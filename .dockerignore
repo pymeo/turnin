@@ -19,5 +19,6 @@ playwright-report
 .env.local
 .env.*.local
 docs
+tests
 *.md
 !README.md

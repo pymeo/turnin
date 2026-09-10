@@ -1,0 +1,65 @@
+# Roadmap
+
+Orden previsto de las vertical slices. Cada una debe llegar hasta la interfaz y
+con tests: media funcionalidad sin pantalla no es media funcionalidad, es deuda.
+
+## Hecho
+
+* **0. Bootstrap** — Docker, Symfony 7.4, PostgreSQL, Redis, Caddy, CI, PWA,
+  sistema de diseño, `/health` como slice vertical completa, migraciones reales en
+  tests, Deptrac, PHPStan, Playwright, Graft y esta documentación.
+
+## Siguiente
+
+1. **Identity — registro y login.** Sin esto no hay nada más. Trae sesión, CSRF,
+   hashing, rate limiting y la primera pantalla autenticada (y con ella la CSP).
+2. **Perfil profesional.** Categoría, unidad, centro. Alimenta la compatibilidad.
+3. **Workplace.** Alta manual de centros; el importador viene después.
+4. **SwapPool y Membership.** El concepto del que depende todo el matching
+   (→ [DOMAIN.md](DOMAIN.md#swappool-el-concepto-que-hay-que-entender)).
+5. **Calendario y Shift.** Introducción manual de turnos. La importación de
+   cuadrantes es otra historia, y más difícil.
+6. **Availability.** «Quiero mañanas», «podría el finde».
+7. **Solicitar un cambio simple.** El primer `SwapRequest`: un turno concreto por
+   otro turno concreto, dirigido a una persona concreta.
+8. **Recibir y aceptar una propuesta.** Cierra el primer ciclo completo. **Aquí
+   Turnin empieza a servir para algo.**
+9. **DirectMatcher.** Turnin propone, en vez de esperar a que el usuario elija.
+10. **Notificaciones.** Push. Sin esto, el matching no llega a tiempo.
+11. **Pro / Subscription.** Stripe. No antes: no hay nada que cobrar hasta que
+    9 y 10 funcionen.
+12. **Encuéntrame un día libre.** «Quiero librar el sábado 19» sin decir cómo.
+13. **Encuéntrame un puente.**
+14. **CycleMatcher.** Cambios encadenados de tres o más personas.
+15. **ShiftDebt.** Favores pendientes.
+16. **Coverage B2B.** Producto distinto, cliente distinto.
+
+El corte de pago está entre 8 y 9 a propósito: participar es gratis, que Turnin
+busque por ti se paga (→ [PRODUCT.md](PRODUCT.md#monetización)).
+
+## Deuda técnica conocida
+
+Problemas reales, no una lista de deseos.
+
+| Qué | Por qué no está hecho | Cuándo toca |
+| --- | --- | --- |
+| Sin `Content-Security-Policy` | Escrita antes de saber qué carga la app, acabaría en `unsafe-inline` | Con la primera pantalla autenticada (slice 1) |
+| Sin migraciones todavía | No hay agregados; la infraestructura y su test de garantía sí están | Slice 1 |
+| ORM configurado sin mapeos | `auto_mapping: false` y `mappings: []` a la espera del primer agregado | Slice 1 |
+| Sin transporte asíncrono | Redis está levantado, pero nada es lo bastante lento aún | Slice 9 o 10 |
+| Sin copias de seguridad | No hay datos | Antes del primer usuario real |
+| Sin `symfony/security-bundle` | Nada que proteger todavía | Slice 1 |
+| E2E solo en Chromium | La imagen de Playwright trae los tres motores; falta activarlos | Cuando haya UI que merezca la matriz |
+| `graft/` no versionado | Se aparta de Pymeo; ver [GRAPH.md](GRAPH.md#qué-no-versionamos) | Si CI llega a depender del grafo |
+| Imagen de producción ~910 MB | `php:8.5-fpm-trixie` son 741 MB de base. Alpine la dejaría en ~190 MB, pero musl trae ICU recortado (`icu-data-full`) y Turnin formatea fechas en español: no es el momento de arriesgar eso | Cuando el tiempo de despliegue moleste, con verificación de locales |
+
+## Decisiones aplazadas
+
+* **Importación de cuadrantes.** Cada centro los publica de forma distinta —PDF,
+  Excel, capturas—. Es un producto en sí mismo y probablemente el foso defensivo
+  más profundo de Turnin. No se toca hasta que el ciclo manual funcione.
+* **Aprobación de supervisión.** Muchos centros exigen visto bueno para un cambio.
+  Está previsto en la máquina de estados (`awaiting_approval`) y no implementado.
+* **Motor de reglas por pool.** Hoy la compatibilidad se preguntará al `SwapPool`
+  con reglas mínimas. El motor completo llega cuando haya varios centros reales
+  con reglas contradictorias, no antes.

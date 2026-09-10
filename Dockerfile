@@ -115,7 +115,9 @@ RUN composer dump-autoload --classmap-authoritative --no-dev \
     && composer run-script --no-dev post-install-cmd \
     && php bin/console tailwind:build --minify \
     && php bin/console asset-map:compile \
-    && rm -rf var/cache/dev var/log/* .git
+    # The Tailwind standalone binary is 107 MB of build tool. The CSS it produced
+    # is already in public/assets; nothing at runtime needs the compiler.
+    && rm -rf var/cache/dev var/log/* var/tailwind .git
 
 # --------------------------------------------------------------------------
 FROM base AS production

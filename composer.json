@@ -27,8 +27,7 @@
         "symfony/twig-bundle": "7.4.*",
         "symfony/uid": "7.4.*",
         "symfony/yaml": "7.4.*",
-        "symfonycasts/tailwind-bundle": "^1.0",
-        "twig/extra-bundle": "^3"
+        "symfonycasts/tailwind-bundle": "^1.0"
     },
     "config": {
         "allow-plugins": {

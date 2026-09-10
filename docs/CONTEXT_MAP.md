@@ -1,0 +1,159 @@
+# Mapa de contextos
+
+## Qué existe hoy
+
+```
+Platform
+├── System     salud del sistema, correlación de peticiones     [IMPLEMENTADO]
+└── Web        shell web público (landing, PWA)                 [IMPLEMENTADO]
+```
+
+Eso es todo. El resto de este documento es el destino, no el presente.
+
+**Un contexto se crea cuando se implementa.** Crear veinte directorios vacíos con
+sus tres capas cada uno no es diseño, es ruido: nadie sabe cuáles están vivos, el
+grafo de Graft se llena de nodos huecos y la primera funcionalidad real acaba
+colocándose en el sitio equivocado porque «ya había una carpeta».
+
+## Destino previsto
+
+```
+Platform
+└── Identity            personas, credenciales, sesión
+
+Workforce
+├── Organization + Workplace + SwapPool + Membership
+
+Scheduling
+├── Calendar + Shift + Availability
+
+Swap
+├── SwapRequest + SwapPreference + SwapProposal + SwapAgreement + ShiftDebt
+
+Matching
+├── DirectMatching + CycleMatching
+
+Notification
+
+Billing                 (futuro)
+Coverage                (futuro, B2B)
+```
+
+## Por qué esta agrupación y no la lista larga
+
+El planteamiento inicial tenía un contexto por concepto. Al analizarlos, varios
+resultan ser **agregados del mismo contexto**, no contextos distintos: comparten
+lenguaje, cambian a la vez y sus invariantes se cruzan. Separarlos crearía
+fronteras que habría que atravesar en cada operación —el síntoma clásico de un
+contexto mal cortado.
+
+### `Workforce` (antes: Organization, Workplace, SwapPool, Membership)
+
+Los cuatro responden a la misma pregunta: **quién trabaja dónde y con quién puede
+cambiar**. Un `SwapPool` no significa nada sin su `Workplace`, y una `Membership`
+no significa nada sin su pool. Sus invariantes se cruzan constantemente («esta
+persona pertenece a un pool de este centro»), y comprobarlas a través de una
+frontera de contexto sería una llamada remota para responder algo trivial.
+
+Son un contexto con cuatro agregados. `SwapPool` es la raíz interesante.
+
+### `Scheduling` (antes: Calendar, Shift, Availability)
+
+`Calendar` no es un agregado: es la *vista* de los turnos de una persona en un
+intervalo. Modelarlo como agregado propio lleva derecho a un objeto gigante que
+carga meses de datos para responder «¿qué hago el sábado?».
+
+`Shift` y `Availability` sí son agregados, y comparten contexto porque
+`Availability` solo tiene sentido contra el calendario: «quiero mañanas» es una
+afirmación sobre los turnos que uno aceptaría.
+
+### `Swap` (antes: SwapRequest, SwapPreference, SwapProposal, SwapAgreement, ShiftDebt)
+
+Aquí la separación habría sido peor. `SwapProposal` y `SwapAgreement` viven y
+mueren con su `SwapRequest`: son parte del mismo agregado o vecinos inmediatos, y
+aceptar una propuesta tiene que ser atómico respecto a la solicitud. Partirlos
+significa coordinación distribuida para una operación que es un `UPDATE`.
+
+`ShiftDebt` sí es agregado aparte —sobrevive al acuerdo que lo creó y tiene su
+propio ciclo de vida— pero comparte el lenguaje de `Swap` y se queda en el mismo
+contexto.
+
+`SwapPreference` no es un agregado, es un value object dentro de `SwapRequest`.
+
+### `Matching` separado de `Swap`
+
+Este corte sí paga. `Swap` guarda *qué quiere la gente*; `Matching` calcula *qué
+es posible*. Son responsabilidades distintas con perfiles operativos distintos:
+`Swap` es transaccional y rápido; `Matching` es cómputo, será lo primero que se
+haga asíncrono y lo primero que se optimice o se reescriba. Que dependa de `Swap`
+y no al revés es lo que permite cambiarlo sin tocar el modelo.
+
+`DirectMatching` y `CycleMatching` son dos estrategias, no dos contextos.
+
+### `Notification` propio
+
+Único contexto que habla con el exterior (push, email). Su fallo no puede tumbar
+un cambio de turno, así que se acopla solo por eventos.
+
+### `Platform\Identity` separado de `Workforce`
+
+Quién eres (credenciales, sesión) es distinto de qué eres en el trabajo
+(categoría, unidad, pool). Se separan porque cambian por motivos distintos y
+porque los datos de `Identity` tienen un régimen de privacidad más estricto.
+
+## Relaciones
+
+```
+                    ┌──────────────┐
+                    │   Identity   │
+                    └──────┬───────┘
+                           │ userId
+                    ┌──────▼───────┐
+                    │  Workforce   │  ← SwapPool: la frontera del matching
+                    └──────┬───────┘
+                  membershipId │
+              ┌────────────┴────────────┐
+      ┌───────▼────────┐        ┌───────▼────────┐
+      │   Scheduling   │        │      Swap      │
+      └───────┬────────┘        └───┬────────┬───┘
+              │  shiftId             │        │ eventos
+              └──────────┬───────────┘        │
+                  ┌──────▼───────┐    ┌───────▼────────┐
+                  │   Matching   │    │  Notification  │
+                  └──────────────┘    └────────────────┘
+```
+
+| Relación | Patrón | Por qué |
+| --- | --- | --- |
+| Identity → Workforce | *Shared kernel* mínimo: solo el `UserId` | Workforce no necesita saber nada más de una persona |
+| Workforce → Scheduling / Swap | *Customer–supplier* | Ambos preguntan a `SwapPool` si un cambio es admisible |
+| Swap → Matching | *Customer–supplier*, invocación explícita | `Swap` pide candidatos; `Matching` no conoce a `Swap` |
+| Swap → Notification | *Publisher–subscriber* (eventos) | Notificar no puede bloquear ni fallar un acuerdo |
+| Scheduling ← Swap | *Publisher–subscriber* (eventos) | Un acuerdo cerrado aplica el cambio al calendario |
+| Coverage → Workforce, Scheduling | *Conformist* (futuro) | El producto B2B consume el modelo existente sin alterarlo |
+
+Ninguna de estas flechas es una llamada a una clase de otro contexto: son eventos
+de dominio o puertos declarados en el contexto que consume. Lo comprueba
+[`deptrac.contexts.yaml`](../deptrac.contexts.yaml).
+
+## Centros sanitarios: importación
+
+Más adelante importaremos el catálogo oficial de centros sanitarios de España.
+Hoy no hay scraping ni datasets, a propósito.
+
+Cuando llegue, la forma será un puerto en `Workforce\Domain`:
+
+```php
+interface WorkplaceImporter
+{
+    /** @return iterable<ImportedWorkplace> */
+    public function fetch(): iterable;
+}
+```
+
+con un adaptador por fuente en `Infrastructure` (CSV del Ministerio, API
+autonómica, carga manual). **El dominio no conoce CSV, ni endpoints, ni formatos
+externos**: recibe `ImportedWorkplace` y decide si crea, actualiza o rechaza.
+
+Es un puerto que se justifica solo: van a existir varias fuentes reales y
+contradictorias, y hay que poder añadir una sin tocar la lógica de conciliación.

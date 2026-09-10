@@ -244,8 +244,5 @@
             "version": "0.14",
             "ref": "b7eaad0756e3f9b38764450655e6fea9614bc32a"
         }
-    },
-    "twig/extra-bundle": {
-        "version": "v3.24.0"
     }
 }

@@ -1,6 +1,13 @@
 when@dev:
     web_profiler:
-        toolbar: true
+        # The toolbar is off by default so the HTML a developer sees is byte-for-byte
+        # the HTML a user sees — which is what makes the Playwright suite meaningful
+        # (it measures real layout, not a 40px debug bar pinned over the viewport).
+        # The profiler itself is still collecting: every response carries an
+        # X-Debug-Token-Link header, and /_profiler/latest is one click away.
+        # Flip this to true locally if you prefer the toolbar; it cannot be an
+        # env placeholder because the bundle reads it at container compile time.
+        toolbar: false
 
     framework:
         profiler:

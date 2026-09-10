@@ -1,0 +1,171 @@
+name: CI
+
+on:
+    push:
+        branches: [main]
+    pull_request:
+
+concurrency:
+    group: ${{ github.workflow }}-${{ github.ref }}
+    cancel-in-progress: true
+
+env:
+    PHP_VERSION: '8.5'
+
+jobs:
+    # Fast feedback: everything that needs neither a database nor a browser.
+    # Runs in ~1 minute and catches most mistakes before the heavier jobs finish.
+    static:
+        name: Lint & static analysis
+        runs-on: ubuntu-latest
+        steps:
+            - uses: actions/checkout@v5
+
+            - uses: shivammathur/setup-php@v2
+              with:
+                  php-version: ${{ env.PHP_VERSION }}
+                  extensions: ctype, iconv, intl, pdo_pgsql, redis, zip
+                  coverage: none
+                  tools: composer:v2
+
+            - name: Validate composer.json
+              run: composer validate --strict
+
+            - uses: ramsey/composer-install@v3
+              with:
+                  composer-options: --prefer-dist
+
+            - name: Code style
+              run: composer cs-check
+
+            - name: Lint YAML, Twig and the service container
+              run: composer lint
+              env:
+                  APP_ENV: dev
+                  APP_SECRET: ci_only_not_a_production_secret
+                  DATABASE_URL: postgresql://turnin:turnin@127.0.0.1:5432/turnin?serverVersion=18&charset=utf8
+                  REDIS_URL: redis://127.0.0.1:6379
+
+            - name: PHPStan
+              run: composer stan
+              env:
+                  APP_ENV: dev
+                  APP_SECRET: ci_only_not_a_production_secret
+                  DATABASE_URL: postgresql://turnin:turnin@127.0.0.1:5432/turnin?serverVersion=18&charset=utf8
+                  REDIS_URL: redis://127.0.0.1:6379
+
+            - name: Architecture (Deptrac)
+              run: composer architecture
+
+            - name: Known vulnerabilities in dependencies
+              run: composer audit
+
+    # The PHP suite against real PostgreSQL and real Redis. The schema is built
+    # by running the migrations — see docs/TESTING.md. MigrationsFromScratchTest
+    # additionally proves an empty database can reach the current schema with
+    # migrations alone, which is what stops an old migration rotting unnoticed.
+    tests:
+        name: PHP tests
+        runs-on: ubuntu-latest
+
+        services:
+            postgres:
+                image: postgres:18-alpine
+                env:
+                    POSTGRES_DB: turnin
+                    POSTGRES_USER: turnin
+                    POSTGRES_PASSWORD: turnin
+                ports: ['5432:5432']
+                options: >-
+                    --health-cmd "pg_isready -U turnin -d turnin"
+                    --health-interval 5s --health-timeout 5s --health-retries 20
+
+            redis:
+                image: redis:8-alpine
+                ports: ['6379:6379']
+                options: >-
+                    --health-cmd "redis-cli ping"
+                    --health-interval 5s --health-timeout 3s --health-retries 20
+
+        env:
+            APP_SECRET: ci_only_not_a_production_secret
+            DATABASE_URL: postgresql://turnin:turnin@127.0.0.1:5432/turnin_test?serverVersion=18&charset=utf8
+            REDIS_URL: redis://127.0.0.1:6379/1
+
+        steps:
+            - uses: actions/checkout@v5
+
+            - uses: shivammathur/setup-php@v2
+              with:
+                  php-version: ${{ env.PHP_VERSION }}
+                  extensions: ctype, iconv, intl, pdo_pgsql, redis, zip
+                  coverage: none
+                  tools: composer:v2
+
+            - uses: ramsey/composer-install@v3
+              with:
+                  composer-options: --prefer-dist
+
+            # Exactly what `make test` runs locally: drop, create, migrate, test.
+            - name: Run the suite
+              run: composer test
+
+    # The application as a user meets it: built assets, real browser, three
+    # viewports. Uses the same Docker stack as local development.
+    e2e:
+        name: End-to-end
+        runs-on: ubuntu-latest
+        steps:
+            - uses: actions/checkout@v5
+
+            - uses: actions/setup-node@v4
+              with:
+                  node-version: 22
+                  cache: npm
+
+            - run: npm ci
+
+            - name: Start the stack
+              run: make up
+
+            - name: Build assets
+              run: make assets
+
+            - name: Apply migrations
+              run: make migrate
+
+            - name: Playwright
+              run: make test-e2e
+              env:
+                  CI: 'true'
+
+            - name: Collect the report on failure
+              if: failure()
+              uses: actions/upload-artifact@v4
+              with:
+                  name: playwright-report
+                  path: var/playwright/report
+                  retention-days: 7
+
+            - name: Container logs on failure
+              if: failure()
+              run: docker compose logs --no-color --tail 200
+
+    # The image that would ship. Building it in CI keeps the production stage
+    # from quietly breaking while everyone works against the development one.
+    image:
+        name: Production image
+        runs-on: ubuntu-latest
+        steps:
+            - uses: actions/checkout@v5
+
+            - uses: docker/setup-buildx-action@v3
+
+            - name: Build the production stage
+              uses: docker/build-push-action@v6
+              with:
+                  context: .
+                  target: production
+                  push: false
+                  cache-from: type=gha
+                  cache-to: type=gha,mode=max
