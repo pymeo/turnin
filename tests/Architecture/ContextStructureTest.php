@@ -34,13 +34,18 @@ final class ContextStructureTest extends TestCase
         $segments = explode('/', $relativePath);
 
         self::assertGreaterThanOrEqual(
-            4,
+            3,
             \count($segments),
-            \sprintf('%s is not inside <Product>/<Context>/<Layer>/.', $relativePath),
+            \sprintf('%s is not inside <Context>/<Layer>/ or <Product>/<Context>/<Layer>/.', $relativePath),
         );
 
+        $layer = $segments[1] ?? null;
+        if (!\in_array($layer, self::LAYERS, true)) {
+            $layer = $segments[2] ?? null;
+        }
+
         self::assertContains(
-            $segments[2],
+            $layer,
             self::LAYERS,
             \sprintf('%s must sit under one of %s.', $relativePath, implode(', ', self::LAYERS)),
         );

@@ -4,10 +4,10 @@ Este documento es el vocabulario compartido. Si un nombre no está aquí, no
 debería aparecer en el código; si aparece en el código y no está aquí, falta
 actualizarlo.
 
-> **Estado**: casi todo lo que sigue es diseño previsto, no código existente. Lo
-> único implementado hoy es `Platform\System` (salud del sistema). Está escrito
-> antes de implementarlo a propósito: el orden de las decisiones importa más que
-> el orden del código.
+> **Estado**: `Platform\System` y el catálogo `Workforce.Workplace` están
+> implementados. El resto continúa siendo diseño previsto. Está escrito antes de
+> implementarlo a propósito: el orden de las decisiones importa más que el orden
+> del código.
 
 ## Vocabulario
 
@@ -26,6 +26,32 @@ actualizarlo.
 | **SwapAgreement** | Una propuesta aceptada por todos y, si hace falta, aprobada. |
 | **ShiftDebt** | «Marta hizo mi turno y le debo uno». Nominal, sin precio. |
 | **Cycle** | Un cambio encadenado: A→B→C→A. |
+
+## `Workplace` — catálogo implementado
+
+`Workplace` representa un centro físico o dispositivo público donde
+potencialmente puede utilizarse Turnin. No representa al empleador
+(`Organization`) ni crea por sí solo una frontera de intercambio (`SwapPool`).
+
+El agregado conserva: UUID v7 interno; fuente y su identificador externo; nombre;
+tipo; comunidad autónoma, provincia y municipio; titularidad; actividad; instante
+de última modificación observada en la fuente; creación y actualización. Para
+Atención Primaria conserva además Área de Salud y Zona Básica de Salud cuando la
+fuente las publica.
+
+Tipos implementados: `HOSPITAL`, `HEALTH_CENTER`, `LOCAL_CLINIC` y
+`OUT_OF_HOSPITAL_URGENT_CARE`. La titularidad implementada es únicamente
+`PUBLIC`: una fila privada no entra en el agregado.
+
+Invariantes:
+
+* `(source, externalId)` identifica unívocamente una fila y tiene constraint
+  único en PostgreSQL; el nombre nunca es identidad;
+* desaparecer de una foto completa desactiva el centro, nunca lo borra;
+* reaparecer reactiva la misma identidad;
+* una descarga o parseo incompletos no constituyen una foto y no causan bajas;
+* `sourceUpdatedAt` cambia solo cuando cambia el registro observado, de modo que
+  una sincronización idéntica es realmente idempotente.
 
 Palabras que **no** usamos: *oferta*, *precio*, *puja*, *mercado*, *crédito*,
 *token*. Turnin no es un mercado y el vocabulario lo refleja

@@ -6,6 +6,9 @@
 Platform
 ├── System     salud del sistema, correlación de peticiones     [IMPLEMENTADO]
 └── Web        shell web público (landing, PWA)                 [IMPLEMENTADO]
+
+Workforce
+└── Workplace  catálogo público oficial y búsqueda              [IMPLEMENTADO]
 ```
 
 Eso es todo. El resto de este documento es el destino, no el presente.
@@ -136,24 +139,22 @@ Ninguna de estas flechas es una llamada a una clase de otro contexto: son evento
 de dominio o puertos declarados en el contexto que consume. Lo comprueba
 [`deptrac.contexts.yaml`](../deptrac.contexts.yaml).
 
-## Centros sanitarios: importación
+## Centros sanitarios: importación implementada
 
-Más adelante importaremos el catálogo oficial de centros sanitarios de España.
-Hoy no hay scraping ni datasets, a propósito.
-
-Cuando llegue, la forma será un puerto en `Workforce\Domain`:
+El catálogo público español entra por un puerto en `Workforce\Domain`:
 
 ```php
-interface WorkplaceImporter
+interface WorkplaceCatalogSource
 {
-    /** @return iterable<ImportedWorkplace> */
-    public function fetch(): iterable;
+    public function fetch(): CompleteWorkplaceCatalog;
 }
 ```
 
-con un adaptador por fuente en `Infrastructure` (CSV del Ministerio, API
-autonómica, carga manual). **El dominio no conoce CSV, ni endpoints, ni formatos
-externos**: recibe `ImportedWorkplace` y decide si crea, actualiza o rechaza.
+Infrastructure configura un adapter por catálogo del Ministerio: Atención
+Primaria, Urgencia Extrahospitalaria y Hospitales. Prueba primero la descarga CSV
+oficial y admite el XLSX anual oficial como fallback, porque en septiembre de
+2026 dos exports CSV responden vacíos. **El dominio no conoce CSV, XLSX,
+endpoints ni al Ministerio**: recibe una foto completa de `ImportedWorkplace`.
 
-Es un puerto que se justifica solo: van a existir varias fuentes reales y
-contradictorias, y hay que poder añadir una sin tocar la lógica de conciliación.
+REGCESS completo queda como fuente futura para sanidad privada. No participa en
+esta slice.

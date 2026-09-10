@@ -8,13 +8,16 @@ con tests: media funcionalidad sin pantalla no es media funcionalidad, es deuda.
 * **0. Bootstrap** — Docker, Symfony 7.4, PostgreSQL, Redis, Caddy, CI, PWA,
   sistema de diseño, `/health` como slice vertical completa, migraciones reales en
   tests, Deptrac, PHPStan, Playwright, Graft y esta documentación.
+* **1. Workplace catalog / import oficial.** Catálogo público SNS desde Atención
+  Primaria, Urgencia Extrahospitalaria y Hospitales; sincronización idempotente,
+  bajas lógicas y búsqueda PostgreSQL para onboarding.
 
 ## Siguiente
 
-1. **Identity — registro y login.** Sin esto no hay nada más. Trae sesión, CSRF,
-   hashing, rate limiting y la primera pantalla autenticada (y con ella la CSP).
-2. **Perfil profesional.** Categoría, unidad, centro. Alimenta la compatibilidad.
-3. **Workplace.** Alta manual de centros; el importador viene después.
+2. **Identity + Google OAuth — registro y login.** Trae sesión, CSRF, hashing,
+   rate limiting y la primera pantalla autenticada (y con ella la CSP).
+3. **Perfil profesional + onboarding.** Categoría, unidad y selección de un
+   `Workplace` del catálogo. Alimenta la compatibilidad.
 4. **SwapPool y Membership.** El concepto del que depende todo el matching
    (→ [DOMAIN.md](DOMAIN.md#swappool-el-concepto-que-hay-que-entender)).
 5. **Calendario y Shift.** Introducción manual de turnos. La importación de
@@ -44,8 +47,6 @@ Problemas reales, no una lista de deseos.
 | Qué | Por qué no está hecho | Cuándo toca |
 | --- | --- | --- |
 | Sin `Content-Security-Policy` | Escrita antes de saber qué carga la app, acabaría en `unsafe-inline` | Con la primera pantalla autenticada (slice 1) |
-| Sin migraciones todavía | No hay agregados; la infraestructura y su test de garantía sí están | Slice 1 |
-| ORM configurado sin mapeos | `auto_mapping: false` y `mappings: []` a la espera del primer agregado | Slice 1 |
 | Sin transporte asíncrono | Redis está levantado, pero nada es lo bastante lento aún | Slice 9 o 10 |
 | Sin copias de seguridad | No hay datos | Antes del primer usuario real |
 | Sin `symfony/security-bundle` | Nada que proteger todavía | Slice 1 |
@@ -63,3 +64,5 @@ Problemas reales, no una lista de deseos.
 * **Motor de reglas por pool.** Hoy la compatibilidad se preguntará al `SwapPool`
   con reglas mínimas. El motor completo llega cuando haya varios centros reales
   con reglas contradictorias, no antes.
+* **REGCESS privado.** Es una fuente futura posible para clínicas y otros centros
+  privados; el catálogo inicial se limita deliberadamente a sanidad pública/SNS.

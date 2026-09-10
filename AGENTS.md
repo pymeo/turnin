@@ -31,7 +31,9 @@ Domain  ←  Application  ←  Infrastructure
   handler se declara en `config/services.yaml`.
 * `Infrastructure` conoce a ambos y es donde vive todo lo demás.
 
-Estructura: `src/<Producto>/<Contexto>/{Domain,Application,Infrastructure}/`.
+Estructura habitual: `src/<Contexto>/{Domain,Application,Infrastructure}/`.
+`Platform` agrupa sus módulos técnicos un nivel más abajo:
+`src/Platform/<Módulo>/{Domain,Application,Infrastructure}/`.
 
 Lo comprueban `make architecture` (Deptrac, dos ejes: capas y contextos) y
 `tests/Architecture/`. No son sugerencias.
@@ -133,9 +135,10 @@ parte que le sirve al que venga después.
 ## Qué NO hacer todavía
 
 Está documentado como futuro, no como pendiente inmediato: Stripe y
-suscripciones, importación masiva de hospitales, el motor de matching completo,
-cambios encadenados, push, emails, login con Google, chat, backoffice, IA, OCR,
-pagos entre trabajadores y Coverage B2B.
+suscripciones, el motor de matching completo, cambios encadenados, push, emails,
+chat, backoffice, IA, OCR, pagos entre trabajadores y Coverage B2B. El catálogo
+oficial de centros ya está implementado; Identity y Google OAuth son la siguiente
+slice y ya no están prohibidos para próximas iteraciones.
 
 Y nunca, en ninguna iteración: **convertir los favores entre trabajadores en
 dinero, tokens negociables o moneda interna.** Ver

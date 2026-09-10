@@ -10,9 +10,10 @@ persigas a quince personas por WhatsApp.
 Empieza por sanidad en España —enfermería, TCAE, celadores, medicina, técnicos,
 urgencias— y se extenderá a otros sectores por turnos.
 
-> **Estado: bootstrap.** La base técnica está completa y probada. El producto
-> todavía no: la home explica el concepto y `/health` es la única funcionalidad.
-> Lo que viene, en orden, está en [docs/ROADMAP.md](docs/ROADMAP.md).
+> **Estado: primeras slices.** La base técnica y el catálogo oficial de centros
+> sanitarios públicos están completos y probados. La home explica el concepto;
+> Identity y onboarding todavía no existen. Lo que viene, en orden, está en
+> [docs/ROADMAP.md](docs/ROADMAP.md).
 
 ## Arrancar
 
@@ -79,16 +80,17 @@ alguien levanta un entorno nuevo. Detalles en [docs/TESTING.md](docs/TESTING.md)
 ## Estructura
 
 ```
-src/<Producto>/<Contexto>/{Domain,Application,Infrastructure}/
+src/<Contexto>/{Domain,Application,Infrastructure}/
 ```
 
 `Domain` es PHP puro: sin Symfony, sin Doctrine, sin Twig. La regla de
 dependencias es `Domain ← Application ← Infrastructure` y la comprueba Deptrac,
 no la memoria de quien revisa.
 
-Hoy existen dos módulos: `Platform\System` (salud del sistema) y `Platform\Web`
-(la landing). Los contextos se crean cuando se implementan; el mapa completo está
-documentado en [docs/CONTEXT_MAP.md](docs/CONTEXT_MAP.md).
+Existen `Platform\System` (salud), `Platform\Web` (landing) y `Workforce`
+(catálogo oficial de `Workplace`). Los módulos técnicos de Platform conservan un
+nivel adicional. Los contextos se crean cuando se implementan; el mapa completo
+está documentado en [docs/CONTEXT_MAP.md](docs/CONTEXT_MAP.md).
 
 ```
 assets/     JS y el sistema de diseño Tailwind

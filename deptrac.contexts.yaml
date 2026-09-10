@@ -24,6 +24,11 @@ parameters:
               - type: classNameRegex
                 value: '#^App\\Platform\\Web\\#'
 
+        - name: Workforce
+          collectors:
+              - type: classNameRegex
+                value: '#^App\\Workforce\\#'
+
         # The kernel: framework glue that belongs to no context. Narrow on
         # purpose — see the note about uncovered tokens above.
         - name: AppRoot
@@ -44,6 +49,8 @@ parameters:
         PlatformSystem:
             - Vendor
         PlatformWeb:
+            - Vendor
+        Workforce:
             - Vendor
         AppRoot:
             - Vendor

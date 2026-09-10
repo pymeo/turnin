@@ -8,6 +8,7 @@ doctrine:
         # make it the default for date-time columns. See docs/DOMAIN.md § Time.
         types:
             datetime_immutable: Doctrine\DBAL\Types\DateTimeTzImmutableType
+            workplace_id: App\Workforce\Infrastructure\Persistence\Doctrine\WorkplaceIdType
 
     orm:
         validate_xml_mapping: true
@@ -24,9 +25,13 @@ doctrine:
         #             dir: '%kernel.project_dir%/src/Scheduling/Infrastructure/Persistence/Doctrine/Mapping'
         #             prefix: 'App\Scheduling\Domain'
         #
-        # There are no aggregates yet (see docs/ROADMAP.md), so the list is empty.
         auto_mapping: false
-        mappings: []
+        mappings:
+            Workforce:
+                type: xml
+                is_bundle: false
+                dir: '%kernel.project_dir%/src/Workforce/Infrastructure/Persistence/Doctrine/Mapping'
+                prefix: 'App\Workforce\Domain'
 
 when@prod:
     doctrine:

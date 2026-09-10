@@ -112,3 +112,43 @@ PHPStan, PHPUnit, php-cs-fixer, Deptrac y Playwright escriben todos por defecto 
 la raíz del proyecto. Están reconfigurados para escribir bajo `var/`, que ya está
 ignorado. La raíz es lo primero que ve quien abre el repositorio, y debe contener
 solo cosas que alguien haya decidido poner ahí.
+
+## El catálogo Workforce prioriza CSV y cae al XLSX anual oficial
+
+Los tres endpoints del buscador avanzado siguen siendo la fuente preferida: son
+CSV oficiales y reflejan actualizaciones dinámicas. El 10 de septiembre de 2026,
+sin embargo, Atención Primaria y Urgencia devolvían `HTTP 200`,
+`Content-Type: text/html` y cuerpo vacío; Hospitales sí devolvía CSV válido.
+
+El adapter exige estado 200, tipo razonable, cuerpo no vacío y parseo completo.
+Si el CSV falla usa el XLSX anual oficial directo, sin hacer scraping HTML. Solo
+después de obtener una foto completa permite reconciliar bajas. Los fallos de una
+fuente no desactivan sus registros existentes.
+
+Fuentes anuales actuales: Atención Primaria y Urgencia 2026 (datos a
+31-12-2025), y Hospitales 2025 (datos a 31-12-2024). Al publicar una nueva edición
+hay que actualizar la URL y la hoja configuradas y verificar sus cabeceras.
+
+## Identidad externa de Atención Primaria
+
+El CCN sería la elección natural, pero el XLSX 2026 tiene 244 centros públicos
+sin CCN y tres CCN asignados a dos centros distintos cada uno. Se usa el
+`IDCENTRO` numérico de SIAP (`siap:<id>`) y se cae a `ccn:<ccn>` en dos filas cuyo
+`IDCENTRO` contiene la anotación `ALTA 25`. Esto conserva todos los centros sin
+usar el nombre como identidad. Hospitales usa CCN y Urgencias, `DISP_EXTRA_ID`.
+
+## Titularidad pública cerrada
+
+Atención Primaria acepta las modalidades oficiales cuyo literal empieza por
+`Pública`; el catálogo de Urgencias ya está acotado al SNS. Hospitales acepta
+únicamente las dependencias funcionales públicas codificadas por el Ministerio
+como 1–8. Se usa allowlist de sus ocho literales, no heurísticas por nombre,
+concierto o acreditación. Los códigos 20 (privados), 21 (mutuas) y 22 (ONG) se
+excluyen.
+
+## Búsqueda de Workplace sin índice especializado
+
+La búsqueda tokeniza nombre, municipio y provincia, limita en SQL y filtra
+`active=true`. Con unas quince mil filas un recorrido de PostgreSQL es suficiente;
+un índice B-tree no ayuda a patrones `%texto%` y `pg_trgm` sería optimización
+prematura. Se medirá de nuevo cuando onboarding aporte consultas reales.

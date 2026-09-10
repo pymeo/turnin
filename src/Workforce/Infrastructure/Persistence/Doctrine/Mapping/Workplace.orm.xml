@@ -1,0 +1,30 @@
+<?xml version="1.0" encoding="UTF-8"?>
+
+<doctrine-mapping xmlns="http://doctrine-project.org/schemas/orm/doctrine-mapping"
+                  xmlns:xsi="http://www.w3.org/2001/XMLSchema-instance"
+                  xsi:schemaLocation="http://doctrine-project.org/schemas/orm/doctrine-mapping https://www.doctrine-project.org/schemas/orm/doctrine-mapping.xsd">
+    <entity name="App\Workforce\Domain\Workplace" table="workforce_workplaces">
+        <id name="id" type="workplace_id" column="id">
+            <generator strategy="NONE"/>
+        </id>
+
+        <field name="source" type="string" enum-type="App\Workforce\Domain\WorkplaceSource" length="40"/>
+        <field name="externalId" column="external_id" type="string" length="64"/>
+        <field name="name" type="string" length="255"/>
+        <field name="type" type="string" enum-type="App\Workforce\Domain\WorkplaceType" length="40"/>
+        <field name="autonomousCommunity" column="autonomous_community" type="string" length="100"/>
+        <field name="province" type="string" length="100"/>
+        <field name="municipality" type="string" length="150"/>
+        <field name="ownership" type="string" enum-type="App\Workforce\Domain\WorkplaceOwnership" length="20"/>
+        <field name="active" type="boolean"/>
+        <field name="sourceUpdatedAt" column="source_updated_at" type="datetime_immutable"/>
+        <field name="createdAt" column="created_at" type="datetime_immutable"/>
+        <field name="updatedAt" column="updated_at" type="datetime_immutable"/>
+        <field name="healthArea" column="health_area" type="string" length="255" nullable="true"/>
+        <field name="basicHealthZone" column="basic_health_zone" type="string" length="255" nullable="true"/>
+
+        <unique-constraints>
+            <unique-constraint name="uniq_workplace_source_external_id" fields="source,externalId"/>
+        </unique-constraints>
+    </entity>
+</doctrine-mapping>

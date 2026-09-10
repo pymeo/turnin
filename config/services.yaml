@@ -20,6 +20,7 @@ services:
             # The Redis probe opens its own short-lived connection instead of
             # reusing the cache pool — see the class docblock.
             string $dsn: '%env(REDIS_URL)%'
+            iterable $workplaceCatalogSources: !tagged_iterator turnin.workplace_catalog_source
 
     App\:
         resource: '../src/'
@@ -29,6 +30,10 @@ services:
             # aggregates are constructed by the code that owns them; registering
             # them would invite constructor injection into the model itself.
             - '../src/*/*/Domain/'
+            - '../src/*/Domain/'
+            # Three explicitly configured instances below represent the three
+            # official catalogs and share one small adapter implementation.
+            - '../src/Workforce/Infrastructure/Ministry/MinistryWorkplaceCatalog.php'
 
     _instanceof:
         App\Platform\System\Domain\HealthProbe:
@@ -36,6 +41,9 @@ services:
 
         Monolog\Processor\ProcessorInterface:
             tags: ['monolog.processor']
+
+        App\Workforce\Domain\WorkplaceCatalogSource:
+            tags: ['turnin.workplace_catalog_source']
 
     # The migrations bundle does not alias its dependency factory, and the
     # schema probe is the only thing that needs it.
@@ -50,3 +58,42 @@ services:
         resource: '../src/*/*/Application/Query/*Handler.php'
         tags:
             - { name: 'messenger.message_handler', bus: 'query.bus' }
+
+    turnin.workforce_query_handlers:
+        namespace: App\Workforce\Application\Query\
+        resource: '../src/Workforce/Application/Query/*Handler.php'
+        tags:
+            - { name: 'messenger.message_handler', bus: 'query.bus' }
+
+    turnin.workforce_command_handlers:
+        namespace: App\Workforce\Application\Command\
+        resource: '../src/Workforce/Application/Command/*Handler.php'
+        tags:
+            - { name: 'messenger.message_handler', bus: 'command.bus' }
+
+    App\Workforce\Domain\Workplaces: '@App\Workforce\Infrastructure\Persistence\Doctrine\DoctrineWorkplaces'
+    App\Workforce\Domain\WorkplaceIdGenerator: '@App\Workforce\Infrastructure\Identity\SymfonyWorkplaceIdGenerator'
+
+    workforce.ministry.primary_care:
+        class: App\Workforce\Infrastructure\Ministry\MinistryWorkplaceCatalog
+        arguments:
+            $catalogSource: !php/enum App\Workforce\Domain\WorkplaceSource::MINISTRY_PRIMARY_CARE
+            $csvUrl: 'https://www.sanidad.gob.es/ciudadanos/centros.do?localidad=&zonaBasica=&municipio=&botonCentros=1&6578706f7274=1&areaSalud=&provincia=%%25&comunidad=%%25&accion=Consultar&d-4015022-e=1'
+            $spreadsheetUrl: 'https://www.sanidad.gob.es/estadEstudios/estadisticas/docs/siap/2026_C_Catal_Centros_AP.xlsx'
+            $worksheet: 'xl/worksheets/sheet3.xml'
+
+    workforce.ministry.urgent_care:
+        class: App\Workforce\Infrastructure\Ministry\MinistryWorkplaceCatalog
+        arguments:
+            $catalogSource: !php/enum App\Workforce\Domain\WorkplaceSource::MINISTRY_URGENT_CARE
+            $csvUrl: 'https://www.sanidad.gob.es/ciudadanos/centros.do?localidad=&municipio=&dispositivo=&6578706f7274=1&tipoDispositivo=&d-4015023-e=1&provincia=%%25&comunidad=%%25&accion=Consultar&botonDispositivo=3'
+            $spreadsheetUrl: 'https://www.sanidad.gob.es/estadEstudios/estadisticas/docs/siap/2026_C_Catal_disp_urg.xlsx'
+            $worksheet: 'xl/worksheets/sheet2.xml'
+
+    workforce.ministry.hospitals:
+        class: App\Workforce\Infrastructure\Ministry\MinistryWorkplaceCatalog
+        arguments:
+            $catalogSource: !php/enum App\Workforce\Domain\WorkplaceSource::MINISTRY_HOSPITALS
+            $csvUrl: 'https://www.sanidad.gob.es/ciudadanos/centros.do?dependenciaTipoCentro=&6578706f7274=1&nombreHosp=&botonHospitales=2&finalidadAsistencial=&d-4015021-e=1&provincia=&accion=Consultar&comunidad=&dependenciaFuncional='
+            $spreadsheetUrl: 'https://www.sanidad.gob.es/estadEstudios/estadisticas/sisInfSanSNS/ofertaRecursos/hospitales/docs/CNH_2025.xlsx'
+            $worksheet: 'xl/worksheets/sheet1.xml'
