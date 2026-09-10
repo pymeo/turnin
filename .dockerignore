@@ -1,0 +1,23 @@
+# Keep the build context small and, more importantly, deterministic: the image
+# must never depend on files that only exist on a developer's machine.
+.git
+.github
+.claude
+node_modules
+vendor
+var
+public/assets
+public/bundles
+assets/vendor
+graft
+test-results
+playwright-report
+.phpunit.cache
+.php-cs-fixer.cache
+.phpstan.cache
+.deptrac.cache
+.env.local
+.env.*.local
+docs
+*.md
+!README.md

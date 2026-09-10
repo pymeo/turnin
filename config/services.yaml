@@ -1,0 +1,52 @@
+# yaml-language-server: $schema=../vendor/symfony/dependency-injection/Loader/schema/services.schema.json
+
+# Entry point for Turnin's own services. Nearly everything is convention;
+# explicit definitions are the exception and each one states why it exists.
+#
+# Dependency rule (enforced by deptrac.yaml and tests/Architecture):
+#     Domain  ←  Application  ←  Infrastructure
+# Domain knows nothing about Symfony or Doctrine. See docs/ARCHITECTURE.md.
+
+parameters:
+
+services:
+    _defaults:
+        autowire: true
+        autoconfigure: true
+        bind:
+            # Probes are discovered by tag, so the handler does not have to know
+            # which dependencies exist.
+            iterable $probes: !tagged_iterator turnin.health_probe
+            # The Redis probe opens its own short-lived connection instead of
+            # reusing the cache pool — see the class docblock.
+            string $dsn: '%env(REDIS_URL)%'
+
+    App\:
+        resource: '../src/'
+        exclude:
+            - '../src/Kernel.php'
+            # The domain model is not a service graph. Value objects and
+            # aggregates are constructed by the code that owns them; registering
+            # them would invite constructor injection into the model itself.
+            - '../src/*/*/Domain/'
+
+    _instanceof:
+        App\Platform\System\Domain\HealthProbe:
+            tags: ['turnin.health_probe']
+
+        Monolog\Processor\ProcessorInterface:
+            tags: ['monolog.processor']
+
+    # The migrations bundle does not alias its dependency factory, and the
+    # schema probe is the only thing that needs it.
+    Doctrine\Migrations\DependencyFactory: '@doctrine.migrations.dependency_factory'
+
+    # --- CQRS wiring --------------------------------------------------------
+    # Handlers are plain Application classes with no framework attributes: the
+    # bus they belong to is a wiring decision, so it is expressed here. Add a
+    # Command block with the same shape when the first command handler lands.
+    turnin.query_handlers:
+        namespace: App\
+        resource: '../src/*/*/Application/Query/*Handler.php'
+        tags:
+            - { name: 'messenger.message_handler', bus: 'query.bus' }

@@ -1,0 +1,47 @@
+doctrine:
+    dbal:
+        url: '%env(resolve:DATABASE_URL)%'
+        profiling_collect_backtrace: '%kernel.debug%'
+
+        # Turnin stores instants, never local wall-clock strings. TIMESTAMPTZ is
+        # the only PostgreSQL type that round-trips an unambiguous instant, so we
+        # make it the default for date-time columns. See docs/DOMAIN.md § Time.
+        types:
+            datetime_immutable: Doctrine\DBAL\Types\DateTimeTzImmutableType
+
+    orm:
+        validate_xml_mapping: true
+        naming_strategy: doctrine.orm.naming_strategy.underscore
+        # Aggregates are plain PHP objects: they must not carry Doctrine
+        # attributes, so mapping is declared in XML from the Infrastructure layer.
+        # `auto_mapping` would go hunting for annotated entities in src/ — exactly
+        # what we do not want. Register one entry per context as aggregates land:
+        #
+        #     mappings:
+        #         Scheduling:
+        #             type: xml
+        #             is_bundle: false
+        #             dir: '%kernel.project_dir%/src/Scheduling/Infrastructure/Persistence/Doctrine/Mapping'
+        #             prefix: 'App\Scheduling\Domain'
+        #
+        # There are no aggregates yet (see docs/ROADMAP.md), so the list is empty.
+        auto_mapping: false
+        mappings: []
+
+when@prod:
+    doctrine:
+        orm:
+            query_cache_driver:
+                type: pool
+                pool: doctrine.system_cache_pool
+            result_cache_driver:
+                type: pool
+                pool: doctrine.result_cache_pool
+
+    framework:
+        cache:
+            pools:
+                doctrine.result_cache_pool:
+                    adapter: cache.app
+                doctrine.system_cache_pool:
+                    adapter: cache.system

@@ -1,0 +1,88 @@
+<!DOCTYPE html>
+<html lang="es">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover">
+    <meta name="color-scheme" content="light dark">
+    <title>Sin conexión — Turnin</title>
+    <!--
+      Deliberately self-contained. This page is the fallback for a failed
+      navigation, so it must not depend on the asset pipeline, a font host or
+      anything else that also needs the network.
+    -->
+    <style>
+        :root {
+            color-scheme: light dark;
+            --canvas: #f5f8f7;
+            --surface: #ffffff;
+            --ink: #0c1a18;
+            --ink-muted: #596c69;
+            --line: #dde6e4;
+        }
+
+        @media (prefers-color-scheme: dark) {
+            :root {
+                --canvas: #08110f;
+                --surface: #111c1a;
+                --ink: #e9f1ef;
+                --ink-muted: #93a6a2;
+                --line: #21322e;
+            }
+        }
+
+        * { box-sizing: border-box; }
+
+        body {
+            margin: 0;
+            min-height: 100vh;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            padding: max(1.5rem, env(safe-area-inset-top)) 1.25rem max(1.5rem, env(safe-area-inset-bottom));
+            background: var(--canvas);
+            color: var(--ink);
+            font-family: ui-sans-serif, system-ui, -apple-system, "Segoe UI", Roboto, sans-serif;
+            overflow-x: hidden;
+        }
+
+        main {
+            width: 100%;
+            max-width: 24rem;
+            display: flex;
+            flex-direction: column;
+            gap: 1rem;
+            padding: 1.5rem;
+            border: 1px solid var(--line);
+            border-radius: 1.125rem;
+            background: var(--surface);
+            text-align: center;
+        }
+
+        h1 { margin: 0; font-size: 1.375rem; }
+        p { margin: 0; color: var(--ink-muted); line-height: 1.5; }
+
+        a {
+            min-height: 2.75rem;
+            display: inline-flex;
+            align-items: center;
+            justify-content: center;
+            padding: 0 1.25rem;
+            border-radius: 0.75rem;
+            background: #0f7666;
+            color: #fff;
+            font-weight: 600;
+            text-decoration: none;
+        }
+    </style>
+</head>
+<body>
+    <main>
+        <h1>Sin conexión</h1>
+        <p>
+            Turnin necesita conexión para mostrarte turnos actualizados. Tus datos
+            no se guardan en este dispositivo.
+        </p>
+        <a href="/">Reintentar</a>
+    </main>
+</body>
+</html>

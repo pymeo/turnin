@@ -1,0 +1,44 @@
+name: turnin
+
+# Production topology. It is intentionally close to compose.yaml so that what we
+# exercise locally is what ships: same Caddy config shape, same health checks.
+# Secrets come from the environment (or the orchestrator), never from a file in
+# this repository — see docs/DEPLOYMENT.md.
+services:
+    app:
+        build:
+            context: .
+            target: production
+        environment:
+            APP_ENV: prod
+            APP_DEBUG: "0"
+            APP_SECRET: ${APP_SECRET:?APP_SECRET must be provided}
+            DATABASE_URL: ${DATABASE_URL:?DATABASE_URL must be provided}
+            REDIS_URL: ${REDIS_URL:?REDIS_URL must be provided}
+            SYMFONY_TRUSTED_PROXIES: ${SYMFONY_TRUSTED_PROXIES:-private_ranges}
+            SYMFONY_TRUSTED_HEADERS: x-forwarded-for,x-forwarded-proto,x-forwarded-port
+        restart: unless-stopped
+        read_only: true
+        tmpfs:
+            - /tmp
+        volumes:
+            - app_var:/var/www/app/var
+
+    web:
+        build:
+            context: .
+            target: web
+        ports:
+            - "${HTTP_PORT:-80}:80"
+        depends_on:
+            app:
+                condition: service_healthy
+        restart: unless-stopped
+        healthcheck:
+            test: ["CMD", "wget", "--quiet", "--spider", "http://127.0.0.1/health"]
+            interval: 10s
+            timeout: 5s
+            retries: 6
+
+volumes:
+    app_var:

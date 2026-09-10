@@ -1,0 +1,24 @@
+parameters:
+    level: max
+    paths:
+        - src
+        - tests
+
+    tmpDir: var/cache/phpstan
+
+    # PHPDoc types are documentation, not a runtime guarantee. With this on,
+    # PHPStan reports the assert() in HealthController and the assertInstanceOf()
+    # in the container-backed tests as redundant — but those are exactly the
+    # checks that turn a misconfigured bus or container into a clear failure
+    # instead of a confusing TypeError three frames later.
+    treatPhpDocTypesAsCertain: false
+
+    # The Symfony extension resolves container services and route/argument types.
+    # `composer stan` warms the dev container first so this file exists.
+    symfony:
+        containerXmlPath: var/cache/dev/App_KernelDevDebugContainer.xml
+
+    # Migrations are a historical record: they are intentionally not autoloaded
+    # and are never refactored, so analysing them adds noise, not safety.
+    excludePaths:
+        - migrations/*

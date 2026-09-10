@@ -1,0 +1,14 @@
+{
+    "name": "turnin",
+    "private": true,
+    "type": "module",
+    "scripts": {
+        "test:e2e": "playwright test",
+        "graph": "graft build",
+        "graph:check": "graft check"
+    },
+    "devDependencies": {
+        "@nanonets/graft": "^0.18.0",
+        "@playwright/test": "^1.56.0"
+    }
+}

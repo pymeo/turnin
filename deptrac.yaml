@@ -1,0 +1,102 @@
+parameters:
+    paths:
+        - ./src
+
+    # Axis 1 of 2: Clean Architecture — Domain ← Application ← Infrastructure.
+    # Domain is plain PHP: no Symfony, no Doctrine, no Twig. This is the rule
+    # that keeps the matching logic testable without a container or a database.
+    #
+    # Axis 2 (bounded-context isolation) lives in deptrac.contexts.yaml. Deptrac
+    # gets confused when one class belongs to two layers, so the two axes are
+    # checked by two runs rather than one merged ruleset.
+    layers:
+        - name: Domain
+          collectors:
+              - type: classNameRegex
+                value: '#^App\\[^\\]+\\[^\\]+\\Domain\\#'
+
+        - name: Application
+          collectors:
+              - type: classNameRegex
+                value: '#^App\\[^\\]+\\[^\\]+\\Application\\#'
+
+        - name: Infrastructure
+          collectors:
+              - type: classNameRegex
+                value: '#^App\\[^\\]+\\[^\\]+\\Infrastructure\\#'
+
+        # Root-level framework glue only: App\Kernel and nothing else. Kept
+        # deliberately narrow so a class that drifts out of the
+        # <Product>\<Context>\<Layer> shape is not quietly absorbed here.
+        # tests/Architecture/ContextStructureTest is what fails on such a class.
+        - name: AppRoot
+          collectors:
+              - type: classNameRegex
+                value: '#^App\\[^\\]+$#'
+
+        # --- third-party ------------------------------------------------------
+        # PHP's own classes (DateTimeImmutable, Stringable, exceptions) are the
+        # language, not a framework dependency.
+        - name: Php
+          collectors:
+              - type: php_internal
+                value: '.*'
+
+        # PSR interfaces (Psr\Clock, Psr\Cache, Psr\Log) are language-level
+        # contracts: depending on them does not tie us to any vendor.
+        - name: Psr
+          collectors:
+              - type: classNameRegex
+                value: '#^Psr\\#'
+
+        - name: Symfony
+          collectors:
+              - type: classNameRegex
+                value: '#^Symfony\\#'
+
+        - name: Doctrine
+          collectors:
+              - type: classNameRegex
+                value: '#^Doctrine\\#'
+
+        - name: Twig
+          collectors:
+              - type: classNameRegex
+                value: '#^Twig\\#'
+
+        - name: Monolog
+          collectors:
+              - type: classNameRegex
+                value: '#^Monolog\\#'
+
+    ruleset:
+        # The whole point: the model is plain PHP.
+        Domain:
+            - Php
+            - Psr
+
+        Application:
+            - Domain
+            - Php
+            - Psr
+
+        Infrastructure:
+            - Domain
+            - Application
+            - Php
+            - Psr
+            - Symfony
+            - Doctrine
+            - Twig
+            - Monolog
+
+        AppRoot:
+            - Php
+            - Symfony
+
+        Php: ~
+        Psr: ~
+        Symfony: ~
+        Doctrine: ~
+        Twig: ~
+        Monolog: ~

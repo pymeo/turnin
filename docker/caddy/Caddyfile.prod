@@ -1,0 +1,50 @@
+{
+	admin off
+	servers {
+		# Caddy sits behind the platform load balancer / tunnel. Trust only the
+		# private hop in front of it so Symfony still sees the public scheme.
+		trusted_proxies static private_ranges
+	}
+}
+
+:80 {
+	root * /var/www/app/public
+
+	encode zstd gzip
+
+	@service_worker path /sw.js
+	header @service_worker {
+		Cache-Control "no-cache, no-store, must-revalidate"
+		Service-Worker-Allowed "/"
+	}
+
+	@immutable_assets path /assets/*
+	header @immutable_assets Cache-Control "public, max-age=31536000, immutable"
+
+	@manifest path /manifest.webmanifest
+	header @manifest Content-Type "application/manifest+json"
+
+	# Anything rendered by PHP is per-user by definition (shift calendars, group
+	# membership). Never let a shared cache hold on to it — see docs/SECURITY.md.
+	@dynamic not path /assets/* /manifest.webmanifest /offline.html /icons/*
+	header @dynamic Cache-Control "private, no-store"
+
+	header {
+		X-Content-Type-Options "nosniff"
+		X-Frame-Options "DENY"
+		Referrer-Policy "same-origin"
+		Strict-Transport-Security "max-age=31536000; includeSubDomains"
+		-Server
+	}
+
+	php_fastcgi app:9000 {
+		index index.php
+	}
+
+	file_server
+
+	log {
+		output stdout
+		format json
+	}
+}

@@ -1,0 +1,24 @@
+# see https://symfony.com/doc/current/reference/configuration/framework.html
+framework:
+    secret: '%env(APP_SECRET)%'
+
+    # Sessions are enabled but not yet used: there is no authentication in the
+    # bootstrap. The cookie policy is set now so the first login lands on safe
+    # defaults instead of inheriting PHP's.
+    session:
+        cookie_secure: auto
+        cookie_samesite: lax
+        cookie_httponly: true
+        # Shift data is private; nothing about a session may reach a shared cache.
+        cookie_lifetime: 0
+
+    http_method_override: false
+
+    php_errors:
+        log: true
+
+when@test:
+    framework:
+        test: true
+        session:
+            storage_factory_id: session.storage.factory.mock_file

@@ -1,0 +1,50 @@
+parameters:
+    paths:
+        - ./src
+
+    # Axis 2 of 2: bounded-context isolation.
+    #
+    # A context may not reach into another context's classes — not its domain,
+    # not its handlers, not its repositories. Contexts integrate through domain
+    # events and application ports, so that a context can later move to its own
+    # schema, its own deployable, or be replaced outright.
+    #
+    # Adding a context here is a deliberate act. Deptrac only sees classes that
+    # take part in a dependency, so a brand-new directory under src/ is caught by
+    # tests/Architecture/ContextStructureTest instead — the two checks are
+    # complementary, which is why both exist.
+    layers:
+        - name: PlatformSystem
+          collectors:
+              - type: classNameRegex
+                value: '#^App\\Platform\\System\\#'
+
+        - name: PlatformWeb
+          collectors:
+              - type: classNameRegex
+                value: '#^App\\Platform\\Web\\#'
+
+        # The kernel: framework glue that belongs to no context. Narrow on
+        # purpose — see the note about uncovered tokens above.
+        - name: AppRoot
+          collectors:
+              - type: classNameRegex
+                value: '#^App\\[^\\]+$#'
+
+        # Everything that is not ours: PHP itself, Symfony, Doctrine, PSR…
+        # Contexts may depend on it freely; the rule here is only about contexts.
+        - name: Vendor
+          collectors:
+              - type: bool
+                must_not:
+                    - type: classNameRegex
+                      value: '#^App\\#'
+
+    ruleset:
+        PlatformSystem:
+            - Vendor
+        PlatformWeb:
+            - Vendor
+        AppRoot:
+            - Vendor
+        Vendor: ~

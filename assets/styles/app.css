@@ -1,0 +1,241 @@
+@import "tailwindcss";
+
+/* ==========================================================================
+   Turnin design system
+   --------------------------------------------------------------------------
+   Mobile first. Every value below is a token, and screens are assembled from
+   the small component set at the bottom of this file. If a screen needs a new
+   one-off colour or radius, that is a signal the token set is wrong — fix it
+   here rather than sprinkling literals through templates.
+
+   Dark mode is not decoration: a large share of our users open Turnin at 04:00
+   during a night shift.
+   ========================================================================== */
+
+/* --- Semantic surfaces ---------------------------------------------------- */
+:root {
+	color-scheme: light dark;
+
+	--canvas: #f5f8f7;
+	--surface: #ffffff;
+	--surface-muted: #eaf0ef;
+	--ink: #0c1a18;
+	--ink-muted: #596c69;
+	--line: #dde6e4;
+	--ring: #0f7666;
+}
+
+@media (prefers-color-scheme: dark) {
+	:root {
+		--canvas: #08110f;
+		--surface: #111c1a;
+		--surface-muted: #172422;
+		--ink: #e9f1ef;
+		--ink-muted: #93a6a2;
+		--line: #21322e;
+		--ring: #34d3b4;
+	}
+}
+
+@theme {
+	--font-sans:
+		ui-sans-serif, system-ui, -apple-system, "Segoe UI", Roboto,
+		"Helvetica Neue", Arial, sans-serif;
+
+	/* Brand: calm teal. Recognisable without looking like a hospital intranet. */
+	--color-brand-50: #ecfdf9;
+	--color-brand-100: #d1faef;
+	--color-brand-200: #a7f3e0;
+	--color-brand-300: #6ee7cd;
+	--color-brand-400: #34d3b4;
+	--color-brand-500: #14b89b;
+	--color-brand-600: #0d947e;
+	--color-brand-700: #0f7666;
+	--color-brand-800: #115e53;
+	--color-brand-900: #134e46;
+
+	/* Shift kinds are core vocabulary, so they get first-class colours. */
+	--color-shift-morning: #d97706;
+	--color-shift-evening: #db6a4b;
+	--color-shift-night: #6366f1;
+
+	/* Feedback */
+	--color-positive: #15803d;
+	--color-caution: #b45309;
+	--color-critical: #b91c1c;
+
+	--radius-card: 1.125rem;
+	--radius-control: 0.75rem;
+
+	/* One-handed reach: nothing interactive is smaller than this. */
+	--size-touch: 2.75rem;
+}
+
+@theme inline {
+	--color-canvas: var(--canvas);
+	--color-surface: var(--surface);
+	--color-surface-muted: var(--surface-muted);
+	--color-ink: var(--ink);
+	--color-ink-muted: var(--ink-muted);
+	--color-line: var(--line);
+}
+
+/* --- Base ----------------------------------------------------------------- */
+@layer base {
+	html {
+		-webkit-text-size-adjust: 100%;
+	}
+
+	body {
+		background-color: var(--canvas);
+		color: var(--ink);
+		font-family: var(--font-sans);
+		/* Never let a layout push the page sideways on a small screen. */
+		overflow-x: hidden;
+	}
+
+	:focus-visible {
+		outline: 2px solid var(--ring);
+		outline-offset: 2px;
+	}
+
+	@media (prefers-reduced-motion: reduce) {
+		*,
+		*::before,
+		*::after {
+			animation-duration: 0.01ms !important;
+			animation-iteration-count: 1 !important;
+			transition-duration: 0.01ms !important;
+		}
+	}
+}
+
+/* --- Layout --------------------------------------------------------------- */
+@utility page {
+	width: 100%;
+	max-width: 34rem;
+	margin-inline: auto;
+	padding-inline: 1.25rem;
+	padding-top: max(1.5rem, env(safe-area-inset-top));
+	padding-bottom: max(2rem, env(safe-area-inset-bottom));
+}
+
+/* --- Components -----------------------------------------------------------
+   Declared with @utility (not @layer components) so that variants can compose
+   the base with @apply — Tailwind v4 only lets you @apply registered utilities.
+   -------------------------------------------------------------------------- */
+@utility btn {
+	@apply inline-flex items-center justify-center gap-2 rounded-[var(--radius-control)]
+		px-5 text-base font-semibold no-underline transition
+		active:scale-[0.98] disabled:pointer-events-none disabled:opacity-50;
+	min-height: var(--size-touch);
+}
+
+@utility btn-primary {
+	@apply btn bg-brand-700 text-white hover:bg-brand-800;
+}
+
+@utility btn-secondary {
+	@apply btn border border-line bg-surface text-ink hover:bg-surface-muted;
+}
+
+@utility btn-ghost {
+	@apply btn text-brand-700 hover:bg-surface-muted dark:text-brand-300;
+}
+
+@utility btn-block {
+	@apply w-full;
+}
+
+@utility card {
+	@apply rounded-[var(--radius-card)] border border-line bg-surface p-4;
+}
+
+@utility card-title {
+	@apply text-sm font-semibold tracking-wide text-ink-muted uppercase;
+}
+
+@utility chip {
+	@apply inline-flex items-center gap-1.5 rounded-full px-2.5 py-1 text-xs font-semibold;
+}
+
+@utility chip-morning {
+	@apply chip text-white;
+	background-color: var(--color-shift-morning);
+}
+
+@utility chip-evening {
+	@apply chip text-white;
+	background-color: var(--color-shift-evening);
+}
+
+@utility chip-night {
+	@apply chip text-white;
+	background-color: var(--color-shift-night);
+}
+
+@utility field {
+	@apply flex flex-col gap-1.5;
+}
+
+@utility field-label {
+	@apply text-sm font-medium text-ink;
+}
+
+@utility input {
+	@apply w-full rounded-[var(--radius-control)] border border-line bg-surface
+		px-3 text-base text-ink placeholder:text-ink-muted
+		focus:border-brand-600 focus:outline-none;
+	min-height: var(--size-touch);
+}
+
+@utility field-error {
+	@apply text-sm;
+	color: var(--color-critical);
+}
+
+@utility alert {
+	@apply flex gap-3 rounded-[var(--radius-control)] border p-3 text-sm;
+}
+
+@utility alert-info {
+	@apply alert border-line bg-surface-muted text-ink;
+}
+
+@utility alert-success {
+	@apply alert border-transparent bg-brand-50 text-brand-900
+		dark:bg-brand-900/40 dark:text-brand-100;
+}
+
+@utility alert-critical {
+	@apply alert border-transparent bg-red-50 text-red-900
+		dark:bg-red-950/50 dark:text-red-100;
+}
+
+@utility empty-state {
+	@apply flex flex-col items-center gap-3 rounded-[var(--radius-card)]
+		border border-dashed border-line px-6 py-10 text-center text-ink-muted;
+}
+
+@utility skeleton {
+	@apply animate-pulse rounded-[var(--radius-control)] bg-surface-muted;
+}
+
+/* Bottom navigation. Unused until there are screens to navigate between, but
+   the safe-area handling is the fiddly part and belongs with the rest of the
+   system rather than being reinvented inside the first feature. */
+@utility bottom-nav {
+	@apply fixed inset-x-0 bottom-0 z-10 flex items-stretch justify-around
+		border-t border-line bg-surface;
+	padding-bottom: env(safe-area-inset-bottom);
+}
+
+@utility bottom-nav-item {
+	@apply flex flex-1 flex-col items-center justify-center gap-0.5 py-2
+		text-xs font-medium text-ink-muted;
+	min-height: var(--size-touch);
+
+	&[aria-current="page"] {
+		@apply text-brand-700 dark:text-brand-300;
+	}
+}

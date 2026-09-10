@@ -1,0 +1,11 @@
+doctrine_migrations:
+    migrations_paths:
+        # Migrations are deliberately outside the App\ namespace: they are a
+        # historical record, not application code, and must never be autoloaded
+        # or refactored along with the classes they once mirrored.
+        'DoctrineMigrations': '%kernel.project_dir%/migrations'
+    enable_profiler: false
+    # Never let a stray `--all-or-nothing=false` slip in: a half-applied
+    # migration is far harder to recover from than a failed one.
+    all_or_nothing: true
+    transactional: true

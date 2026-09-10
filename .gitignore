@@ -1,0 +1,51 @@
+###> symfony/framework-bundle ###
+/.env.local
+/.env.local.php
+/.env.*.local
+/config/secrets/prod/prod.decrypt.private.php
+/public/bundles/
+/var/
+/vendor/
+###< symfony/framework-bundle ###
+
+###> symfony/asset-mapper ###
+# Compiled output and downloaded importmap packages: both are reproducible from
+# importmap.php with `php bin/console importmap:install`.
+/public/assets/
+/assets/vendor/
+###< symfony/asset-mapper ###
+
+###> tooling ###
+# Every tool writes its cache under var/ (see phpstan.neon, phpunit.dist.xml,
+# deptrac*.yaml, .php-cs-fixer.dist.php), which is already ignored above. These
+# entries only exist so an older local checkout does not commit stale caches.
+/.phpstan.cache/
+/.phpunit.cache/
+/.php-cs-fixer.cache
+/.php-cs-fixer.php
+/.deptrac.cache
+/.deptrac.contexts.cache
+/phpunit.xml
+###< tooling ###
+
+###> node / playwright ###
+/node_modules/
+/var/playwright/
+###< node / playwright ###
+
+###> graft ###
+# The generated context graph is a cache: regenerate it with `make graph`.
+# Only the wiring graph is versioned, so CI can detect drift with `make
+# graph-check` without carrying every node in the diff. See docs/GRAPH.md.
+/graft/*
+!/graft/.graph/
+/graft/.graph/*
+!/graft/.graph/wiring.json
+###< graft ###
+
+###> local ###
+# Anything that looks like a credential must never reach the remote.
+*.pem
+*.key
+secret*.txt
+*secret*.txt

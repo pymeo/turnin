@@ -1,0 +1,13 @@
+# yaml-language-server: $schema=../vendor/symfony/routing/Loader/schema/routing.schema.json
+
+# Routes are declared with #[Route] on the HTTP adapters that live in each
+# context's Infrastructure/Http directory. Symfony's attribute loader needs a
+# real PSR-4 root rather than a glob, so it scans src/ and finds them there.
+#
+#   bin/console debug:router
+
+controllers:
+    resource:
+        path: '../src/'
+        namespace: App
+    type: attribute

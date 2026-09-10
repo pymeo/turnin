@@ -1,0 +1,32 @@
+framework:
+    messenger:
+        # Three buses, one responsibility each. Handlers are ordinary Application
+        # classes; Messenger is the transport, not an architectural layer.
+        default_bus: command.bus
+
+        buses:
+            command.bus:
+                middleware:
+                    # A command either completes or leaves nothing behind.
+                    - doctrine_transaction
+            query.bus:
+                middleware: []
+            event.bus:
+                default_middleware:
+                    enabled: true
+                    # Domain events may legitimately have no subscriber yet.
+                    allow_no_handlers: true
+
+        transports:
+            # Everything is synchronous today. When the first genuinely slow use
+            # case appears (matching, notifications, imports) it gets its own
+            # Redis transport and a routing entry here — not before.
+            sync: 'sync://'
+
+        routing: []
+
+when@test:
+    framework:
+        messenger:
+            transports:
+                sync: 'in-memory://'

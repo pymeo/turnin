@@ -1,0 +1,45 @@
+{
+	# Development runs on plain HTTP behind localhost; TLS is terminated by the
+	# platform in production (see Caddyfile.prod).
+	auto_https off
+	admin off
+}
+
+:80 {
+	root * /var/www/app/public
+
+	encode zstd gzip
+
+	# The service worker must be able to claim the whole origin. Serving it from
+	# / with a no-cache header is what lets a deploy actually replace it.
+	@service_worker path /sw.js
+	header @service_worker {
+		Cache-Control "no-cache, no-store, must-revalidate"
+		Service-Worker-Allowed "/"
+	}
+
+	# Fingerprinted AssetMapper output is immutable; everything else is not.
+	@immutable_assets path /assets/*
+	header @immutable_assets Cache-Control "public, max-age=31536000, immutable"
+
+	@manifest path /manifest.webmanifest
+	header @manifest Content-Type "application/manifest+json"
+
+	header {
+		X-Content-Type-Options "nosniff"
+		Referrer-Policy "same-origin"
+		-Server
+	}
+
+	php_fastcgi app:9000 {
+		# Symfony's front controller. Everything not on disk goes to PHP.
+		index index.php
+	}
+
+	file_server
+
+	log {
+		output stdout
+		format json
+	}
+}
