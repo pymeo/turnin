@@ -247,3 +247,12 @@ Se publican cuando ocurre algo que el negocio reconoce, no en cada `save()`.
 
 Es la vía por la que los contextos se comunican sin conocerse
 (→ [CONTEXT_MAP.md](CONTEXT_MAP.md)).
+
+## Identity y capacidades
+
+`Platform/Identity` modela `User`, `Email`, `UserId` y el hash de contraseña.
+La identidad no contiene centro, categoría ni destino: esas decisiones viven en
+`Workforce\WorkerAssignment`. Las capacidades `worker` y `supervisor` son
+independientes para permitir una misma cuenta con ambos perfiles. El supervisor
+solo recibe acceso por una relación de dominio o invitación; nunca por un botón
+público de autoasignación.

@@ -71,6 +71,12 @@ services:
         tags:
             - { name: 'messenger.message_handler', bus: 'command.bus' }
 
+    turnin.identity_command_handlers:
+        namespace: App\Platform\Identity\Application\Command\
+        resource: '../src/Platform/Identity/Application/Command/*Handler.php'
+        tags:
+            - { name: 'messenger.message_handler', bus: 'command.bus' }
+
     App\Workforce\Domain\Workplaces: '@App\Workforce\Infrastructure\Persistence\Doctrine\DoctrineWorkplaces'
     App\Workforce\Domain\WorkplaceIdGenerator: '@App\Workforce\Infrastructure\Identity\SymfonyWorkplaceIdGenerator'
     App\Workforce\Domain\StaffCategories: '@App\Workforce\Infrastructure\Persistence\Doctrine\DoctrineStaffCategories'
@@ -79,6 +85,12 @@ services:
     App\Workforce\Domain\WorkerAssignmentIdGenerator: '@App\Workforce\Infrastructure\Identity\SymfonyWorkerAssignmentIdGenerator'
     App\Workforce\Domain\WorkerAssignmentWriter: '@App\Workforce\Infrastructure\Persistence\Doctrine\DoctrineWorkerAssignmentWriter'
     App\Workforce\Domain\SwapPoolResolver: ~
+    App\Platform\Identity\Domain\Users: '@App\Platform\Identity\Infrastructure\Persistence\Doctrine\DoctrineUsers'
+    App\Platform\Identity\Domain\PasswordHasher: '@App\Platform\Identity\Infrastructure\Security\SymfonyPasswordHasher'
+    App\Platform\Identity\Domain\UserIdGenerator: '@App\Platform\Identity\Infrastructure\Identity\SymfonyUserIdGenerator'
+    App\Platform\Identity\Domain\PostAuthenticationDestinationResolver: ~
+    App\Workforce\Domain\WorkerProfileCompletion: '@App\Platform\Identity\Infrastructure\Workforce\IdentityWorkerProfileCompletion'
+    App\Workforce\Domain\AuthenticatedWorker: '@App\Platform\Identity\Infrastructure\Workforce\DatabaseAuthenticatedWorker'
 
     workforce.ministry.primary_care:
         class: App\Workforce\Infrastructure\Ministry\MinistryWorkplaceCatalog

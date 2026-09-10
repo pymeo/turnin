@@ -52,7 +52,7 @@ Problemas reales, no una lista de deseos.
 | Sin `Content-Security-Policy` | Escrita antes de saber qué carga la app, acabaría en `unsafe-inline` | Con la primera pantalla autenticada (slice 1) |
 | Sin transporte asíncrono | Redis está levantado, pero nada es lo bastante lento aún | Slice 9 o 10 |
 | Sin copias de seguridad | No hay datos | Antes del primer usuario real |
-| Sin `symfony/security-bundle` | Nada que proteger todavía | Slice 1 |
+| Perfiles de supervisor aún sin alta administrativa | La identidad ya soporta la capacidad, pero no se auto-concede permisos | Slice responsable |
 | E2E solo en Chromium | La imagen de Playwright trae los tres motores; falta activarlos | Cuando haya UI que merezca la matriz |
 | `graft/` no versionado | Se aparta de Pymeo; ver [GRAPH.md](GRAPH.md#qué-no-versionamos) | Si CI llega a depender del grafo |
 | Imagen de producción ~910 MB | `php:8.5-fpm-trixie` son 741 MB de base. Alpine la dejaría en ~190 MB, pero musl trae ICU recortado (`icu-data-full`) y Turnin formatea fechas en español: no es el momento de arriesgar eso | Cuando el tiempo de despliegue moleste, con verificación de locales |
@@ -69,3 +69,13 @@ Problemas reales, no una lista de deseos.
   con reglas contradictorias, no antes.
 * **REGCESS privado.** Es una fuente futura posible para clínicas y otros centros
   privados; el catálogo inicial se limita deliberadamente a sanidad pública/SNS.
+
+## Slice actual: Identity y entrada a Workforce
+
+La landing enlaza a registro/login con sesión Symfony, y un usuario autenticado
+sin asignación laboral completa continúa en `/onboarding`. El onboarding usa los
+catálogos buscables de Workforce y termina en `/app`; la asignación y el
+`SwapPool` siguen siendo responsabilidad de Workforce. La capacidad de supervisor
+se representa separada de la de trabajador y su lobby está preparado, pero la
+creación administrativa de supervisores y la aprobación de cambios quedan para
+la siguiente slice.

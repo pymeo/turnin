@@ -143,6 +143,14 @@ de dominio o puertos declarados en el contexto que consume. Lo comprueba
 
 ## Centros sanitarios: importación implementada
 
+## Identity y entrada autenticada
+
+`Platform/Identity` contiene la identidad y autenticación, no datos laborales.
+`User` puede tener capacidad de trabajador y/o supervisor sin convertirlas en
+cuentas distintas. Registro y login usan sesión Symfony y el destino inicial se
+resuelve hacia Workforce cuando falta la asignación. `/app` y `/supervisor` son
+entradas separadas; el primero es el contexto por defecto para quien tiene ambos.
+
 El catálogo público español entra por un puerto en `Workforce\Domain`:
 
 ```php

@@ -46,7 +46,8 @@
     </section>
 
     <section class="flex flex-col gap-3">
-        <a href="#como-funciona" class="btn-primary btn-block">Empezar</a>
+        <a href="{{ path('identity_register') }}" class="btn-primary btn-block">Crear cuenta</a>
+        <a href="{{ path('identity_login') }}" class="btn-secondary btn-block">Iniciar sesión</a>
 
         {# Revealed by the install controller only when the browser offers it. #}
         <button type="button"
@@ -75,10 +76,7 @@
             </li>
         </ol>
 
-        <p class="alert-info">
-            Turnin está en construcción. El registro abrirá cuando el primer cambio
-            se pueda resolver de principio a fin.
-        </p>
+        <p class="alert-info">Empieza definiendo tu centro y tu grupo de trabajo. Los cambios y aprobaciones llegarán después.</p>
     </section>
 </main>
 {% endblock %}

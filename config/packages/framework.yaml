@@ -2,9 +2,8 @@
 framework:
     secret: '%env(APP_SECRET)%'
 
-    # Sessions are enabled but not yet used: there is no authentication in the
-    # bootstrap. The cookie policy is set now so the first login lands on safe
-    # defaults instead of inheriting PHP's.
+    # Authentication uses a server-side session. The cookie policy keeps the
+    # PWA safe by default and enables Secure automatically in HTTPS production.
     session:
         cookie_secure: auto
         cookie_samesite: lax

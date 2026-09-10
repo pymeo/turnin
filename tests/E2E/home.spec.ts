@@ -39,7 +39,7 @@ test.describe('home', () => {
 	test('puts the primary action in reach of one thumb', async ({ page }) => {
 		await page.goto('/');
 
-		const cta = page.getByRole('link', { name: 'Empezar' });
+		const cta = page.getByRole('link', { name: 'Crear cuenta' });
 		await expect(cta).toBeVisible();
 
 		const box = await cta.boundingBox();
@@ -52,7 +52,7 @@ test.describe('home', () => {
 	test('actually loaded Tailwind rather than falling back to unstyled HTML', async ({ page }) => {
 		await page.goto('/');
 
-		const cta = page.getByRole('link', { name: 'Empezar' });
+		const cta = page.getByRole('link', { name: 'Crear cuenta' });
 
 		// An unstyled <a> is transparent; the brand button is not.
 		const background = await cta.evaluate((el) => getComputedStyle(el).backgroundColor);
@@ -65,11 +65,11 @@ test.describe('home', () => {
 		expect(brand).not.toBe('');
 	});
 
-	test('the call to action leads somewhere real', async ({ page }) => {
+	test('the call to action leads to registration', async ({ page }) => {
 		await page.goto('/');
 
-		await page.getByRole('link', { name: 'Empezar' }).click();
-		await expect(page.locator('#como-funciona')).toBeInViewport();
+		await page.getByRole('link', { name: 'Crear cuenta' }).click();
+		await expect(page).toHaveURL(/\/register$/);
 	});
 
 	test('loads without console errors', async ({ page }) => {

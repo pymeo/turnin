@@ -21,13 +21,14 @@ final class HomePageTest extends WebTestCase
         self::assertSelectorTextContains('body', 'Tus turnos. Tu tiempo.');
     }
 
-    public function test_it_offers_a_single_primary_call_to_action(): void
+    public function test_it_offers_registration_and_login_actions(): void
     {
         $client = static::createClient();
         $crawler = $client->request('GET', '/');
 
-        self::assertCount(1, $crawler->filter('a.btn-primary'));
-        self::assertSelectorTextContains('a.btn-primary', 'Empezar');
+        self::assertCount(1, $crawler->filter('a.btn-primary[href="/register"]'));
+        self::assertSelectorTextContains('a.btn-primary', 'Crear cuenta');
+        self::assertCount(1, $crawler->filter('a.btn-secondary[href="/login"]'));
     }
 
     /**
@@ -48,11 +49,11 @@ final class HomePageTest extends WebTestCase
         self::assertCount(1, $crawler->filter('link[rel="apple-touch-icon"]'));
     }
 
-    public function test_it_does_not_pretend_that_sign_up_already_works(): void
+    public function test_it_explains_the_current_next_step(): void
     {
         $client = static::createClient();
         $client->request('GET', '/');
 
-        self::assertSelectorTextContains('body', 'El registro abrirá');
+        self::assertSelectorTextContains('body', 'Empieza definiendo tu centro');
     }
 }

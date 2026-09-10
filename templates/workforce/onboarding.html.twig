@@ -1,0 +1,15 @@
+{% extends 'base.html.twig' %}
+{% block title %}Completa tu contexto — Turnin{% endblock %}
+{% block body %}
+<main class="page flex flex-col gap-6">
+    <header class="flex flex-col gap-2"><span class="card-title">Tu contexto laboral</span><h1 class="text-3xl font-bold">Casi listo</h1><p class="text-ink-muted">Una pregunta cada vez. Selecciona una opción de los resultados.</p></header>
+    {% if error %}<p class="alert-critical" role="alert">{{ error }}</p>{% endif %}
+    <form method="post" class="flex flex-col gap-5">
+        <input type="hidden" name="_token" value="{{ csrf_token('onboarding') }}">
+        <div class="field" data-controller="search-select" data-search-select-endpoint-value="/api/workplaces"><span class="field-label">¿Dónde trabajas?</span><input class="input" data-search-select-target="input" placeholder="Buscar hospital o centro" autocomplete="off" required><input type="hidden" name="workplace_id" data-search-select-target="value"><div data-search-select-target="status" class="text-sm text-ink-muted" role="status"></div><div data-search-select-target="results" class="flex flex-col gap-1" role="listbox"></div></div>
+        <div class="field" data-controller="search-select" data-search-select-endpoint-value="/api/staff-categories"><span class="field-label">¿Qué trabajo haces allí?</span><input class="input" data-search-select-target="input" placeholder="Buscar TCAE, enfermería…" autocomplete="off" required><input type="hidden" name="staff_category_id" data-search-select-target="value"><div data-search-select-target="status" class="text-sm text-ink-muted" role="status"></div><div data-search-select-target="results" class="flex flex-col gap-1" role="listbox"></div></div>
+        <label class="field"><span class="field-label">¿Dónde estás destinado?</span><input class="input" name="functional_area" placeholder="Urgencias, Equipo volante…" autocomplete="organization-title"><span class="text-sm text-ink-muted">Puedes indicar una unidad fija o un equipo volante.</span></label>
+        <button class="btn-primary btn-block" type="submit">Entrar en Turnin</button>
+    </form>
+</main>
+{% endblock %}
