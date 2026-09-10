@@ -11,8 +11,9 @@ Empieza por sanidad en España —enfermería, TCAE, celadores, medicina, técni
 urgencias— y se extenderá a otros sectores por turnos.
 
 > **Estado: primeras slices.** La base técnica y el catálogo oficial de centros
-> sanitarios públicos están completos y probados. La home explica el concepto;
-> Identity y onboarding todavía no existen. Lo que viene, en orden, está en
+> sanitarios públicos están completos y probados. Workforce ya tiene la base de
+> categorías, unidades locales (incluido personal volante), asignaciones y pools;
+> Identity y la UX autenticada de onboarding son las siguientes slices. Lo que viene, en orden, está en
 > [docs/ROADMAP.md](docs/ROADMAP.md).
 
 ## Arrancar

@@ -8,7 +8,7 @@ Platform
 └── Web        shell web público (landing, PWA)                 [IMPLEMENTADO]
 
 Workforce
-└── Workplace  catálogo público oficial y búsqueda              [IMPLEMENTADO]
+└── Workplace + Workforce assignment + SwapPool                 [IMPLEMENTADO]
 ```
 
 Eso es todo. El resto de este documento es el destino, no el presente.
@@ -25,7 +25,9 @@ Platform
 └── Identity            personas, credenciales, sesión
 
 Workforce
-├── Organization + Workplace + SwapPool + Membership
+├── Organization + Workplace + StaffCategory + Specialty
+├── OrganizationalUnit + Employer + WorkerAssignment
+└── SwapPool + Membership
 
 Scheduling
 ├── Calendar + Shift + Availability
@@ -158,3 +160,12 @@ endpoints ni al Ministerio**: recibe una foto completa de `ImportedWorkplace`.
 
 REGCESS completo queda como fuente futura para sanidad privada. No participa en
 esta slice.
+
+### Asignación laboral y personal volante
+
+La base de Workforce aporta categorías con aliases y unidades por centro. Las
+unidades distinguen `fixed_service` de `floating_team`; esta última cubre
+`Equipo volante`, `Correturnos`, `Retén` y equivalentes locales. No se modela
+como `service = null`: su ID forma parte de la clave de `SwapPool`, por lo que
+los volantes no se mezclan automáticamente con la plantilla fija de la unidad
+que cubran temporalmente. La ubicación puntual del turno quedará en Scheduling.

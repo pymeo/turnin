@@ -1,0 +1,17 @@
+<?xml version="1.0" encoding="UTF-8" ?>
+<doctrine-mapping xmlns="http://doctrine-project.org/schemas/orm/doctrine-mapping">
+    <entity name="App\Workforce\Domain\WorkerAssignment" table="workforce_worker_assignments">
+        <id name="id" type="guid" column="id" />
+        <field name="workerId" column="worker_id" type="guid" />
+        <field name="workplaceId" column="workplace_id" type="workplace_id" />
+        <field name="staffCategoryId" column="staff_category_id" type="guid" />
+        <field name="specialtyId" column="specialty_id" type="guid" nullable="true" />
+        <field name="organizationalUnitId" column="organizational_unit_id" type="guid" nullable="true" />
+        <field name="functionalArea" column="functional_area" type="string" nullable="true" />
+        <field name="employerId" column="employer_id" type="guid" nullable="true" />
+        <field name="primary" column="primary_assignment" type="boolean" />
+        <field name="active" column="active" type="boolean" />
+        <field name="createdAt" column="created_at" type="datetime_immutable" />
+        <field name="updatedAt" column="updated_at" type="datetime_immutable" />
+    </entity>
+</doctrine-mapping>

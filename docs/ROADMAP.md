@@ -11,6 +11,9 @@ con tests: media funcionalidad sin pantalla no es media funcionalidad, es deuda.
 * **1. Workplace catalog / import oficial.** Catálogo público SNS desde Atención
   Primaria, Urgencia Extrahospitalaria y Hospitales; sincronización idempotente,
   bajas lógicas y búsqueda PostgreSQL para onboarding.
+* **1b. Workforce assignment foundation.** Categorías con aliases, unidades por
+  centro (incluidos equipos volantes), asignación y clave conservadora de
+  `SwapPool`.
 
 ## Siguiente
 

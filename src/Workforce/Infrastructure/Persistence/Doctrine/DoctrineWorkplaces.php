@@ -5,13 +5,14 @@ declare(strict_types=1);
 namespace App\Workforce\Infrastructure\Persistence\Doctrine;
 
 use App\Workforce\Domain\Workplace;
+use App\Workforce\Domain\WorkplaceReader;
 use App\Workforce\Domain\Workplaces;
 use App\Workforce\Domain\WorkplaceSource;
 use DateTimeImmutable;
 use Doctrine\DBAL\ArrayParameterType;
 use Doctrine\ORM\EntityManagerInterface;
 
-final readonly class DoctrineWorkplaces implements Workplaces
+final readonly class DoctrineWorkplaces implements Workplaces, WorkplaceReader
 {
     public function __construct(private EntityManagerInterface $entityManager)
     {
@@ -23,6 +24,11 @@ final readonly class DoctrineWorkplaces implements Workplaces
             'source' => $source,
             'externalId' => $externalId,
         ]);
+    }
+
+    public function byId(\App\Workforce\Domain\WorkplaceId $id): ?Workplace
+    {
+        return $this->entityManager->find(Workplace::class, $id);
     }
 
     public function save(Workplace $workplace): void

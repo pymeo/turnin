@@ -73,6 +73,12 @@ services:
 
     App\Workforce\Domain\Workplaces: '@App\Workforce\Infrastructure\Persistence\Doctrine\DoctrineWorkplaces'
     App\Workforce\Domain\WorkplaceIdGenerator: '@App\Workforce\Infrastructure\Identity\SymfonyWorkplaceIdGenerator'
+    App\Workforce\Domain\StaffCategories: '@App\Workforce\Infrastructure\Persistence\Doctrine\DoctrineStaffCategories'
+    App\Workforce\Domain\OrganizationalUnits: '@App\Workforce\Infrastructure\Persistence\Doctrine\DoctrineOrganizationalUnits'
+    App\Workforce\Domain\WorkplaceReader: '@App\Workforce\Infrastructure\Persistence\Doctrine\DoctrineWorkplaces'
+    App\Workforce\Domain\WorkerAssignmentIdGenerator: '@App\Workforce\Infrastructure\Identity\SymfonyWorkerAssignmentIdGenerator'
+    App\Workforce\Domain\WorkerAssignmentWriter: '@App\Workforce\Infrastructure\Persistence\Doctrine\DoctrineWorkerAssignmentWriter'
+    App\Workforce\Domain\SwapPoolResolver: ~
 
     workforce.ministry.primary_care:
         class: App\Workforce\Infrastructure\Ministry\MinistryWorkplaceCatalog

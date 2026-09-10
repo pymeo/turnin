@@ -1,0 +1,15 @@
+<?xml version="1.0" encoding="UTF-8" ?>
+<doctrine-mapping xmlns="http://doctrine-project.org/schemas/orm/doctrine-mapping" xmlns:xsi="http://www.w3.org/2001/XMLSchema-instance" xsi:schemaLocation="http://doctrine-project.org/schemas/orm/doctrine-mapping https://www.doctrine-project.org/schemas/orm/doctrine-mapping.xsd">
+    <entity name="App\Workforce\Domain\OrganizationalUnit" table="workforce_organizational_units">
+        <id name="id" type="guid" column="id" />
+        <field name="workplaceId" column="workplace_id" type="workplace_id" />
+        <field name="officialCode" column="official_code" type="string" nullable="true" />
+        <field name="name" column="name" type="string" />
+        <field name="aliases" column="aliases" type="json" />
+        <field name="kind" column="kind" type="string" enum-type="App\Workforce\Domain\OrganizationalUnitKind" />
+        <field name="status" column="status" type="string" enum-type="App\Workforce\Domain\OrganizationalUnitStatus" />
+        <field name="parentId" column="parent_id" type="guid" nullable="true" />
+        <field name="createdAt" column="created_at" type="datetime_immutable" />
+        <field name="updatedAt" column="updated_at" type="datetime_immutable" />
+    </entity>
+</doctrine-mapping>

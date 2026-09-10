@@ -1,0 +1,15 @@
+<?xml version="1.0" encoding="UTF-8" ?>
+<doctrine-mapping xmlns="http://doctrine-project.org/schemas/orm/doctrine-mapping" xmlns:xsi="http://www.w3.org/2001/XMLSchema-instance" xsi:schemaLocation="http://doctrine-project.org/schemas/orm/doctrine-mapping https://www.doctrine-project.org/schemas/orm/doctrine-mapping.xsd">
+    <entity name="App\Workforce\Domain\StaffCategory" table="workforce_staff_categories">
+        <id name="id" type="guid" column="id" />
+        <field name="code" column="code" type="string" />
+        <field name="name" column="name" type="string" />
+        <field name="description" column="description" type="string" />
+        <field name="aliases" column="aliases" type="json" />
+        <field name="specialtyRequired" column="specialty_required" type="boolean" />
+        <field name="functionalAreaRequired" column="functional_area_required" type="boolean" />
+        <field name="active" column="active" type="boolean" />
+        <field name="createdAt" column="created_at" type="datetime_immutable" />
+        <field name="updatedAt" column="updated_at" type="datetime_immutable" />
+    </entity>
+</doctrine-mapping>

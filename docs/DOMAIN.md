@@ -4,10 +4,10 @@ Este documento es el vocabulario compartido. Si un nombre no está aquí, no
 debería aparecer en el código; si aparece en el código y no está aquí, falta
 actualizarlo.
 
-> **Estado**: `Platform\System` y el catálogo `Workforce.Workplace` están
-> implementados. El resto continúa siendo diseño previsto. Está escrito antes de
-> implementarlo a propósito: el orden de las decisiones importa más que el orden
-> del código.
+> **Estado**: `Platform\System`, el catálogo `Workforce.Workplace` y la base del
+> contexto laboral (`StaffCategory`, `OrganizationalUnit`, `WorkerAssignment` y
+> `SwapPool`) están implementados. Identity, turnos y matching siguen siendo
+> trabajo posterior.
 
 ## Vocabulario
 
@@ -17,6 +17,11 @@ actualizarlo.
 | **Workplace** | El centro físico. «Hospital Universitario Virgen de las Nieves». |
 | **SwapPool** | El conjunto dentro del cual ciertas personas *pueden* intercambiar. «UCI · Enfermería». |
 | **Membership** | La pertenencia de una persona a un pool, con su categoría y su unidad. |
+| **StaffCategory** | Categoría profesional normalizada, con aliases y reglas de especialidad/área. |
+| **Specialty** | Especialidad opcional ligada a una categoría. |
+| **OrganizationalUnit** | Destino o unidad de adscripción dentro de un centro; fija o volante. |
+| **WorkerAssignment** | Asignación laboral actual, separada de la cuenta. |
+| **Employer** | Empresa o servicio de salud que emplea a la persona en el centro. |
 | **Shift** | Un turno concreto: quién, dónde, qué día laboral, qué franja. |
 | **ShiftKind** | Mañana, tarde, noche… La franja, no las horas exactas. |
 | **WorkDate** | El *día laboral* al que se imputa un turno. No es un timestamp. |
@@ -87,6 +92,20 @@ cerrarnos la puerta:
   porque «no encontramos nada» sin motivo es una pésima experiencia;
 * las reglas serán datos del pool, no clases, para que un centro pueda tener las
   suyas sin desplegar código.
+
+### Personal volante
+
+`OrganizationalUnit` no es sinónimo de servicio asistencial. También modela una
+unidad de adscripción como `Equipo volante`, `Correturnos`, `Retén` o `Equipo de
+apoyo`, con `kind = floating_team` y aliases locales. La unidad siempre pertenece
+a un `Workplace`: que dos centros usen el literal «volantes» no los convierte en
+la misma unidad.
+
+El `WorkerAssignment` conserva esa unidad y el `SwapPoolResolver` la incluye en
+la clave. Por tanto, `Hospital X + Enfermería + Equipo volante` forma un pool
+distinto de `Hospital X + Enfermería + Urgencias`. La ubicación concreta de un
+turno futuro (`ShiftAssignment`) será otro dato de Scheduling y nunca mutará la
+adscripción ni el pool del trabajador.
 
 ## Agregados previstos
 
