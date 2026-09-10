@@ -156,3 +156,12 @@ Corre como `www-data`, con el sistema de ficheros de solo lectura salvo `/tmp` y
 `var/`, sin dependencias de desarrollo y sin Xdebug. No ejecuta migraciones al
 arrancar: eso es un paso deliberado del despliegue
 (→ [DEPLOYMENT.md](DEPLOYMENT.md)).
+
+## OAuth
+
+Google usa Authorization Code + OIDC con `state`; no se desactiva su validación.
+Solo se solicitan `openid email profile`, el enlace por email exige
+`email_verified`, y no se persisten access/refresh tokens. El callback genera su
+URL desde el origen HTTPS reconocido tras el proxy. El destino posterior solo
+acepta paths internos para evitar open redirects. Logout invalida la sesión de
+Turnin y no toca la sesión global de Google.

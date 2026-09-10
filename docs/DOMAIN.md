@@ -256,3 +256,8 @@ La identidad no contiene centro, categoría ni destino: esas decisiones viven en
 independientes para permitir una misma cuenta con ambos perfiles. El supervisor
 solo recibe acceso por una relación de dominio o invitación; nunca por un botón
 público de autoasignación.
+
+`ExternalIdentity` es una credencial de esa misma cuenta. Conserva proveedor,
+subject estable, email observado al vincular y fecha; nunca tokens OAuth. El
+subject resuelve al usuario antes de considerar el email. Un email verificado
+solo permite enlazar durante el primer acceso.

@@ -39,7 +39,9 @@ final readonly class DatabaseUserProvider implements UserProviderInterface
     /** @param array<string,mixed> $row */
     private function map(array $row): SecurityUser
     {
-        return new SecurityUser($this->text($row['id'] ?? null), $this->text($row['email'] ?? null), $this->text($row['password_hash'] ?? null), (bool) ($row['has_worker_profile'] ?? false), (bool) ($row['has_supervisor_profile'] ?? false));
+        $passwordHash = $row['password_hash'] ?? null;
+
+        return new SecurityUser($this->text($row['id'] ?? null), $this->text($row['email'] ?? null), \is_string($passwordHash) ? $passwordHash : null, (bool) ($row['has_worker_profile'] ?? false), (bool) ($row['has_supervisor_profile'] ?? false));
     }
 
     private function text(mixed $value): string

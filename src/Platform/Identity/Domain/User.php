@@ -8,7 +8,7 @@ use DateTimeImmutable;
 
 final readonly class User
 {
-    public function __construct(public UserId $id, public Email $email, public string $passwordHash, public bool $hasWorkerProfile, public bool $hasSupervisorProfile, public DateTimeImmutable $createdAt)
+    public function __construct(public UserId $id, public Email $email, public ?string $passwordHash, public bool $hasWorkerProfile, public bool $hasSupervisorProfile, public DateTimeImmutable $createdAt)
     {
     }
 }

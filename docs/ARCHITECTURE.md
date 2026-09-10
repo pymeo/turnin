@@ -9,6 +9,10 @@ Domain  ←  Application  ←  Infrastructure
 Las flechas son dependencias. `Domain` no conoce a nadie. `Application` conoce
 `Domain`. `Infrastructure` conoce a ambos. Nunca al revés.
 
+Los SDK OAuth (`KnpU\OAuth2ClientBundle` y `League\OAuth2\Client`) son también
+dependencias exclusivas de Infrastructure. Deptrac los agrupa como capa externa
+`OAuth`; Application recibe claims traducidos y Domain no conoce Google.
+
 **`Domain` es PHP puro**: sin Symfony, sin Doctrine, sin Twig, sin PSR-7. Puede
 usar el propio lenguaje (`DateTimeImmutable`, `Stringable`, excepciones) y las
 interfaces PSR (`Psr\Clock\ClockInterface`, `Psr\Log\LoggerInterface`), que son

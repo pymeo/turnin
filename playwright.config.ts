@@ -32,12 +32,16 @@ export default defineConfig({
 		{
 			// The narrowest screen we intend to support. If the layout survives
 			// here it survives anywhere.
-			name: 'mobile-small',
+			name: 'mobile-375',
 			use: { ...devices['iPhone SE'] },
 		},
 		{
-			name: 'mobile',
-			use: { ...devices['Pixel 7'] },
+			name: 'mobile-390',
+			use: { ...devices['iPhone 13'] },
+		},
+		{
+			name: 'mobile-430',
+			use: { ...devices['iPhone 14 Pro Max'] },
 		},
 		{
 			name: 'desktop',

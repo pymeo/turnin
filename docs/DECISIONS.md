@@ -13,6 +13,14 @@ con el motivo al lado.
 | [3](adr/0003-postgresql.md) | PostgreSQL con Doctrine y mapeo XML |
 | [4](adr/0004-cqrs-messenger.md) | CQRS sobre Symfony Messenger, sin wrappers |
 | [5](adr/0005-time-and-clock.md) | El tiempo entra por un puerto |
+| [6](adr/0006-identity-capabilities-and-auth-flow.md) | Identidad única y capacidades separadas |
+| [7](adr/0007-external-identities.md) | Proveedores externos como credenciales |
+
+## 2026-09-10 — No persistir tokens de Google
+
+Turnin solo usa Google para autenticar. Guardar access o refresh tokens ampliaría
+el impacto de una fuga sin aportar una capacidad actual; se conserva únicamente
+el `sub` y el email observado al vincular.
 
 ## Versiones
 

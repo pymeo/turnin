@@ -89,6 +89,9 @@ services:
     App\Platform\Identity\Domain\PasswordHasher: '@App\Platform\Identity\Infrastructure\Security\SymfonyPasswordHasher'
     App\Platform\Identity\Domain\UserIdGenerator: '@App\Platform\Identity\Infrastructure\Identity\SymfonyUserIdGenerator'
     App\Platform\Identity\Domain\PostAuthenticationDestinationResolver: ~
+    App\Platform\Identity\Domain\ExternalIdentities: '@App\Platform\Identity\Infrastructure\Persistence\Doctrine\DoctrineExternalIdentities'
+    App\Platform\Identity\Domain\ExternalIdentityIdGenerator: '@App\Platform\Identity\Infrastructure\Identity\SymfonyExternalIdentityIdGenerator'
+    App\Platform\Identity\Domain\IdentityTransaction: '@App\Platform\Identity\Infrastructure\Persistence\Doctrine\DoctrineIdentityTransaction'
     App\Workforce\Domain\WorkerProfileCompletion: '@App\Platform\Identity\Infrastructure\Workforce\IdentityWorkerProfileCompletion'
     App\Workforce\Domain\AuthenticatedWorker: '@App\Platform\Identity\Infrastructure\Workforce\DatabaseAuthenticatedWorker'
 

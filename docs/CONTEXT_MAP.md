@@ -151,6 +151,10 @@ cuentas distintas. Registro y login usan sesión Symfony y el destino inicial se
 resuelve hacia Workforce cuando falta la asignación. `/app` y `/supervisor` son
 entradas separadas; el primero es el contexto por defecto para quien tiene ambos.
 
+Google OAuth es un adapter de Infrastructure de Identity. KnpU/League no cruzan
+hacia Application o Domain; ambos reciben únicamente proveedor, subject, email y
+la confirmación de verificación.
+
 El catálogo público español entra por un puerto en `Workforce\Domain`:
 
 ```php

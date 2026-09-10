@@ -79,3 +79,7 @@ catálogos buscables de Workforce y termina en `/app`; la asignación y el
 se representa separada de la de trabajador y su lobby está preparado, pero la
 creación administrativa de supervisores y la aprobación de cambios quedan para
 la siguiente slice.
+
+Google OAuth queda integrado como credencial principal de la identidad existente,
+con contraseña como fallback. La única operación externa pendiente es cargar las
+credenciales reales y las dos redirect URIs en Google Cloud Console.

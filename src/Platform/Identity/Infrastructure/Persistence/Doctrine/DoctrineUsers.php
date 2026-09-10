@@ -44,7 +44,9 @@ final readonly class DoctrineUsers implements Users
     /** @param array<string,mixed> $row */
     private function map(array $row): User
     {
-        return new User(new UserId($this->text($row['id'] ?? null)), new Email($this->text($row['email'] ?? null)), $this->text($row['password_hash'] ?? null), (bool) ($row['has_worker_profile'] ?? false), (bool) ($row['has_supervisor_profile'] ?? false), new DateTimeImmutable($this->text($row['created_at'] ?? null)));
+        $passwordHash = $row['password_hash'] ?? null;
+
+        return new User(new UserId($this->text($row['id'] ?? null)), new Email($this->text($row['email'] ?? null)), \is_string($passwordHash) ? $passwordHash : null, (bool) ($row['has_worker_profile'] ?? false), (bool) ($row['has_supervisor_profile'] ?? false), new DateTimeImmutable($this->text($row['created_at'] ?? null)));
     }
 
     private function text(mixed $value): string

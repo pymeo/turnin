@@ -2,6 +2,7 @@
 {% block title %}Completa tu contexto — Turnin{% endblock %}
 {% block body %}
 <main class="page flex flex-col gap-6">
+    {% include 'identity/_authenticated_header.html.twig' %}
     <header class="flex flex-col gap-2"><span class="card-title">Tu contexto laboral</span><h1 class="text-3xl font-bold">Casi listo</h1><p class="text-ink-muted">Una pregunta cada vez. Selecciona una opción de los resultados.</p></header>
     {% if error %}<p class="alert-critical" role="alert">{{ error }}</p>{% endif %}
     <form method="post" class="flex flex-col gap-5">

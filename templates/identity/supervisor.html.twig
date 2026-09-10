@@ -1,3 +1,3 @@
 {% extends 'base.html.twig' %}
 {% block title %}Gestión — Turnin{% endblock %}
-{% block body %}<main class="page flex flex-col gap-6"><h1 class="text-3xl font-bold">Cambios pendientes</h1><p class="empty-state">No tienes cambios pendientes.</p><a class="btn-ghost btn-block" href="{{ path('identity_app') }}">Volver a mis turnos</a></main>{% endblock %}
+{% block body %}<main class="page flex flex-col gap-6">{% include 'identity/_authenticated_header.html.twig' %}<h1 class="text-3xl font-bold">Cambios pendientes</h1><p class="empty-state">No tienes cambios pendientes.</p><a class="btn-ghost btn-block" href="{{ path('identity_app') }}">Volver a mis turnos</a></main>{% endblock %}

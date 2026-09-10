@@ -9,6 +9,8 @@ doctrine:
         types:
             datetime_immutable: Doctrine\DBAL\Types\DateTimeTzImmutableType
             workplace_id: App\Workforce\Infrastructure\Persistence\Doctrine\WorkplaceIdType
+            identity_user_id: App\Platform\Identity\Infrastructure\Persistence\Doctrine\UserIdType
+            identity_email: App\Platform\Identity\Infrastructure\Persistence\Doctrine\EmailType
 
     orm:
         validate_xml_mapping: true
@@ -32,6 +34,11 @@ doctrine:
                 is_bundle: false
                 dir: '%kernel.project_dir%/src/Workforce/Infrastructure/Persistence/Doctrine/Mapping'
                 prefix: 'App\Workforce\Domain'
+            Identity:
+                type: xml
+                is_bundle: false
+                dir: '%kernel.project_dir%/src/Platform/Identity/Infrastructure/Persistence/Doctrine/Mapping'
+                prefix: 'App\Platform\Identity\Domain'
 
 when@prod:
     doctrine:

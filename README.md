@@ -11,9 +11,9 @@ Empieza por sanidad en España —enfermería, TCAE, celadores, medicina, técni
 urgencias— y se extenderá a otros sectores por turnos.
 
 > **Estado: primeras slices.** La base técnica y el catálogo oficial de centros
-> sanitarios públicos están completos y probados. Workforce ya tiene la base de
-> categorías, unidades locales (incluido personal volante), asignaciones y pools;
-> Identity y la UX autenticada de onboarding son las siguientes slices. Lo que viene, en orden, está en
+> sanitarios públicos están completos y probados. Workforce ya tiene categorías,
+> unidades locales, asignaciones y pools; Identity dispone de contraseña, Google
+> OAuth, sesión y onboarding autenticado. Lo que viene, en orden, está en
 > [docs/ROADMAP.md](docs/ROADMAP.md).
 
 ## Arrancar
@@ -25,6 +25,11 @@ make setup
 ```
 
 Y ya está en <http://localhost:8080>.
+
+Para probar Google en desarrollo, crea `.env.local` con
+`GOOGLE_OAUTH_CLIENT_ID` y `GOOGLE_OAUTH_CLIENT_SECRET`, y registra
+`https://dev.turnin.es/auth/google/callback` en Google Cloud. La configuración
+completa está en [docs/authentication.md](docs/authentication.md).
 
 `make setup` construye las imágenes, levanta los servicios, instala dependencias,
 crea la base de datos, aplica migraciones y compila los assets. Es idempotente.
@@ -122,6 +127,7 @@ php-cs-fixer · Playwright · Graft.
 | [DEVELOPMENT.md](docs/DEVELOPMENT.md) | Día a día. |
 | [DEPLOYMENT.md](docs/DEPLOYMENT.md) | Imagen de producción y despliegue. |
 | [SECURITY.md](docs/SECURITY.md) | Amenazas, privacidad, caché offline. |
+| [authentication.md](docs/authentication.md) | Contraseña, Google OAuth, callbacks y secretos. |
 | [GRAPH.md](docs/GRAPH.md) | Graft. |
 | [ROADMAP.md](docs/ROADMAP.md) | Qué viene y qué deuda hay. |
 | [DECISIONS.md](docs/DECISIONS.md) | Decisiones menores, con su motivo. |

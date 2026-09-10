@@ -1,0 +1,7 @@
+<header class="flex items-center justify-between gap-4" aria-label="Sesión">
+    <a href="{{ path('identity_app') }}" class="font-bold text-brand-700">Turnin</a>
+    <form method="post" action="{{ path('identity_logout') }}">
+        <input type="hidden" name="_csrf_token" value="{{ csrf_token('logout') }}">
+        <button class="btn-ghost" type="submit">Salir</button>
+    </form>
+</header>

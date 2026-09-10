@@ -21,9 +21,13 @@ security:
                 check_path: identity_login
                 enable_csrf: true
                 default_target_path: /app
+                success_handler: App\Platform\Identity\Infrastructure\Security\PostAuthenticationSuccessHandler
+            custom_authenticators:
+                - App\Platform\Identity\Infrastructure\Security\GoogleAuthenticator
             logout:
                 path: identity_logout
                 target: web_home
+                enable_csrf: true
 
             # Activate different ways to authenticate:
             # https://symfony.com/doc/current/security.html#the-firewall

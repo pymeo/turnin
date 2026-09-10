@@ -75,6 +75,11 @@ parameters:
               - type: classNameRegex
                 value: '#^Monolog\\#'
 
+        - name: OAuth
+          collectors:
+              - type: classNameRegex
+                value: '#^(KnpU\\OAuth2ClientBundle|League\\OAuth2\\Client)\\#'
+
     ruleset:
         # The whole point: the model is plain PHP.
         Domain:
@@ -95,6 +100,7 @@ parameters:
             - Doctrine
             - Twig
             - Monolog
+            - OAuth
 
         AppRoot:
             - Php
@@ -106,3 +112,4 @@ parameters:
         Doctrine: ~
         Twig: ~
         Monolog: ~
+        OAuth: ~

@@ -33,8 +33,9 @@ final class IdentityController
         }
 
         $lastEmail = $request->getSession()->get('_security.last_username', '');
+        $authenticationError = $request->getSession()->remove('identity.authentication_error');
 
-        return new Response($this->twig->render('identity/login.html.twig', ['last_email' => \is_string($lastEmail) ? $lastEmail : '']));
+        return new Response($this->twig->render('identity/login.html.twig', ['last_email' => \is_string($lastEmail) ? $lastEmail : '', 'authentication_error' => \is_string($authenticationError) ? $authenticationError : null]));
     }
 
     #[Route('/register', name: 'identity_register', methods: ['GET', 'POST'])]
@@ -60,7 +61,7 @@ final class IdentityController
         return new Response($this->twig->render('identity/register.html.twig', ['error' => $error]));
     }
 
-    #[Route('/logout', name: 'identity_logout', methods: ['GET', 'POST'])]
+    #[Route('/logout', name: 'identity_logout', methods: ['POST'])]
     public function logout(): never
     {
         throw new LogicException('Intercepted by the firewall.');

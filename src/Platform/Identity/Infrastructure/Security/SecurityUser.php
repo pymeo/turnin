@@ -4,14 +4,20 @@ declare(strict_types=1);
 
 namespace App\Platform\Identity\Infrastructure\Security;
 
+use App\Platform\Identity\Domain\User;
 use LogicException;
 use Symfony\Component\Security\Core\User\PasswordAuthenticatedUserInterface;
 use Symfony\Component\Security\Core\User\UserInterface;
 
 final readonly class SecurityUser implements UserInterface, PasswordAuthenticatedUserInterface
 {
-    public function __construct(private string $id, private string $email, private string $hash, private bool $worker, private bool $supervisor)
+    public function __construct(private string $id, private string $email, private ?string $hash, private bool $worker, private bool $supervisor)
     {
+    }
+
+    public static function fromDomain(User $user): self
+    {
+        return new self($user->id->value, $user->email->value, $user->passwordHash, $user->hasWorkerProfile, $user->hasSupervisorProfile);
     }
 
     /** @return non-empty-string */
@@ -24,7 +30,7 @@ final readonly class SecurityUser implements UserInterface, PasswordAuthenticate
         return $this->email;
     }
 
-    public function getPassword(): string
+    public function getPassword(): ?string
     {
         return $this->hash;
     }
