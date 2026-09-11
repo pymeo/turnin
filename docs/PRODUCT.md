@@ -23,7 +23,8 @@ modelo tiene que soportarlas sin reescribirse. Por eso el `SwapPool`
 
 ## Qué puede hacer un usuario
 
-* introducir o importar su calendario;
+* introducir su calendario pintándolo, repitiendo su patrón o dictándolo
+  —implementado—; importarlo desde un PDF o una foto, todavía no;
 * pertenecer a un centro y a uno o varios grupos de intercambio compatibles;
 * indicar su disponibilidad;
 * recibir propuestas —y solo las relevantes;

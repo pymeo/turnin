@@ -36,6 +36,7 @@ export default class extends Controller {
 			input.checked = input.value === 'skip_existing';
 		}
 		this.clearError();
+		this.showCalculating();
 		openSheet(this.sheetTarget);
 		await this.refresh();
 	}
@@ -43,6 +44,27 @@ export default class extends Controller {
 	changePolicy(event) {
 		this.policy = event.currentTarget.value;
 		this.refresh();
+	}
+
+	/*
+	 * The sheet opens immediately because that is what a tap should feel like,
+	 * so it has to have something to say while the preview is still on its way.
+	 * An empty sheet reads as a broken one.
+	 */
+	showCalculating() {
+		this.countsTarget.textContent = 'Calculando…';
+		this.listTarget.replaceChildren(...Array.from({ length: 3 }, () => {
+			const row = document.createElement('div');
+			row.className = 'preview-row';
+			const bar = document.createElement('span');
+			bar.className = 'skeleton h-4 w-full';
+			row.append(bar);
+			return row;
+		}));
+		this.conflictsTarget.classList.add('hidden');
+		this.warningsTarget.classList.add('hidden');
+		this.confirmTarget.disabled = true;
+		this.confirmTarget.textContent = 'Calculando…';
 	}
 
 	async refresh() {

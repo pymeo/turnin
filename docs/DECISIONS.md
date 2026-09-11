@@ -15,6 +15,7 @@ con el motivo al lado.
 | [5](adr/0005-time-and-clock.md) | El tiempo entra por un puerto |
 | [6](adr/0006-identity-capabilities-and-auth-flow.md) | Identidad única y capacidades separadas |
 | [7](adr/0007-external-identities.md) | Proveedores externos como credenciales |
+| [8](adr/0008-roster-and-calendar-model.md) | Calendario personal: RosterDay, snapshots y un único escritor |
 
 ## 2026-09-10 — No persistir tokens de Google
 
@@ -38,6 +39,37 @@ el flujo debe reanudarse en otro dispositivo y esos datos laborales no deben
 entrar en la caché offline de la PWA. Las unidades de referencia se materializan
 en el centro al seleccionarlas; una unidad escrita por el usuario nace local y
 pendiente, sin fingir que está verificada.
+
+## 2026-09-11 — El calendario se persiste con DBAL, no con el ORM
+
+`RosterDay` posee sus segmentos, y una asociación de Doctrine exigiría un
+`Collection` sobre una clase de `Domain`. Es el mismo caso que
+`WorkerOnboardingDraft` y se resuelve igual: repositorio en `Infrastructure`
+hablando DBAL, agregado de PHP puro. El mapeo XML que pide
+[AGENTS.md](../AGENTS.md) aplica a los agregados que sí van por el ORM; aquí la
+alternativa era peor que la excepción. Ver
+[ADR 8](adr/0008-roster-and-calendar-model.md).
+
+## 2026-09-11 — Identificadores de Scheduling como `string`, no como value object
+
+`Workplace` tiene `WorkplaceId`; `WorkerAssignment`, `SwapPool` y
+`OrganizationalUnit` —todo lo escrito después— usan `string`. Scheduling sigue a
+la mayoría. Un VO por agregado aquí serían cuatro clases y cuatro tipos de
+Doctrine que no protegen ninguna regla que la base de datos no proteja ya con
+`UUID`.
+
+## 2026-09-11 — El borrador del calendario no se persiste
+
+`ScheduleDraft` vive en el navegador mientras se pinta y en la petición cuando se
+confirma. Persistirlo añadiría una tabla, un ciclo de vida y una limpieza
+periódica para recuperar como mucho unos toques; el borrador de onboarding sí se
+persiste porque ese flujo dura días y cambia de dispositivo, y éste dura segundos.
+
+## 2026-09-11 — `endsNextDay` se deriva, no se almacena
+
+Un fin igual o anterior al inicio solo puede significar el día siguiente, y
+08:00→08:00 es la guardia de 24 horas. Guardar también el flag permitiría que
+columna y horas se contradijeran, y esa fila no tendría lectura correcta.
 
 ## Versiones
 

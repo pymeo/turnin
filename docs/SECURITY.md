@@ -118,6 +118,38 @@ Las dos claves entran por `PII_HMAC_KEY` y `PII_ENCRYPTION_KEY`; producción fal
 al arrancar si faltan. Los identificadores ya asociados no se pueden cambiar
 desde el onboarding: requieren un futuro proceso de soporte con verificación.
 
+## Dictado del cuadrante
+
+**Turnin no almacena audio.** El reconocimiento lo hace el navegador con
+`SpeechRecognition`; lo que llega al servidor es exclusivamente la transcripción
+en texto, dentro de la petición que la interpreta. No se guarda ningún blob, ni
+grabación, ni fichero temporal.
+
+Tampoco se afirma que el reconocimiento sea local: en Chrome suele apoyarse en
+servicios de Google, y eso ocurre entre el navegador y ese proveedor, fuera de
+Turnin. La interfaz ofrece siempre la alternativa de escribirlo.
+
+El texto dictado es un cuadrante, así que se trata como dato laboral: se
+interpreta y se descarta. **No se registra en logs ni en analítica.** Los eventos
+de producto cuentan que se usó el dictado, nunca qué se dijo.
+
+El parser es determinista y vive en `Scheduling\Domain`: no llama a ningún
+servicio externo ni a ningún modelo. Un cuadrante no sale de aquí.
+
+## El calendario es dato privado
+
+Un `RosterDay` dice dónde está una persona cada día. Es el dato más sensible que
+maneja Turnin después de los identificadores personales:
+
+* toda ruta de `/app/calendar` exige sesión y resuelve la asignación laboral **en
+  el servidor**. Ningún endpoint acepta un `workerAssignmentId` del cliente;
+* los turnos que se pueden aplicar son los `ShiftPreset` de la propia asignación:
+  un id de otra cuenta no resuelve, así que no se puede escribir con él;
+* las mutaciones van por `POST` con token CSRF (`X-CSRF-TOKEN`), igual que el
+  onboarding;
+* el calendario **no entra en la caché offline** de la PWA. Ver
+  [§ Datos offline](#datos-offline).
+
 ## `/health`
 
 Es público y sin autenticar, porque lo consultan Docker y el balanceador antes de

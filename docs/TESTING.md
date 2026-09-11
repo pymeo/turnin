@@ -139,3 +139,26 @@ recogiendo datos: cada respuesta lleva `X-Debug-Token-Link`.
 * Nada de datos compartidos entre tests: el orden es aleatorio.
 * Si necesitas el kernel para probar una regla de negocio, la regla está mal
   colocada.
+
+## E2E: un trabajador onboardeado por worker
+
+El calendario cuelga de una asignación laboral, y crearla es pasar por el
+registro y los siete pasos del onboarding. Hacerlo una vez por test ponía cinco
+navegadores a rellenar formularios a la vez, que era con diferencia lo más caro
+—y lo más frágil— de la suite.
+
+`tests/E2E/support/worker.ts` lo hace **una vez por worker de Playwright** y
+guarda el `storageState`. Los tests siguen siendo independientes porque cada uno
+trabaja sobre **su propio mes**; si añades uno, dale un mes que no use nadie.
+
+El onboarding sigue ejecutándose a través de la interfaz, no sembrando la base de
+datos: es la única forma de que el test demuestre que las dos slices encajan.
+
+Dos avisos sobre esta suite, ambos anotados en
+[ROADMAP.md](ROADMAP.md#deuda-técnica-conocida):
+
+* corre contra la base de datos de **desarrollo** y deja cuentas y unidades
+  locales detrás. Eso cambia el ranking de sugerencias del onboarding, así que
+  ningún test debe asumir *qué* unidad o categoría sale primero —solo que salen—;
+* no hay reseteo entre ejecuciones. Si el onboarding empieza a fallar por datos
+  acumulados, mira ahí antes que al código.

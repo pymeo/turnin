@@ -197,6 +197,24 @@ final class CalendarFlowTest extends WebTestCase
         self::assertStringContainsString('turno de mañana', (string) $october->filter('[data-day="2026-10-02"]')->attr('aria-label'));
     }
 
+    /**
+     * A roster says where a person is every day. The service worker already
+     * refuses to cache navigations; this checks nothing downstream is invited to
+     * either. See docs/SECURITY.md § El calendario es dato privado.
+     */
+    public function test_the_calendar_is_never_offered_to_a_shared_cache(): void
+    {
+        $client = $this->workerWithAssignment();
+
+        foreach (['/app/calendar', '/app/calendar/grid?month=2026-09'] as $url) {
+            $client->request('GET', $url);
+            $cacheControl = (string) $client->getResponse()->headers->get('Cache-Control');
+
+            self::assertStringContainsString('private', $cacheControl, $url.' must not be publicly cacheable.');
+            self::assertStringContainsString('must-revalidate', $cacheControl, $url.' must be revalidated.');
+        }
+    }
+
     public function test_a_request_without_a_csrf_token_is_refused(): void
     {
         $client = $this->workerWithAssignment();

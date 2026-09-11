@@ -69,7 +69,12 @@ export default class extends Controller {
 		const names = ['enero', 'febrero', 'marzo', 'abril', 'mayo', 'junio', 'julio', 'agosto', 'septiembre', 'octubre', 'noviembre', 'diciembre'];
 		this.daySheetTitleTarget.textContent = `${day} de ${names[month - 1]} de ${year}`;
 		const unknown = cell.dataset.state === 'unknown';
-		this.daySheetDetailTarget.textContent = unknown ? 'Aún no has indicado tu turno.' : cell.getAttribute('aria-label').split(', ').slice(1).join(', ');
+		// The cell's own label already spells the day out for a screen reader;
+		// the sheet reuses everything after the date.
+		const described = (cell.getAttribute('aria-label') || '').split(', ').slice(1).join(', ');
+		this.daySheetDetailTarget.textContent = unknown
+			? 'Aún no has indicado tu turno.'
+			: described.charAt(0).toLocaleUpperCase('es') + described.slice(1);
 		this.daySheetClearTarget.classList.toggle('hidden', unknown);
 		openSheet(this.daySheetTarget);
 	}
@@ -136,6 +141,8 @@ export default class extends Controller {
 	paintModeChanged(event) {
 		this.painting = event.detail.active;
 		this.addButtonTarget.classList.toggle('hidden', this.painting);
+		// The dock is much taller while painting; the shell makes room for it.
+		this.element.dataset.painting = String(this.painting);
 	}
 
 	changed(event) {
@@ -153,6 +160,7 @@ export default class extends Controller {
 			this.detected = payload.result;
 			const found = Boolean(this.detected);
 			this.detectionTarget.classList.toggle('hidden', !found);
+			this.detectionTarget.classList.toggle('flex', found);
 			if (found) {
 				this.detectionTextTarget.textContent = `Parece que este patrón se repite cada ${this.detected.length} días: ${this.detected.sequence}.`;
 			}

@@ -19,6 +19,7 @@
                 data-state="{{ cell.state }}"
                 data-outside="{{ cell.inMonth ? 'false' : 'true' }}"
                 data-today="{{ cell.isToday ? 'true' : 'false' }}"
+                data-weekend="{{ cell.isWeekend ? 'true' : 'false' }}"
                 aria-pressed="false"
                 aria-label="{{ cell.ariaLabel }}{{ cell.isToday ? ', hoy' : '' }}">
             <span class="calendar-cell-number">{{ cell.dayNumber }}</span>

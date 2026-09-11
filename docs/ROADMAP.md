@@ -19,13 +19,17 @@ con tests: media funcionalidad sin pantalla no es media funcionalidad, es deuda.
 * **3. Perfil profesional + onboarding.** Flujo móvil reanudable para nombre,
   identidad, centro, categoría y destinos; crea memberships y permite actualizar
   la asignación laboral existente.
+* **5. Calendario personal.** `Scheduling` con `RosterDay`, `ShiftSegment`,
+  `ShiftPreset` y `RosterPattern`. Tres entradas —pintar, patrón y voz/texto—
+  que convergen en un `ScheduleDraft`, con preview obligatorio y política de
+  conflictos explícita. Parser determinista sin IA ni servicios externos.
 
 ## Siguiente
 
+Los números son los de la slice, no el orden de la lista: la 5 ya está hecha.
+
 4. **SwapPool y Membership.** El concepto del que depende todo el matching
    (→ [DOMAIN.md](DOMAIN.md#swappool-el-concepto-que-hay-que-entender)).
-5. **Calendario y Shift.** Introducción manual de turnos. La importación de
-   cuadrantes es otra historia, y más difícil.
 6. **Availability.** «Quiero mañanas», «podría el finde».
 7. **Solicitar un cambio simple.** El primer `SwapRequest`: un turno concreto por
    otro turno concreto, dirigido a una persona concreta.
@@ -56,13 +60,24 @@ Problemas reales, no una lista de deseos.
 | Perfiles de supervisor aún sin alta administrativa | La identidad ya soporta la capacidad, pero no se auto-concede permisos | Slice responsable |
 | E2E solo en Chromium | La imagen de Playwright trae los tres motores; falta activarlos | Cuando haya UI que merezca la matriz |
 | `graft/` no versionado | Se aparta de Pymeo; ver [GRAPH.md](GRAPH.md#qué-no-versionamos) | Si CI llega a depender del grafo |
+| Rehacer el onboarding esconde el calendario | `CompleteWorkerOnboarding` desactiva la asignación e inserta una nueva con otro id, y el calendario cuelga de la asignación. Los datos siguen ahí, pero dejan de mostrarse | Con la primera edición real de perfil: o la asignación conserva su id cuando la clave de pool no cambia, o el calendario se traslada a la nueva |
+| `workforce_worker_assignments.worker_id` sin clave foránea | Borrar una cuenta deja la asignación, sus memberships y ahora su calendario huérfanos. Añadirla exige limpiar primero los huérfanos existentes | Antes del primer usuario real, junto con las copias de seguridad |
+| E2E contra la base de datos de desarrollo | La suite crea cuentas, asignaciones y unidades locales que alteran el ranking de sugerencias del onboarding. Los tests ya no asumen qué unidad sale primero, pero la acumulación sigue | Cuando `make test-e2e` necesite ser determinista en CI: base propia y reseteo entre ejecuciones |
 | Imagen de producción ~910 MB | `php:8.5-fpm-trixie` son 741 MB de base. Alpine la dejaría en ~190 MB, pero musl trae ICU recortado (`icu-data-full`) y Turnin formatea fechas en español: no es el momento de arriesgar eso | Cuando el tiempo de despliegue moleste, con verificación de locales |
 
 ## Decisiones aplazadas
 
 * **Importación de cuadrantes.** Cada centro los publica de forma distinta —PDF,
   Excel, capturas—. Es un producto en sí mismo y probablemente el foso defensivo
-  más profundo de Turnin. No se toca hasta que el ciclo manual funcione.
+  más profundo de Turnin. No se toca hasta que el ciclo manual funcione. El
+  camino ya está abierto: `RosterSource::IMPORT` existe y cualquier importador
+  produce un `ScheduleDraft` que pasa por el escritor actual.
+* **Exportar el calendario a `.ics`.** Descarga de un mes como calendario
+  estándar. Barato de hacer y no bloquea nada, pero no aporta al ciclo de
+  intercambio, que es lo que decide si Turnin sirve para algo.
+* **Editar las horas de un segmento sin tocar el preset.** Hoy un turno se
+  cambia eligiendo otro preset; un horario excepcional se resuelve creando un
+  preset. Basta mientras no aparezca alguien con turnos irrepetibles.
 * **Aprobación de supervisión.** Muchos centros exigen visto bueno para un cambio.
   Está previsto en la máquina de estados (`awaiting_approval`) y no implementado.
 * **Motor de reglas por pool.** Hoy la compatibilidad se preguntará al `SwapPool`
@@ -70,6 +85,24 @@ Problemas reales, no una lista de deseos.
   con reglas contradictorias, no antes.
 * **REGCESS privado.** Es una fuente futura posible para clínicas y otros centros
   privados; el catálogo inicial se limita deliberadamente a sanidad pública/SNS.
+
+## Slice completada: calendario personal
+
+`/app/calendar` muestra el mes en una cuadrícula de seis semanas y ofrece tres
+maneras de rellenarlo. Pintar: se elige un turno y se tocan o arrastran los días,
+con deshacer, y nada se guarda hasta confirmar. Patrón: se construye la rotación
+tocándola, se elige desde cuándo y durante cuánto, y se previsualiza antes de
+aplicar. Voz y texto: el navegador transcribe, el parser interpreta y el
+resultado pasa por la misma pantalla de confirmación.
+
+Las tres convergen en `ScheduleDraft`, se resuelven contra lo que ya hay con
+`ConflictPolicy` y se escriben en una sola operación transaccional.
+
+Queda fuera a propósito: la importación de cuadrantes, la exportación `.ics`, la
+edición de horas por día sin pasar por un preset y cualquier sugerencia que
+necesite un motor de matching. El panel de oportunidades solo dice lo que el
+calendario ya sabe —«tienes 4 días libres seguidos»— y no inventa cambios
+posibles.
 
 ## Slice completada: Identity y entrada a Workforce
 

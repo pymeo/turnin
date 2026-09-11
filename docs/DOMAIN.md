@@ -5,9 +5,10 @@ debería aparecer en el código; si aparece en el código y no está aquí, falt
 actualizarlo.
 
 > **Estado**: `Platform\System`, `Platform\Identity`, el catálogo
-> `Workforce.Workplace` y la base del contexto laboral (`StaffCategory`,
-> `OrganizationalUnit`, `WorkerAssignment` y `SwapPool`) están implementados.
-> Turnos y matching siguen siendo trabajo posterior.
+> `Workforce.Workplace`, la base del contexto laboral (`StaffCategory`,
+> `OrganizationalUnit`, `WorkerAssignment` y `SwapPool`) y el calendario personal
+> (`Scheduling`: `RosterDay`, `ShiftPreset`, `RosterPattern`) están
+> implementados. Availability, swap y matching siguen siendo trabajo posterior.
 
 ## Vocabulario
 
@@ -24,6 +25,12 @@ actualizarlo.
 | **PersonalProfile** | Nombre y teléfono protegido de una persona, separado de su asignación laboral. |
 | **UsageIdentity** | Evidencia privada que impide cuentas duplicadas mediante huellas no reversibles de DNI/NIE y teléfono. |
 | **Employer** | Empresa o servicio de salud que emplea a la persona en el centro. |
+| **RosterDay** | Un día del cuadrante de una persona: `REST` o `WORKING`. Que no exista significa que aún no lo ha indicado. |
+| **ShiftSegment** | Un tramo de trabajo dentro de un día. Guarda copia del preset con el que se creó. |
+| **ShiftPreset** | El botón rápido del trabajador: «Mañana, M, 08:00–15:00». Plantilla, no registro. |
+| **RosterPattern** | Una rotación repetible, en `PatternSlot` ordenados: M M T T N N L L L. |
+| **ScheduleDraft** | Una propuesta de días, antes de escribir nada. Pintar, patrón y voz terminan aquí. |
+| **ShiftWindow** | Las horas de un segmento, en hora de pared. Deriva si termina al día siguiente. |
 | **Shift** | Un turno concreto: quién, dónde, qué día laboral, qué franja. |
 | **ShiftKind** | Mañana, tarde, noche… La franja, no las horas exactas. |
 | **WorkDate** | El *día laboral* al que se imputa un turno. No es un timestamp. |
@@ -63,6 +70,79 @@ Invariantes:
 Palabras que **no** usamos: *oferta*, *precio*, *puja*, *mercado*, *crédito*,
 *token*. Turnin no es un mercado y el vocabulario lo refleja
 (→ [PRODUCT.md](PRODUCT.md#favores-pendientes)).
+
+## `Scheduling` — el calendario personal implementado
+
+El dato del que depende todo lo demás: sin saber qué trabaja la gente no hay
+matching, ni disponibilidad, ni puentes.
+
+### `RosterDay` y por qué no existe `UNKNOWN`
+
+Un día existe como fila **solo cuando el trabajador ha dicho algo sobre él**. Los
+estados son `REST` y `WORKING`. No hay un tercer estado: no saber no es un dato
+del día, es la ausencia del día.
+
+```
+sin fila        →  no lo ha indicado        (UNKNOWN)
+state = REST    →  libra                    (sin segmentos)
+state = WORKING →  trabaja                  (uno o más ShiftSegment)
+```
+
+**`vacío` no es `libre`.** Es la invariante más importante de este contexto:
+ofrecer el descanso de alguien porque una celda estaba vacía sería el peor fallo
+que puede cometer Turnin. Los resúmenes del mes cuentan los días desconocidos
+aparte y nunca como libres.
+
+Invariantes:
+
+* `UNIQUE (worker_assignment_id, date)`, con constraint real en PostgreSQL;
+* un día `REST` no puede llevar segmentos;
+* un día `WORKING` necesita al menos uno, y sus segmentos no se solapan;
+* borrar la información de un día **elimina la fila** y lo devuelve a UNKNOWN;
+  marcarlo libre **crea** una fila `REST`. Son operaciones distintas.
+
+### `ShiftSegment` guarda un snapshot
+
+Al aplicar un `ShiftPreset`, el segmento **copia** etiqueta, abreviatura y horas.
+El preset es una plantilla; el calendario histórico es un registro. Corregir
+«Mañana» de 08:00–15:00 a 07:30–14:30 afecta al siguiente toque, nunca a marzo.
+
+Un día admite varios segmentos desde el principio: el turno partido y el
+«turno + guardia» son corrientes, y añadir el segundo después obliga a migrar
+cuadrantes vivos.
+
+### `ShiftPreset`: libre no es un turno
+
+Los botones rápidos del trabajador, con sus aliases para el dictado («guardia»,
+«g», «24 horas»). Se retiran (`active = false`), nunca se borran: hay segmentos
+de hace meses que los nombran.
+
+**No existe un preset «Libre».** Librar es `RosterDayState::REST`, una propiedad
+del día. Modelarlo como turno lo metería en toda consulta que cuente horas
+trabajadas. En la interfaz sí aparece junto a los turnos, porque ahí es donde el
+pulgar lo busca.
+
+### `ScheduleDraft`: un solo camino de escritura
+
+```
+pintar   ┐
+patrón   ├─→ ScheduleDraft ─→ resolver ─→ preview ─→ confirmar ─→ escribir
+voz/texto┘
+```
+
+Tres formas de entrar, un modelo y un escritor. Nada se guarda sin confirmación
+explícita, y los conflictos se resuelven con `ConflictPolicy` —`SKIP_EXISTING`
+por defecto, `REPLACE_EXISTING` solo si la persona lo pide—. Ver
+[ADR 8](adr/0008-roster-and-calendar-model.md).
+
+### Voz y texto
+
+La voz produce texto en el navegador; Turnin recibe la transcripción y nada más.
+**No se almacena audio.** El `ScheduleTextParser` es determinista, vive en
+`Domain` y no llama a ningún servicio: entiende «1 y 2 mañana», «del 1 al 4
+mañana», «1-4 mañana», «uno y dos mañana», los aliases de cada preset y las
+rotaciones dictadas («mi patrón es mañana mañana tarde tarde…»). Lo que no
+entiende lo devuelve como fragmento no reconocido; nunca lo adivina.
 
 ## SwapPool: el concepto que hay que entender
 
@@ -177,9 +257,14 @@ validar nada es ruido.
 
 * `WorkDate` — el día laboral. Un turno de noche del sábado que termina el domingo
   a las 08:00 **es un turno del sábado**. Confundir esto con un timestamp rompe
-  cuadrantes enteros.
-* `ShiftKind` — enum: mañana, tarde, noche, guardia…
-* `TimeRange` — inicio y fin, con la invariante de que fin > inicio.
+  cuadrantes enteros. Implementado en `Scheduling\Domain` con aritmética entera
+  sobre días julianos: ninguna zona ni cambio horario puede mover una fecha.
+* `RosterMonth` — el mes que carga y navega la pantalla del calendario.
+* `ShiftKind` — enum: mañana, tarde, noche, 12 h, guardia…
+* `LocalTime` — hora de pared, sin zona. `'22:00'` no es un instante.
+* `ShiftWindow` — inicio y fin de un segmento. **Fin > inicio no se cumple**: un
+  turno de noche va de 22:00 a 08:00, y `endsNextDay()` se deriva de ahí en lugar
+  de almacenarse.
 * `<Aggregate>Id` — UUID v7 validado.
 * `ProfessionalCategory` — enfermería, TCAE, celador…
 
@@ -243,7 +328,7 @@ Se publican cuando ocurre algo que el negocio reconoce, no en cada `save()`.
 | `SwapRequestOpened` | Matching |
 | `SwapProposalCreated` | Notification |
 | `SwapProposalAccepted` | Swap (para cerrar el acuerdo), Notification |
-| `SwapAgreementSettled` | Scheduling (aplicar el cambio al calendario), ShiftDebt |
+| `SwapAgreementSettled` | Scheduling (aplicar el cambio al calendario vía `ScheduleDraft` con `RosterSource::SWAP`), ShiftDebt |
 | `ShiftDebtIncurred` / `ShiftDebtSettled` | Notification |
 | `AvailabilityChanged` | Matching |
 

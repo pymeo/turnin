@@ -58,6 +58,7 @@ Hoy existen físicamente tres módulos bajo `Platform` y un contexto de producto
 | `Platform\Web`     | El shell web: la landing pública. Sin dominio propio, y así se declara. |
 | `Platform\Identity` | Cuenta, contraseña, OAuth, sesión y perfil personal protegido.        |
 | `Workforce`        | Catálogo, asignación, pools y onboarding laboral reanudable.            |
+| `Scheduling`       | El calendario personal: días, turnos, patrones y su entrada por voz.    |
 
 No hay más porque no hay más producto todavía. El mapa de contextos previsto está
 en [CONTEXT_MAP.md](CONTEXT_MAP.md); se crean cuando se implementan, no antes.
@@ -118,11 +119,11 @@ permite que `deptrac` prohíba `Domain → Doctrine` de verdad y no como aspirac
 ```yaml
 # config/packages/doctrine.yaml — una entrada por contexto según vayan apareciendo
 mappings:
-    Scheduling:
+    Workforce:
         type: xml
         is_bundle: false
-        dir: '%kernel.project_dir%/src/Scheduling/Infrastructure/Persistence/Doctrine/Mapping'
-        prefix: 'App\Scheduling\Domain'
+        dir: '%kernel.project_dir%/src/Workforce/Infrastructure/Persistence/Doctrine/Mapping'
+        prefix: 'App\Workforce\Domain'
 ```
 
 `auto_mapping` está desactivado a propósito: buscaría entidades anotadas por todo
@@ -133,6 +134,13 @@ Los repositorios son **interfaces en `Domain`** con nombres del negocio
 `Infrastructure`. No hay repositorio genérico: un `findBy(array $criteria)` es una
 consulta SQL disfrazada que traslada la decisión al llamante.
 
+Hay dos agregados que **no** pasan por el ORM: `WorkerOnboardingDraft` y
+`RosterDay`. Ambos poseen una colección hija, y una asociación de Doctrine
+exigiría un `Doctrine\Common\Collections\Collection` sobre una clase de
+`Domain` —la dependencia que `deptrac.yaml` existe para impedir—. Sus
+repositorios hablan DBAL y construyen el agregado a mano. Está razonado en
+[ADR 8](adr/0008-roster-and-calendar-model.md).
+
 ## Identificadores
 
 UUID v7 mediante `symfony/uid`, generados en `Infrastructure`. Nunca autoincrement.
@@ -140,10 +148,13 @@ UUID v7 mediante `symfony/uid`, generados en `Infrastructure`. Nunca autoincreme
 v7 en lugar de v4 porque es ordenable temporalmente: los índices de PostgreSQL no
 se fragmentan y las claves quedan naturalmente ordenadas por creación.
 
-El `Domain` no conoce `Symfony\Component\Uid`. Cada agregado tendrá su propio
-value object de identidad (`SwapRequestId`) que valida el formato; generarlo es
-tarea de un puerto, igual que el reloj. Todavía no existe ninguno porque todavía
-no hay agregados: se creará con el primero, no antes.
+El `Domain` no conoce `Symfony\Component\Uid`: generarlos es tarea de un puerto
+(`WorkplaceIdGenerator`, `RosterIdGenerator`…), igual que el reloj.
+
+Un value object de identidad por agregado es opcional y se usa donde protege una
+regla: `WorkplaceId` valida el formato porque la identidad del catálogo llega de
+fuera. `WorkerAssignment`, `SwapPool` y los agregados de `Scheduling` usan
+`string`, porque ahí el VO no protegería nada que la columna `UUID` no proteja ya.
 
 ## Tiempo
 

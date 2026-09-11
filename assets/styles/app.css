@@ -458,6 +458,12 @@
 	padding-top: max(0.75rem, env(safe-area-inset-top));
 	/* Room for the docked CTA so the last week is never hidden behind it. */
 	padding-bottom: calc(6.5rem + env(safe-area-inset-bottom));
+
+	/* Paint mode replaces that CTA with a palette, an undo row and a save
+	   button, so the page needs to make room for all three. */
+	&[data-painting="true"] {
+		padding-bottom: calc(16rem + env(safe-area-inset-bottom));
+	}
 }
 
 @utility calendar-header {
@@ -498,6 +504,12 @@
 
 	& > .calendar-cell-number {
 		@apply text-[0.82rem] leading-none font-semibold;
+	}
+
+	/* Saturdays and Sundays read a shade quieter, which is enough to find a
+	   weekend at a glance without adding another colour to the palette. */
+	&[data-weekend="true"] > .calendar-cell-number {
+		@apply text-ink-muted;
 	}
 
 	& > .calendar-cell-code {
@@ -565,8 +577,13 @@
 	}
 }
 
+/* An accent rule rather than an icon: no emoji font to depend on, and it reads
+   as a note instead of a notification. */
 @utility calendar-insight {
-	@apply flex items-start gap-2 rounded-[var(--radius-control)] bg-surface-muted px-3 py-2 text-sm;
+	@apply rounded-[var(--radius-control)] bg-surface-muted px-3 py-2 text-sm;
+	border-left: 3px solid var(--ring);
+	border-start-start-radius: 0.25rem;
+	border-end-start-radius: 0.25rem;
 }
 
 @utility next-shift-card {

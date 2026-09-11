@@ -19,9 +19,6 @@
         {% endif %}
     </p>
     {% for insight in month.insights %}
-        <p class="calendar-insight">
-            <span aria-hidden="true">🌤</span>
-            <span><strong class="font-semibold text-ink">{{ insight.headline }}</strong> {{ insight.detail }}</span>
-        </p>
+        <p class="calendar-insight"><strong class="font-semibold text-ink">{{ insight.headline }}.</strong> {{ insight.detail }}</p>
     {% endfor %}
 </div>

@@ -58,12 +58,9 @@
 
     {# A repeating rotation we spotted in what the worker already entered. Only
        ever shown for an exact repetition over at least two whole cycles. #}
-    <section class="calendar-insight hidden" data-calendar-target="detection" aria-live="polite">
-        <span aria-hidden="true">🔁</span>
-        <span class="flex min-w-0 flex-col gap-1">
-            <span data-calendar-target="detectionText"></span>
-            <button type="button" class="btn-ghost self-start px-0 text-sm" data-action="calendar#repeatDetectedPattern">Repetir automáticamente</button>
-        </span>
+    <section class="calendar-insight hidden flex-col gap-1" data-calendar-target="detection" aria-live="polite">
+        <span data-calendar-target="detectionText"></span>
+        <button type="button" class="btn-ghost self-start px-0 text-sm" data-action="calendar#repeatDetectedPattern">Repetir automáticamente</button>
     </section>
 
     <div class="calendar-dock">

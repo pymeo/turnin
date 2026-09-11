@@ -10,10 +10,14 @@ Platform
 
 Workforce
 └── Workplace + Workforce assignment + SwapPool                 [IMPLEMENTADO]
+
+Scheduling
+└── RosterDay + ShiftPreset + RosterPattern                     [IMPLEMENTADO]
 ```
 
-Scheduling, Swap, Matching, Notification, Billing y Coverage siguen siendo el
-destino, no el presente.
+Swap, Matching, Notification, Billing y Coverage siguen siendo el destino, no el
+presente. De `Scheduling` existe el calendario personal; `Availability` todavía
+no.
 
 **Un contexto se crea cuando se implementa.** Crear veinte directorios vacíos con
 sus tres capas cada uno no es diseño, es ruido: nadie sabe cuáles están vivos, el
@@ -133,6 +137,8 @@ porque los datos de `Identity` tienen un régimen de privacidad más estricto.
 | Relación | Patrón | Por qué |
 | --- | --- | --- |
 | Identity → Workforce | *Shared kernel* mínimo: solo el `UserId` | Workforce no necesita saber nada más de una persona |
+| Identity → Scheduling | Puerto `AuthenticatedWorkers`, declarado por Scheduling | Quién ha iniciado sesión lo sabe Identity; Scheduling solo necesita el id |
+| Workforce → Scheduling | Puerto `AssignedWorkers`, declarado por Scheduling | El calendario cuelga de la asignación y de su zona horaria, que son datos de Workforce |
 | Workforce → Scheduling / Swap | *Customer–supplier* | Ambos preguntan a `SwapPool` si un cambio es admisible |
 | Swap → Matching | *Customer–supplier*, invocación explícita | `Swap` pide candidatos; `Matching` no conoce a `Swap` |
 | Swap → Notification | *Publisher–subscriber* (eventos) | Notificar no puede bloquear ni fallar un acuerdo |
@@ -179,6 +185,36 @@ endpoints ni al Ministerio**: recibe una foto completa de `ImportedWorkplace`.
 
 REGCESS completo queda como fuente futura para sanidad privada. No participa en
 esta slice.
+
+## Scheduling: el calendario personal implementado
+
+`Scheduling` contiene el cuadrante de una persona. Sus agregados son `RosterDay`
+—un día de una asignación, con sus `ShiftSegment`—, `ShiftPreset` —los botones
+rápidos del trabajador— y `RosterPattern` —una rotación repetible—. `Availability`
+sigue siendo trabajo posterior.
+
+No toca ninguna clase de otro contexto. Declara dos puertos y otros los
+implementan, que es la dirección *customer–supplier* de esta tabla:
+
+```php
+// App\Scheduling\Domain
+interface AssignedWorkers        // lo implementa Workforce
+{
+    public function primaryFor(string $workerId): ?AssignedWorker;
+}
+
+interface AuthenticatedWorkers   // lo implementa Identity
+{
+    public function idForEmail(string $email): ?string;
+}
+```
+
+`AssignedWorker` lleva la zona horaria del centro, resuelta por Workforce desde
+la comunidad autónoma: `Atlantic/Canary` o `Europe/Madrid`. Scheduling nunca
+escribe `Europe/Madrid`.
+
+Cuando exista intercambio aprobado, aplicarlo al calendario será construir un
+`ScheduleDraft` con `RosterSource::SWAP` y pasarlo por el escritor que ya existe.
 
 ### Asignación laboral y personal volante
 

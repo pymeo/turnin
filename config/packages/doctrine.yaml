@@ -18,14 +18,11 @@ doctrine:
         # Aggregates are plain PHP objects: they must not carry Doctrine
         # attributes, so mapping is declared in XML from the Infrastructure layer.
         # `auto_mapping` would go hunting for annotated entities in src/ — exactly
-        # what we do not want. Register one entry per context as aggregates land:
+        # what we do not want. Register one entry per context as aggregates land.
         #
-        #     mappings:
-        #         Scheduling:
-        #             type: xml
-        #             is_bundle: false
-        #             dir: '%kernel.project_dir%/src/Scheduling/Infrastructure/Persistence/Doctrine/Mapping'
-        #             prefix: 'App\Scheduling\Domain'
+        # Scheduling is deliberately absent: its aggregates own child collections
+        # and are persisted with DBAL rather than the ORM, so there is no mapping
+        # to declare. See docs/adr/0008-roster-and-calendar-model.md.
         #
         auto_mapping: false
         mappings:
