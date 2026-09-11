@@ -40,7 +40,7 @@ final readonly class GetRosterMonthHandler
 
     public function __invoke(GetRosterMonth $query): RosterMonthView
     {
-        $worker = $this->workspace->require($query->workerId);
+        $worker = $this->workspace->require($query->workerId, $query->assignmentId);
         $today = $this->calendar->today($worker);
         $month = null === $query->month ? $today->month() : RosterMonth::fromString($query->month);
 
@@ -94,7 +94,7 @@ final readonly class GetRosterMonthHandler
         $first = $day->firstSegment();
         $label = null === $first ? 'Turno' : $first->labelSnapshot;
         $hours = null === $first ? '' : \sprintf(', de %s a %s', $first->window->start, $first->window->end);
-        $tone = null === $first ? 'oncall' : $first->kind->tone();
+        $tone = null === $first ? 'slate' : $first->colorSnapshot->value;
 
         return new RosterDayCell(
             (string) $date,

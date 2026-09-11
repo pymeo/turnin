@@ -4,6 +4,7 @@ declare(strict_types=1);
 
 namespace App\Scheduling\Domain;
 
+use DateTimeZone;
 use InvalidArgumentException;
 
 /**
@@ -19,6 +20,8 @@ use InvalidArgumentException;
  */
 final readonly class ShiftSegment
 {
+    public ShiftColor $colorSnapshot;
+
     public function __construct(
         public string $id,
         public ?string $presetId,
@@ -27,16 +30,18 @@ final readonly class ShiftSegment
         public ShiftWindow $window,
         public ShiftKind $kind,
         public int $position,
+        ?ShiftColor $colorSnapshot = null,
     ) {
         if ('' === trim($this->labelSnapshot) || '' === trim($this->abbreviationSnapshot)) {
             throw new InvalidArgumentException('A shift segment needs a label and an abbreviation.');
         }
         $this->window->guardAgainstEmptyWindow();
+        $this->colorSnapshot = $colorSnapshot ?? ShiftColor::suggestedFor($this->kind);
     }
 
     public static function fromPreset(string $id, ShiftPreset $preset, int $position): self
     {
-        return new self($id, $preset->id(), $preset->name(), $preset->abbreviation(), $preset->window(), $preset->kind(), $position);
+        return new self($id, $preset->id(), $preset->name(), $preset->abbreviation(), $preset->window(), $preset->kind(), $position, $preset->color());
     }
 
     public function endsNextDay(): bool
@@ -49,10 +54,26 @@ final readonly class ShiftSegment
         return \sprintf('%s %s', $this->labelSnapshot, $this->window);
     }
 
-    public function matches(self $other): bool
+    public function sameLocalHoursAs(self $other): bool
     {
-        return $this->abbreviationSnapshot === $other->abbreviationSnapshot
+        return $this->window->equals($other->window);
+    }
+
+    public function sameDurationAs(self $other): bool
+    {
+        return $this->window->durationInMinutes() === $other->window->durationInMinutes();
+    }
+
+    public function samePresentationAs(self $other): bool
+    {
+        return $this->labelSnapshot === $other->labelSnapshot
+            && $this->abbreviationSnapshot === $other->abbreviationSnapshot
             && $this->kind === $other->kind
-            && $this->window->equals($other->window);
+            && $this->colorSnapshot === $other->colorSnapshot;
+    }
+
+    public function intervalOn(WorkDate $date, DateTimeZone $timeZone): ShiftInterval
+    {
+        return ShiftInterval::materialize($date, $this->window, $timeZone);
     }
 }

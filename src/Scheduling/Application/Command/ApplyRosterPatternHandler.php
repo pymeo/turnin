@@ -23,7 +23,7 @@ final readonly class ApplyRosterPatternHandler
 
     public function __invoke(ApplyRosterPattern $command): ScheduleDraftApplied
     {
-        $expanded = $this->expansion->expand($command->workerId, $command->patternId, $command->from, $command->to);
+        $expanded = $this->expansion->expand($command->workerId, $command->patternId, $command->from, $command->to, $command->assignmentId);
 
         $instructions = [];
         foreach ($expanded->draft->entries as $entry) {
@@ -33,7 +33,7 @@ final readonly class ApplyRosterPatternHandler
             $instructions[] = new DraftInstruction($entry->date, $entry->intent, $this->presetIdsOf($entry->intent, $entry->segments));
         }
 
-        return ($this->writer)(new ApplyScheduleDraft($command->workerId, $instructions, $expanded->draft->source, $command->policy));
+        return ($this->writer)(new ApplyScheduleDraft($command->workerId, $instructions, $expanded->draft->source, $command->policy, $command->assignmentId));
     }
 
     /**

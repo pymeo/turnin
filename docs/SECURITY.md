@@ -209,3 +209,11 @@ Solo se solicitan `openid email profile`, el enlace por email exige
 URL desde el origen HTTPS reconocido tras el proxy. El destino posterior solo
 acepta paths internos para evitar open redirects. Logout invalida la sesión de
 Turnin y no toca la sesión global de Google.
+# Credenciales de calendarios externos
+
+Google Calendar usa un consentimiento OAuth independiente del login. Los tokens
+no llegan al navegador ni a logs y se cifran con XChaCha20-Poly1305 mediante
+`CALENDAR_TOKEN_ENCRYPTION_KEY`, distinta de la clave PII. Desconectar elimina el
+refresh token, inutiliza el access token y desactiva mappings sin borrar turnos
+de Turnin ni eventos externos. Todo `workerAssignmentId` recibido se valida por
+usuario antes de consultar, importar o exportar.

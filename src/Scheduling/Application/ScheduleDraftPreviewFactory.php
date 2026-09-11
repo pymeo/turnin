@@ -54,7 +54,7 @@ final readonly class ScheduleDraftPreviewFactory
         $tone = match ($entry->intent) {
             DraftIntent::REST => 'rest',
             DraftIntent::CLEAR => 'unknown',
-            DraftIntent::WORK => ($entry->segments[0] ?? null)?->kind->tone() ?? 'oncall',
+            DraftIntent::WORK => ($entry->segments[0] ?? null)?->color->value ?? 'slate',
         };
 
         return new DraftEntryView(

@@ -14,6 +14,11 @@ interface RosterDays
     /** @return list<RosterDay> Ordered by date. */
     public function inRange(string $workerAssignmentId, WorkDate $from, WorkDate $to): array;
 
+    /** @param non-empty-list<string> $workerAssignmentIds
+     * @return list<RosterDay>
+     */
+    public function inRangeForAssignments(array $workerAssignmentIds, WorkDate $from, WorkDate $to): array;
+
     public function onDate(string $workerAssignmentId, WorkDate $date): ?RosterDay;
 
     /**

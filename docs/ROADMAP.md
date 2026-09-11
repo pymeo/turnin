@@ -119,3 +119,14 @@ con contraseña como fallback. La única operación externa pendiente es cargar 
 credenciales reales fuera del repositorio y las dos redirect URIs en Google Cloud
 Console. El onboarding añade datos personales protegidos y un borrador persistente;
 al terminar crea la asignación primaria y los accesos adicionales declarados.
+# Slice calendario multi-asignación (2026-09)
+
+Implementados calendarios independientes 0..N, selector y vista combinada,
+overlaps entre fechas/zonas, presets configurables con color histórico, turnos
+custom y derivados, edición puntual, Google Calendar manual import/export
+idempotente y export `.ics`.
+
+Quedan para una slice posterior los webhooks `watch`, resolución interactiva de
+borrados/conflictos remotos, sincronización automática periódica e import `.ics`.
+El esquema conserva `syncToken` y el adaptador entiende la expiración 410 para
+cuando se active ese proceso.

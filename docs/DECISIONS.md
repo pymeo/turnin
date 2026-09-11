@@ -209,3 +209,12 @@ La búsqueda tokeniza nombre, municipio y provincia, limita en SQL y filtra
 `active=true`. Con unas quince mil filas un recorrido de PostgreSQL es suficiente;
 un índice B-tree no ayuda a patrones `%texto%` y `pg_trgm` sería optimización
 prematura. Se medirá de nuevo cuando onboarding aporte consultas reales.
+# 2026-09 — Color histórico y Google Calendar manual
+
+- El `colorKey` del preset se copia al segmento. Así un cambio visual futuro no
+  repinta retrospectivamente un cuadrante confirmado.
+- La primera versión de Google es import/export manual y explícita. Persistimos
+  mappings y cursor, pero no activamos una bidireccionalidad automática hasta
+  definir UX de borrados y ediciones concurrentes.
+- Import `.ics` se pospone; export `.ics` cubre ya Apple, Outlook y el fallback
+  manual sin abrir otra superficie de parsing.

@@ -16,6 +16,7 @@ final readonly class PreviewScheduleDraft
         public array $instructions,
         public RosterSource $source,
         public ConflictPolicy $policy = ConflictPolicy::SKIP_EXISTING,
+        public ?string $assignmentId = null,
     ) {
     }
 }

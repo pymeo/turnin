@@ -17,4 +17,9 @@ final class RosterAccessDenied extends RuntimeException
     {
         return new self('Completa tu perfil laboral para usar el calendario.');
     }
+
+    public static function notOwned(): self
+    {
+        return new self('No puedes acceder a ese calendario.');
+    }
 }

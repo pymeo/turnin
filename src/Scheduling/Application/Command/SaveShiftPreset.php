@@ -20,6 +20,8 @@ final readonly class SaveShiftPreset
         public string $end,
         public string $kind,
         public array $aliases = [],
+        public string $colorKey = 'slate',
+        public ?string $assignmentId = null,
     ) {
     }
 }

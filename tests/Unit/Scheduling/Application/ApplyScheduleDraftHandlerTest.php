@@ -158,6 +158,12 @@ final class ApplyScheduleDraftHandlerTest extends TestCase
         ($this->handler())(new ApplyScheduleDraft('worker-1', [], RosterSource::MANUAL));
     }
 
+    public function test_an_assignment_identifier_owned_by_another_worker_is_rejected(): void
+    {
+        $this->expectException(RosterAccessDenied::class);
+        ($this->handler())(new ApplyScheduleDraft('worker-1', [new DraftInstruction(WorkDate::of(2026, 9, 1), DraftIntent::REST)], RosterSource::MANUAL, ConflictPolicy::SKIP_EXISTING, 'assignment-of-worker-2'));
+    }
+
     private function handler(): ApplyScheduleDraftHandler
     {
         return new ApplyScheduleDraftHandler(

@@ -44,6 +44,16 @@ final class InMemoryRosterDays implements RosterDays
         return $this->days[$workerAssignmentId][(string) $date] ?? null;
     }
 
+    public function inRangeForAssignments(array $workerAssignmentIds, WorkDate $from, WorkDate $to): array
+    {
+        $days = [];
+        foreach ($workerAssignmentIds as $assignmentId) {
+            array_push($days, ...$this->inRange($assignmentId, $from, $to));
+        }
+
+        return $days;
+    }
+
     public function apply(string $workerAssignmentId, array $days, array $datesToClear): void
     {
         ++$this->applyCalls;

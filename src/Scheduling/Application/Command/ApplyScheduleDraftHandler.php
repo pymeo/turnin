@@ -4,6 +4,7 @@ declare(strict_types=1);
 
 namespace App\Scheduling\Application\Command;
 
+use App\Scheduling\Application\RosterAccessDenied;
 use App\Scheduling\Application\RosterWorkspace;
 use App\Scheduling\Domain\DraftIntent;
 use App\Scheduling\Domain\RosterDay;
@@ -41,9 +42,12 @@ final readonly class ApplyScheduleDraftHandler
 
     public function __invoke(ApplyScheduleDraft $command): ScheduleDraftApplied
     {
-        $worker = $this->workspace->require($command->workerId);
+        $worker = $this->workspace->require($command->workerId, $command->assignmentId);
         $presets = $this->workspace->presetsFor($worker);
-        $draft = $this->composer->compose($command->instructions, $presets, $command->source);
+        $draft = $command->preparedDraft ?? $this->composer->compose($command->instructions, $presets, $command->source, $worker->assignmentId);
+        if (null !== $draft->workerAssignmentId && $draft->workerAssignmentId !== $worker->assignmentId) {
+            throw RosterAccessDenied::notOwned();
+        }
 
         if ($draft->isEmpty()) {
             throw new RuntimeException('No hay ningún día que guardar.');
@@ -88,6 +92,6 @@ final readonly class ApplyScheduleDraftHandler
 
     private function segmentFor(SegmentProposal $proposal, int $position): ShiftSegment
     {
-        return new ShiftSegment($this->ids->next(), $proposal->presetId, $proposal->label, $proposal->abbreviation, $proposal->window, $proposal->kind, $position);
+        return new ShiftSegment($this->ids->next(), $proposal->presetId, $proposal->label, $proposal->abbreviation, $proposal->window, $proposal->kind, $position, $proposal->color);
     }
 }

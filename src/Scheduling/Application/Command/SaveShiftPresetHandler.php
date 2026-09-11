@@ -6,6 +6,7 @@ namespace App\Scheduling\Application\Command;
 
 use App\Scheduling\Application\RosterWorkspace;
 use App\Scheduling\Domain\RosterIdGenerator;
+use App\Scheduling\Domain\ShiftColor;
 use App\Scheduling\Domain\ShiftKind;
 use App\Scheduling\Domain\ShiftPreset;
 use App\Scheduling\Domain\ShiftPresets;
@@ -25,14 +26,15 @@ final readonly class SaveShiftPresetHandler
 
     public function __invoke(SaveShiftPreset $command): string
     {
-        $worker = $this->workspace->require($command->workerId);
+        $worker = $this->workspace->require($command->workerId, $command->assignmentId);
         $now = $this->clock->now();
         $window = ShiftWindow::fromStrings($command->start, $command->end);
         $kind = ShiftKind::tryFrom($command->kind) ?? ShiftKind::OTHER;
+        $color = ShiftColor::tryFrom($command->colorKey) ?? ShiftColor::SLATE;
 
         if (null === $command->presetId) {
             $resolver = $this->workspace->presetsFor($worker);
-            $preset = ShiftPreset::create($this->ids->next(), $worker->assignmentId, $command->name, $command->abbreviation, $window, $kind, $command->aliases, $resolver->nextPosition(), $now);
+            $preset = ShiftPreset::create($this->ids->next(), $worker->assignmentId, $command->name, $command->abbreviation, $window, $kind, $command->aliases, $resolver->nextPosition(), $now, $color);
             $this->presets->save($preset);
 
             return $preset->id();
@@ -43,7 +45,7 @@ final readonly class SaveShiftPresetHandler
         $preset = $this->presets->byId($worker->assignmentId, $command->presetId)
             ?? throw new InvalidArgumentException('Ese turno no existe.');
 
-        $preset->reshape($command->name, $command->abbreviation, $window, $kind, $command->aliases, $now);
+        $preset->reshape($command->name, $command->abbreviation, $window, $kind, $command->aliases, $now, $color);
         $this->presets->save($preset);
 
         return $preset->id();

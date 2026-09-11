@@ -65,7 +65,7 @@ final class GetRosterMonthHandlerTest extends TestCase
 
         self::assertSame('working', $cell->state);
         self::assertSame('N', $cell->abbreviation);
-        self::assertSame('night', $cell->tone);
+        self::assertSame('blue', $cell->tone);
         self::assertSame('14 de septiembre, turno de noche, de 22:00 a 08:00', $cell->ariaLabel);
     }
 

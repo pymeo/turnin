@@ -22,7 +22,7 @@ final readonly class DeactivateShiftPresetHandler
 
     public function __invoke(DeactivateShiftPreset $command): void
     {
-        $worker = $this->workspace->require($command->workerId);
+        $worker = $this->workspace->require($command->workerId, $command->assignmentId);
         $preset = $this->presets->byId($worker->assignmentId, $command->presetId)
             ?? throw new InvalidArgumentException('Ese turno no existe.');
 

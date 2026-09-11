@@ -13,7 +13,7 @@ use DateTimeZone;
  */
 final readonly class AssignedWorker
 {
-    public function __construct(public string $workerId, public string $assignmentId, public string $timeZoneId, public string $workplaceName)
+    public function __construct(public string $workerId, public string $assignmentId, public string $timeZoneId, public string $workplaceName, public bool $primary = true, public string $destinationName = '')
     {
     }
 
@@ -24,5 +24,10 @@ final readonly class AssignedWorker
     public function timeZone(): DateTimeZone
     {
         return new DateTimeZone($this->timeZoneId);
+    }
+
+    public function shortLabel(): string
+    {
+        return '' === $this->destinationName ? $this->workplaceName : $this->workplaceName.' · '.$this->destinationName;
     }
 }

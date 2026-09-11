@@ -119,6 +119,30 @@ final class OnboardingFlowTest extends WebTestCase
         self::assertSame(0, $this->countRows('SELECT COUNT(*) FROM identity_personal_profiles WHERE user_id = :worker', ['worker' => $this->userId]));
     }
 
+    public function test_a_worker_can_add_a_second_active_workplace_without_reentering_identity(): void
+    {
+        $workplaces = $this->connection->fetchFirstColumn('SELECT id FROM workforce_workplaces WHERE active = TRUE ORDER BY name LIMIT 2');
+        self::assertCount(2, $workplaces);
+        self::assertIsString($workplaces[0]);
+        self::assertIsString($workplaces[1]);
+        $categoryId = $this->scalar('SELECT id FROM workforce_staff_categories WHERE active = TRUE AND specialty_required = FALSE ORDER BY name LIMIT 1');
+        $this->post('/onboarding/name', ['given_name' => 'Ana', 'family_name' => 'García']);
+        $this->post('/onboarding/identity', ['identity_document' => '12 345 678-z', 'phone' => '600 123 123']);
+        $this->post('/onboarding/progress', ['workplace_id' => $workplaces[0], 'staff_category_id' => $categoryId, 'primary_destination_id' => 'reference:emergency']);
+        $this->post('/onboarding/complete');
+
+        $page = $this->client->request('GET', '/onboarding?mode=add');
+        self::assertResponseIsSuccessful();
+        self::assertSame('true', $page->filter('[data-step="identity"]')->attr('data-complete'));
+        $this->post('/onboarding/progress', ['workplace_id' => $workplaces[1], 'staff_category_id' => $categoryId, 'primary_destination_id' => 'reference:intensive_care']);
+        $result = $this->post('/onboarding/add-assignment');
+
+        self::assertStringStartsWith('/app/calendar?assignment=', (string) (($result['result']['redirect'] ?? '')));
+        self::assertSame(2, $this->countRows('SELECT COUNT(*) FROM workforce_worker_assignments WHERE worker_id = :worker AND active = TRUE', ['worker' => $this->userId]));
+        self::assertSame(1, $this->countRows('SELECT COUNT(*) FROM workforce_worker_assignments WHERE worker_id = :worker AND active = TRUE AND primary_assignment = TRUE', ['worker' => $this->userId]));
+        self::assertSame(2, $this->countRows('SELECT COUNT(*) FROM workforce_swap_pool_memberships WHERE worker_id = :worker AND active = TRUE AND is_primary = TRUE', ['worker' => $this->userId]));
+    }
+
     /** @param array<string, mixed> $parameters
      * @return array<string, mixed>
      */

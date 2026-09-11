@@ -11,7 +11,7 @@ namespace App\Scheduling\Application\Command;
 final readonly class CreateRosterPattern
 {
     /** @param list<string|null> $slots */
-    public function __construct(public string $workerId, public ?string $name, public array $slots)
+    public function __construct(public string $workerId, public ?string $name, public array $slots, public ?string $assignmentId = null)
     {
     }
 }

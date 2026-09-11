@@ -23,9 +23,31 @@ final readonly class RosterWorkspace
     {
     }
 
-    public function require(string $workerId): AssignedWorker
+    public function requirePrimary(string $workerId): AssignedWorker
     {
         return $this->workers->primaryFor($workerId) ?? throw RosterAccessDenied::noAssignment();
+    }
+
+    public function requireAssignment(string $workerId, string $assignmentId): AssignedWorker
+    {
+        $worker = $this->workers->byIdFor($workerId, $assignmentId);
+        if (null === $worker) {
+            throw RosterAccessDenied::notOwned();
+        }
+
+        return $worker;
+    }
+
+    /** @return list<AssignedWorker> */
+    public function activeAssignments(string $workerId): array
+    {
+        return $this->workers->activeFor($workerId);
+    }
+
+    /** Backward-compatible entry point for old commands. */
+    public function require(string $workerId, ?string $assignmentId = null): AssignedWorker
+    {
+        return null === $assignmentId ? $this->requirePrimary($workerId) : $this->requireAssignment($workerId, $assignmentId);
     }
 
     public function find(string $workerId): ?AssignedWorker

@@ -14,6 +14,7 @@ final readonly class ApplyRosterPattern
         public string $from,
         public string $to,
         public ConflictPolicy $policy = ConflictPolicy::SKIP_EXISTING,
+        public ?string $assignmentId = null,
     ) {
     }
 }

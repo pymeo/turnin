@@ -19,7 +19,7 @@ final readonly class PreviewScheduleDraftHandler
 
     public function __invoke(PreviewScheduleDraft $query): ScheduleDraftPreview
     {
-        $worker = $this->workspace->require($query->workerId);
+        $worker = $this->workspace->require($query->workerId, $query->assignmentId);
         $draft = $this->composer->compose($query->instructions, $this->workspace->presetsFor($worker), $query->source);
 
         return $this->previews->build($worker, $draft, $query->policy);

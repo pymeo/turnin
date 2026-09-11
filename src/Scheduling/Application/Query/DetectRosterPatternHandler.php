@@ -29,7 +29,7 @@ final readonly class DetectRosterPatternHandler
 
     public function __invoke(DetectRosterPattern $query): ?DetectedPatternView
     {
-        $worker = $this->workspace->require($query->workerId);
+        $worker = $this->workspace->require($query->workerId, $query->assignmentId);
         $month = null === $query->month ? $this->calendar->today($worker)->month() : RosterMonth::fromString($query->month);
 
         $days = $this->rosterDays->inRange($worker->assignmentId, $month->previous()->firstDay(), $month->next()->lastDay());

@@ -8,6 +8,7 @@ use App\Scheduling\Domain\RosterDay;
 use App\Scheduling\Domain\RosterDays;
 use App\Scheduling\Domain\RosterDayState;
 use App\Scheduling\Domain\RosterSource;
+use App\Scheduling\Domain\ShiftColor;
 use App\Scheduling\Domain\ShiftKind;
 use App\Scheduling\Domain\ShiftSegment;
 use App\Scheduling\Domain\ShiftWindow;
@@ -38,7 +39,7 @@ final readonly class DoctrineRosterDays implements RosterDays
             <<<'SQL'
                 SELECT d.id, d.work_date, d.state, d.source, d.created_at, d.updated_at,
                        s.id AS segment_id, s.shift_preset_id, s.label_snapshot, s.abbreviation_snapshot,
-                       s.starts_at, s.ends_at, s.kind, s.position
+                       s.starts_at, s.ends_at, s.kind, s.position, s.color_key_snapshot
                   FROM scheduling_roster_days d
                   LEFT JOIN scheduling_roster_segments s ON s.roster_day_id = d.id
                  WHERE d.worker_assignment_id = :assignment
@@ -49,6 +50,39 @@ final readonly class DoctrineRosterDays implements RosterDays
         );
 
         return $this->hydrate($workerAssignmentId, $rows);
+    }
+
+    public function inRangeForAssignments(array $workerAssignmentIds, WorkDate $from, WorkDate $to): array
+    {
+        if ([] === $workerAssignmentIds) {
+            return [];
+        }
+        $rows = $this->connection->fetchAllAssociative(
+            <<<'SQL'
+                SELECT d.id, d.worker_assignment_id, d.work_date, d.state, d.source, d.created_at, d.updated_at,
+                       s.id AS segment_id, s.shift_preset_id, s.label_snapshot, s.abbreviation_snapshot,
+                       s.starts_at, s.ends_at, s.kind, s.position, s.color_key_snapshot
+                  FROM scheduling_roster_days d
+                  LEFT JOIN scheduling_roster_segments s ON s.roster_day_id = d.id
+                 WHERE d.worker_assignment_id IN (:assignments)
+                   AND d.work_date BETWEEN :from AND :to
+                 ORDER BY d.work_date, d.worker_assignment_id, s.position
+                SQL,
+            ['assignments' => $workerAssignmentIds, 'from' => (string) $from, 'to' => (string) $to],
+            ['assignments' => ArrayParameterType::STRING],
+        );
+        $byAssignment = [];
+        foreach ($rows as $row) {
+            $byAssignment[$this->text($row['worker_assignment_id'] ?? null)][] = $row;
+        }
+
+        $days = [];
+        foreach ($byAssignment as $assignmentId => $assignmentRows) {
+            array_push($days, ...$this->hydrate($assignmentId, $assignmentRows));
+        }
+        usort($days, static fn (RosterDay $left, RosterDay $right): int => $left->date()->dayNumber() <=> $right->date()->dayNumber());
+
+        return $days;
     }
 
     public function onDate(string $workerAssignmentId, WorkDate $date): ?RosterDay
@@ -133,7 +167,7 @@ final readonly class DoctrineRosterDays implements RosterDays
 
         foreach ($days as $day) {
             foreach ($day->segments() as $segment) {
-                $values[] = \sprintf('(:sid%1$d, :day%1$d, :preset%1$d, :label%1$d, :abbr%1$d, :start%1$d, :end%1$d, :kind%1$d, :position%1$d)', $index);
+                $values[] = \sprintf('(:sid%1$d, :day%1$d, :preset%1$d, :label%1$d, :abbr%1$d, :start%1$d, :end%1$d, :kind%1$d, :position%1$d, :color%1$d)', $index);
                 $parameters['sid'.$index] = $segment->id;
                 $parameters['day'.$index] = $day->id();
                 $parameters['preset'.$index] = $segment->presetId;
@@ -143,6 +177,7 @@ final readonly class DoctrineRosterDays implements RosterDays
                 $parameters['end'.$index] = (string) $segment->window->end;
                 $parameters['kind'.$index] = $segment->kind->value;
                 $parameters['position'.$index] = $segment->position;
+                $parameters['color'.$index] = $segment->colorSnapshot->value;
                 ++$index;
             }
         }
@@ -152,7 +187,7 @@ final readonly class DoctrineRosterDays implements RosterDays
         }
 
         $this->connection->executeStatement(
-            'INSERT INTO scheduling_roster_segments (id, roster_day_id, shift_preset_id, label_snapshot, abbreviation_snapshot, starts_at, ends_at, kind, position) VALUES '.implode(', ', $values),
+            'INSERT INTO scheduling_roster_segments (id, roster_day_id, shift_preset_id, label_snapshot, abbreviation_snapshot, starts_at, ends_at, kind, position, color_key_snapshot) VALUES '.implode(', ', $values),
             $parameters,
         );
     }
@@ -179,6 +214,7 @@ final readonly class DoctrineRosterDays implements RosterDays
                     ShiftWindow::fromStrings($this->text($row['starts_at'] ?? null), $this->text($row['ends_at'] ?? null)),
                     ShiftKind::from($this->text($row['kind'] ?? null)),
                     $this->number($row['position'] ?? null),
+                    ShiftColor::from($this->text($row['color_key_snapshot'] ?? null)),
                 );
             }
         }

@@ -2,10 +2,9 @@
    a thumb's reach: this is the fastest way in, so it is the one that must not
    require aiming. #}
 {% set tones = {
-    'morning': 'calendar-tone-morning',
-    'evening': 'calendar-tone-evening',
-    'night': 'calendar-tone-night',
-    'oncall': 'calendar-tone-oncall',
+    'amber': 'calendar-tone-amber', 'orange': 'calendar-tone-orange', 'teal': 'calendar-tone-teal',
+    'blue': 'calendar-tone-blue', 'indigo': 'calendar-tone-indigo', 'violet': 'calendar-tone-violet',
+    'rose': 'calendar-tone-rose', 'slate': 'calendar-tone-slate', 'emerald': 'calendar-tone-emerald', 'cyan': 'calendar-tone-cyan',
     'rest': 'calendar-tone-rest',
     'unknown': 'calendar-tone-unknown',
 } %}
@@ -24,6 +23,7 @@
                 {{ preset.name }}
             </button>
         {% endfor %}
+        <a class="paint-swatch" href="{{ path('scheduling_shift_presets', {assignment: selectedAssignment.assignmentId}) }}"><span class="paint-swatch-mark calendar-tone-unknown" aria-hidden="true">＋</span>Nuevo</a>
         {# Libre sits beside the shifts because that is where a thumb expects it,
            but it is a day state, not a preset. See docs/DOMAIN.md. #}
         <button type="button"

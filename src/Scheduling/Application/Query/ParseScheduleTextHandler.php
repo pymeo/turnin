@@ -29,7 +29,7 @@ final readonly class ParseScheduleTextHandler
 
     public function __invoke(ParseScheduleText $query): ParsedScheduleView
     {
-        $worker = $this->workspace->require($query->workerId);
+        $worker = $this->workspace->require($query->workerId, $query->assignmentId);
         $month = null === $query->month ? $this->calendar->today($worker)->month() : RosterMonth::fromString($query->month);
 
         $reading = $this->parser->parse($query->text, $month, $this->workspace->presetsFor($worker), $query->source);

@@ -19,8 +19,8 @@ final readonly class PreviewRosterPatternHandler
 
     public function __invoke(PreviewRosterPattern $query): ScheduleDraftPreview
     {
-        $worker = $this->workspace->require($query->workerId);
-        $expanded = $this->expansion->expand($query->workerId, $query->patternId, $query->from, $query->to);
+        $worker = $this->workspace->require($query->workerId, $query->assignmentId);
+        $expanded = $this->expansion->expand($query->workerId, $query->patternId, $query->from, $query->to, $query->assignmentId);
 
         return $this->previews->build($worker, $expanded->draft, $query->policy);
     }

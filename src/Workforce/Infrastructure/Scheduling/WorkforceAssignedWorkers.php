@@ -25,28 +25,56 @@ final readonly class WorkforceAssignedWorkers implements AssignedWorkers
 
     public function primaryFor(string $workerId): ?AssignedWorker
     {
-        $row = $this->connection->fetchAssociative(
-            <<<'SQL'
-                SELECT a.id, w.name, w.autonomous_community
-                  FROM workforce_worker_assignments a
-                  JOIN workforce_workplaces w ON w.id = a.workplace_id
-                 WHERE a.worker_id = :worker AND a.active = TRUE AND a.primary_assignment = TRUE
-                 ORDER BY a.created_at DESC
-                 LIMIT 1
-                SQL,
-            ['worker' => $workerId],
-        );
-
-        if (false === $row) {
-            return null;
+        foreach ($this->activeFor($workerId) as $worker) {
+            if ($worker->primary) {
+                return $worker;
+            }
         }
 
-        return new AssignedWorker(
+        return null;
+    }
+
+    public function activeFor(string $workerId): array
+    {
+        return $this->find($workerId);
+    }
+
+    public function byIdFor(string $workerId, string $assignmentId): ?AssignedWorker
+    {
+        foreach ($this->find($workerId, $assignmentId) as $worker) {
+            return $worker;
+        }
+
+        return null;
+    }
+
+    /** @return list<AssignedWorker> */
+    private function find(string $workerId, ?string $assignmentId = null): array
+    {
+        $sql = <<<'SQL'
+            SELECT a.id, a.primary_assignment, w.name, w.autonomous_community,
+                   COALESCE(u.name, '') AS destination_name
+              FROM workforce_worker_assignments a
+              JOIN workforce_workplaces w ON w.id = a.workplace_id
+              LEFT JOIN workforce_organizational_units u ON u.id = a.organizational_unit_id
+             WHERE a.worker_id = :worker AND a.active = TRUE
+            SQL;
+        $parameters = ['worker' => $workerId];
+        if (null !== $assignmentId) {
+            $sql .= ' AND a.id = :assignment';
+            $parameters['assignment'] = $assignmentId;
+        }
+        $sql .= ' ORDER BY a.primary_assignment DESC, a.created_at, a.id';
+        $rows = $this->connection->fetchAllAssociative($sql, $parameters);
+
+        return array_map(fn (array $row): AssignedWorker => new AssignedWorker(
             $workerId,
             $this->text($row['id'] ?? null),
             WorkplaceTimeZone::forAutonomousCommunity($this->nullable($row['autonomous_community'] ?? null)),
             $this->text($row['name'] ?? null),
-        );
+            (bool) ($row['primary_assignment'] ?? false),
+            $this->text($row['destination_name'] ?? null),
+        ), $rows);
     }
 
     private function text(mixed $value): string

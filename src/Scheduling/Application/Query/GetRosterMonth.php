@@ -6,7 +6,7 @@ namespace App\Scheduling\Application\Query;
 
 final readonly class GetRosterMonth
 {
-    public function __construct(public string $workerId, public ?string $month = null)
+    public function __construct(public string $workerId, public ?string $month = null, public ?string $assignmentId = null)
     {
     }
 }

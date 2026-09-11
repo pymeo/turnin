@@ -4,6 +4,7 @@ declare(strict_types=1);
 
 namespace App\Scheduling\Infrastructure\Http;
 
+use App\Scheduling\Application\RosterAccessDenied;
 use App\Scheduling\Domain\AuthenticatedWorkers;
 use App\Scheduling\Domain\ConflictPolicy;
 use App\Scheduling\Domain\DraftInstruction;
@@ -26,8 +27,8 @@ use Throwable;
  * The three things every calendar endpoint does before anything else: work out
  * who is asking, check the token, and turn the posted draft into instructions.
  *
- * Written once so that "the worker assignment comes from the session, never
- * from the request" cannot be forgotten in the fourth endpoint.
+ * The selected assignment may come from the request, but is never trusted:
+ * every handler resolves it through RosterWorkspace ownership checks.
  */
 final readonly class RosterRequest
 {
@@ -104,6 +105,14 @@ final readonly class RosterRequest
         return ConflictPolicy::fromRequest(\is_string($payload['policy'] ?? null) ? $payload['policy'] : null);
     }
 
+    public function assignmentId(Request $request): ?string
+    {
+        $payload = $this->payload($request);
+        $value = $payload['assignmentId'] ?? $request->query->get('assignment');
+
+        return \is_string($value) && '' !== trim($value) ? trim($value) : null;
+    }
+
     /** @return array<string, mixed> */
     public function payload(Request $request): array
     {
@@ -150,7 +159,9 @@ final readonly class RosterRequest
         try {
             return new JsonResponse(['ok' => true, 'result' => $operation($workerId)]);
         } catch (Throwable $exception) {
-            return new JsonResponse(['error' => self::rootCause($exception)->getMessage()], Response::HTTP_UNPROCESSABLE_ENTITY);
+            $cause = self::rootCause($exception);
+
+            return new JsonResponse(['error' => $cause->getMessage()], $cause instanceof RosterAccessDenied && 'No puedes acceder a ese calendario.' === $cause->getMessage() ? Response::HTTP_FORBIDDEN : Response::HTTP_UNPROCESSABLE_ENTITY);
         }
     }
 

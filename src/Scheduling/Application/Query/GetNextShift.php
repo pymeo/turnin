@@ -6,7 +6,7 @@ namespace App\Scheduling\Application\Query;
 
 final readonly class GetNextShift
 {
-    public function __construct(public string $workerId)
+    public function __construct(public string $workerId, public ?string $assignmentId = null)
     {
     }
 }

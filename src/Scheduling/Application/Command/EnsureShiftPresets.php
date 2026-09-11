@@ -10,7 +10,7 @@ namespace App\Scheduling\Application\Command;
  */
 final readonly class EnsureShiftPresets
 {
-    public function __construct(public string $workerId)
+    public function __construct(public string $workerId, public ?string $assignmentId = null)
     {
     }
 }

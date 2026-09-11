@@ -21,9 +21,9 @@ final readonly class SuggestedShiftPresets
     public static function catalogue(): array
     {
         return [
-            new ShiftPresetBlueprint('Mañana', 'M', ShiftWindow::fromStrings('08:00', '15:00'), ShiftKind::MORNING, ['manana', 'turno de manana', 'mananas']),
-            new ShiftPresetBlueprint('Tarde', 'T', ShiftWindow::fromStrings('15:00', '22:00'), ShiftKind::EVENING, ['tarde', 'turno de tarde', 'tardes']),
-            new ShiftPresetBlueprint('Noche', 'N', ShiftWindow::fromStrings('22:00', '08:00'), ShiftKind::NIGHT, ['noche', 'turno de noche', 'noches']),
+            new ShiftPresetBlueprint('Mañana', 'M', ShiftWindow::fromStrings('08:00', '15:00'), ShiftKind::MORNING, ['manana', 'turno de manana', 'mananas'], ShiftColor::AMBER),
+            new ShiftPresetBlueprint('Tarde', 'T', ShiftWindow::fromStrings('15:00', '22:00'), ShiftKind::EVENING, ['tarde', 'turno de tarde', 'tardes'], ShiftColor::ORANGE),
+            new ShiftPresetBlueprint('Noche', 'N', ShiftWindow::fromStrings('22:00', '08:00'), ShiftKind::NIGHT, ['noche', 'turno de noche', 'noches'], ShiftColor::BLUE),
         ];
     }
 }

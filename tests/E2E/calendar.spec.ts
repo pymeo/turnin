@@ -169,6 +169,36 @@ test.describe('personal shift calendar', () => {
 
 		await expect(voiceSheet.locator('[data-voice-schedule-target="unresolved"]')).toContainText('y el resto ya veremos');
 	});
+
+	test('creates a coloured 12-hour custom shift and edits one day without changing the preset', async ({ page }) => {
+		await openCalendar(page, '2027-03');
+		await page.goto('/app/calendar/turnos');
+		await page.getByRole('button', { name: /Crear un turno/ }).click();
+		const sheet = page.locator('[data-shift-presets-target="sheet"]');
+		await sheet.locator('[data-shift-presets-target="mode"]').selectOption('12h');
+		await sheet.locator('[data-shift-presets-target="name"]').fill('12 horas día');
+		await sheet.locator('[data-shift-presets-target="abbreviation"]').fill('12D');
+		await sheet.locator('[data-shift-presets-target="start"]').fill('08:00');
+		await sheet.locator('[data-shift-presets-target="color"]').selectOption('emerald');
+		await sheet.getByRole('button', { name: 'Guardar turno' }).click();
+		await page.waitForLoadState('domcontentloaded');
+		await expect(page.locator('[data-preset-id]').filter({ hasText: '12 horas día' })).toContainText('08:00 – 20:00');
+
+		await page.goto('/app/calendar?month=2027-03');
+		await openAddSheet(page);
+		await page.getByRole('button', { name: /Pintar calendario/ }).click();
+		await expect(page.locator('[data-paint-code="12D"]')).toBeVisible();
+		await page.locator('[data-paint-code="12D"]').click();
+		await cell(page, '2027-03', 18).click();
+		await page.locator('[data-calendar-paint-target="save"]').click();
+		await page.locator('[data-schedule-draft-target="confirm"]').click();
+		await cell(page, '2027-03', 18).click();
+		const day = page.locator('[data-calendar-target="daySheet"]');
+		await day.getByRole('button', { name: 'Cambiar solo este día' }).click();
+		await day.locator('[data-calendar-target="manualEnd"]').fill('19:00');
+		await day.getByRole('button', { name: 'Guardar solo este día' }).click();
+		await expect(cell(page, '2027-03', 18)).toHaveAttribute('aria-label', /07:00|19:00|Turno puntual/i);
+	});
 });
 
 /*

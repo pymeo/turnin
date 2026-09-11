@@ -7,6 +7,7 @@ namespace App\Tests\Unit\Scheduling\Domain;
 use App\Scheduling\Domain\RosterDay;
 use App\Scheduling\Domain\RosterDayState;
 use App\Scheduling\Domain\RosterSource;
+use App\Scheduling\Domain\ShiftColor;
 use App\Scheduling\Domain\ShiftKind;
 use App\Scheduling\Domain\ShiftPreset;
 use App\Scheduling\Domain\ShiftSegment;
@@ -82,14 +83,16 @@ final class RosterDayTest extends TestCase
      */
     public function test_a_segment_keeps_the_hours_it_was_created_with_when_the_preset_changes(): void
     {
-        $preset = ShiftPreset::create('preset-1', 'assignment-1', 'Mañana', 'M', ShiftWindow::fromStrings('08:00', '15:00'), ShiftKind::MORNING, [], 1, $this->now());
+        $preset = ShiftPreset::create('preset-1', 'assignment-1', 'Mañana', 'M', ShiftWindow::fromStrings('08:00', '15:00'), ShiftKind::MORNING, [], 1, $this->now(), ShiftColor::TEAL);
         $segment = ShiftSegment::fromPreset('segment-1', $preset, 0);
 
-        $preset->reshape('Mañana', 'M', ShiftWindow::fromStrings('07:30', '14:30'), ShiftKind::MORNING, [], $this->now());
+        $preset->reshape('Mañana', 'M', ShiftWindow::fromStrings('07:30', '14:30'), ShiftKind::MORNING, [], $this->now(), ShiftColor::ROSE);
 
         self::assertSame('08:00', (string) $segment->window->start);
         self::assertSame('15:00', (string) $segment->window->end);
         self::assertSame('07:30', (string) $preset->window()->start);
+        self::assertSame(ShiftColor::TEAL, $segment->colorSnapshot);
+        self::assertSame(ShiftColor::ROSE, $preset->color());
     }
 
     public function test_a_night_shift_is_recognised_as_night_work(): void

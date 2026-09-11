@@ -17,11 +17,12 @@ final readonly class SegmentProposal
         public string $abbreviation,
         public ShiftWindow $window,
         public ShiftKind $kind,
+        public ShiftColor $color = ShiftColor::SLATE,
     ) {
     }
 
     public static function fromPreset(ShiftPreset $preset): self
     {
-        return new self($preset->id(), $preset->name(), $preset->abbreviation(), $preset->window(), $preset->kind());
+        return new self($preset->id(), $preset->name(), $preset->abbreviation(), $preset->window(), $preset->kind(), $preset->color());
     }
 }

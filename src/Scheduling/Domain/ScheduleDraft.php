@@ -9,28 +9,29 @@ namespace App\Scheduling\Domain;
  *
  *     painting  ┐
  *     pattern   ├─→ ScheduleDraft ─→ validate ─→ preview ─→ confirm ─→ persist
- *     voice/text┘
+ *     voice/text│
+ *     Google/ICS┘
  *
- * Three entry points, one model and one writer. Three separate persistence
- * paths would mean three places to get conflicts, authorisation and time zones
+ * All entry points use one model and one writer. Separate persistence paths
+ * would mean several places to get conflicts, authorisation and time zones
  * subtly wrong. A draft never touches the calendar.
  */
 final readonly class ScheduleDraft
 {
     /** @param list<ScheduleDraftEntry> $entries */
-    private function __construct(public array $entries, public RosterSource $source)
+    private function __construct(public array $entries, public RosterSource $source, public ?string $workerAssignmentId)
     {
     }
 
     /** @param list<ScheduleDraftEntry> $entries */
-    public static function of(array $entries, RosterSource $source): self
+    public static function of(array $entries, RosterSource $source, ?string $workerAssignmentId = null): self
     {
-        return new self(self::deduplicated($entries), $source);
+        return new self(self::deduplicated($entries), $source, $workerAssignmentId);
     }
 
-    public static function empty(RosterSource $source): self
+    public static function empty(RosterSource $source, ?string $workerAssignmentId = null): self
     {
-        return new self([], $source);
+        return new self([], $source, $workerAssignmentId);
     }
 
     public function isEmpty(): bool

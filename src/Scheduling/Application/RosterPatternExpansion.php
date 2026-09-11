@@ -22,9 +22,9 @@ final readonly class RosterPatternExpansion
     {
     }
 
-    public function expand(string $workerId, string $patternId, string $from, string $to): ExpandedRosterPattern
+    public function expand(string $workerId, string $patternId, string $from, string $to, ?string $assignmentId = null): ExpandedRosterPattern
     {
-        $worker = $this->workspace->require($workerId);
+        $worker = $this->workspace->require($workerId, $assignmentId);
         $pattern = $this->patterns->byId($worker->assignmentId, $patternId)
             ?? throw new InvalidArgumentException('Ese patrón no existe.');
 

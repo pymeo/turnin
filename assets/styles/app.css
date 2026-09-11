@@ -23,6 +23,9 @@
 	--ink-muted: #596c69;
 	--line: #dde6e4;
 	--ring: #0f7666;
+	--shift-amber: #d97706; --shift-orange: #ea580c; --shift-teal: #0f766e;
+	--shift-blue: #2563eb; --shift-indigo: #4f46e5; --shift-violet: #7c3aed;
+	--shift-rose: #e11d48; --shift-slate: #475569; --shift-emerald: #059669; --shift-cyan: #0891b2;
 }
 
 @media (prefers-color-scheme: dark) {
@@ -568,6 +571,21 @@
 	border-color: var(--line);
 	border-style: dashed;
 }
+
+@utility calendar-tone-amber { background-color: color-mix(in srgb, var(--shift-amber) 16%, var(--surface)); color: color-mix(in srgb, var(--shift-amber) 82%, var(--ink)); }
+@utility calendar-tone-orange { background-color: color-mix(in srgb, var(--shift-orange) 16%, var(--surface)); color: color-mix(in srgb, var(--shift-orange) 82%, var(--ink)); }
+@utility calendar-tone-teal { background-color: color-mix(in srgb, var(--shift-teal) 16%, var(--surface)); color: color-mix(in srgb, var(--shift-teal) 82%, var(--ink)); }
+@utility calendar-tone-blue { background-color: color-mix(in srgb, var(--shift-blue) 16%, var(--surface)); color: color-mix(in srgb, var(--shift-blue) 82%, var(--ink)); }
+@utility calendar-tone-indigo { background-color: color-mix(in srgb, var(--shift-indigo) 16%, var(--surface)); color: color-mix(in srgb, var(--shift-indigo) 82%, var(--ink)); }
+@utility calendar-tone-violet { background-color: color-mix(in srgb, var(--shift-violet) 16%, var(--surface)); color: color-mix(in srgb, var(--shift-violet) 82%, var(--ink)); }
+@utility calendar-tone-rose { background-color: color-mix(in srgb, var(--shift-rose) 16%, var(--surface)); color: color-mix(in srgb, var(--shift-rose) 82%, var(--ink)); }
+@utility calendar-tone-slate { background-color: color-mix(in srgb, var(--shift-slate) 16%, var(--surface)); color: color-mix(in srgb, var(--shift-slate) 82%, var(--ink)); }
+@utility calendar-tone-emerald { background-color: color-mix(in srgb, var(--shift-emerald) 16%, var(--surface)); color: color-mix(in srgb, var(--shift-emerald) 82%, var(--ink)); }
+@utility calendar-tone-cyan { background-color: color-mix(in srgb, var(--shift-cyan) 16%, var(--surface)); color: color-mix(in srgb, var(--shift-cyan) 82%, var(--ink)); }
+
+@utility combined-cell-codes { @apply flex max-w-full items-center gap-0.5 overflow-hidden text-[0.65rem] font-bold; }
+@utility workplace-dot { @apply inline-block size-1.5 shrink-0 rounded-full bg-ink-muted; }
+@utility overlap-mark { @apply absolute top-1 right-1 grid size-4 place-items-center rounded-full bg-caution text-[0.65rem] font-black text-white; }
 
 @utility calendar-summary {
 	@apply flex flex-wrap items-center gap-x-2 gap-y-1 px-1 text-[0.8rem] text-ink-muted;

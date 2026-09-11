@@ -1,5 +1,5 @@
 import { Controller } from '@hotwired/stimulus';
-import { applyTone, closeSheet, getJson, openSheet, postJson } from '../scheduling/roster_api.js';
+import { applyTone, closeSheet, configureCalendarContext, getJson, openSheet, postJson } from '../scheduling/roster_api.js';
 
 /*
  * The month screen: paging, tapping a day, and opening the sheets.
@@ -9,10 +9,11 @@ import { applyTone, closeSheet, getJson, openSheet, postJson } from '../scheduli
  * exactly one confirm-and-write path.
  */
 export default class extends Controller {
-	static targets = ['grid', 'summary', 'title', 'emptyState', 'addSheet', 'daySheet', 'daySheetTitle', 'daySheetDetail', 'daySheetClear', 'patternSheet', 'voiceSheet', 'voiceChoice', 'detection', 'detectionText', 'addButton'];
-	static values = { month: String, today: String, csrf: String };
+	static targets = ['grid', 'summary', 'title', 'emptyState', 'addSheet', 'daySheet', 'daySheetTitle', 'daySheetDetail', 'daySheetClear', 'manualFields', 'manualLabel', 'manualAbbreviation', 'manualStart', 'manualEnd', 'manualKind', 'manualColor', 'patternSheet', 'voiceSheet', 'voiceChoice', 'detection', 'detectionText', 'addButton'];
+	static values = { month: String, today: String, csrf: String, assignment: String, view: String };
 
 	connect() {
+		configureCalendarContext(this.hasAssignmentValue ? this.assignmentValue : null, this.hasViewValue ? this.viewValue : null);
 		this.painting = false;
 		this.selectedDate = null;
 		this.detected = null;
@@ -72,9 +73,9 @@ export default class extends Controller {
 		// The cell's own label already spells the day out for a screen reader;
 		// the sheet reuses everything after the date.
 		const described = (cell.getAttribute('aria-label') || '').split(', ').slice(1).join(', ');
-		this.daySheetDetailTarget.textContent = unknown
+		this.daySheetDetailTarget.textContent = cell.dataset.detail || (unknown
 			? 'Aún no has indicado tu turno.'
-			: described.charAt(0).toLocaleUpperCase('es') + described.slice(1);
+			: described.charAt(0).toLocaleUpperCase('es') + described.slice(1));
 		this.daySheetClearTarget.classList.toggle('hidden', unknown);
 		openSheet(this.daySheetTarget);
 	}
@@ -91,6 +92,20 @@ export default class extends Controller {
 		this.saveDay('clear', []);
 	}
 
+	showManual() {
+		this.manualFieldsTarget.classList.remove('hidden');
+		this.manualFieldsTarget.classList.add('flex');
+	}
+
+	async saveManual() {
+		if (!this.selectedDate || this.viewValue === 'all') return;
+		try {
+			await postJson('/app/calendar/manual', this.csrfValue, {date: this.selectedDate, label: this.manualLabelTarget.value, abbreviation: this.manualAbbreviationTarget.value, start: this.manualStartTarget.value, end: this.manualEndTarget.value, kind: this.manualKindTarget.value, colorKey: this.manualColorTarget.value});
+			closeSheet(this.daySheetTarget);
+			await this.load(this.monthValue);
+		} catch (error) { this.report(error); }
+	}
+
 	/*
 	 * A single day is the one case that does not need a preview: the worker is
 	 * looking at that day, chose one thing for it, and replacing it is the
@@ -98,6 +113,7 @@ export default class extends Controller {
 	 * confirmation sheet.
 	 */
 	async saveDay(intent, presetIds) {
+		if (this.viewValue === 'all') return;
 		if (!this.selectedDate) return;
 		try {
 			await postJson('/app/calendar/apply', this.csrfValue, {
@@ -114,6 +130,16 @@ export default class extends Controller {
 
 	openAdd() {
 		openSheet(this.addSheetTarget);
+	}
+
+	async seedPresets() {
+		await postJson('/app/calendar/turnos/inicializar', this.csrfValue, {});
+		window.location.reload();
+	}
+
+	async copyPresets(event) {
+		await postJson('/app/calendar/turnos/copiar', this.csrfValue, { sourceAssignmentId: event.currentTarget.dataset.assignmentId });
+		window.location.reload();
 	}
 
 	startPainting() {

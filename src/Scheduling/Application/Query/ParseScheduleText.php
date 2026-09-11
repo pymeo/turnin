@@ -15,6 +15,7 @@ final readonly class ParseScheduleText
         public ?string $month = null,
         public RosterSource $source = RosterSource::TEXT,
         public ConflictPolicy $policy = ConflictPolicy::SKIP_EXISTING,
+        public ?string $assignmentId = null,
     ) {
     }
 }

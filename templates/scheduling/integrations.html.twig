@@ -1,0 +1,29 @@
+{% extends 'base.html.twig' %}
+
+{% block title %}Turnin — Integraciones de calendario{% endblock %}
+
+{% block body %}
+<main class="calendar-shell" data-controller="calendar-integration" data-calendar-integration-csrf-value="{{ csrf_token('calendar') }}">
+    {% include 'identity/_authenticated_header.html.twig' %}
+    <header class="flex items-center justify-between gap-3">
+        <span><a class="btn-ghost px-0" href="{{ path('scheduling_calendar') }}">← Calendario</a><h1 class="text-2xl font-bold">Integraciones</h1></span>
+    </header>
+
+    <section class="card flex flex-col gap-4">
+        <span><h2 class="text-lg font-semibold">Google Calendar</h2><p class="text-sm text-ink-muted">{{ connected ? '✓ Conectado' : 'No conectado' }}</p></span>
+        {% if not connected %}
+            <p>Conecta Calendar de forma independiente a tu inicio de sesión. Turnin seguirá siendo la fuente de verdad.</p>
+            <span class="flex flex-wrap gap-2"><a class="btn-primary" href="{{ path('scheduling_google_calendar_connect') }}">Conectar para importar</a><a class="btn-secondary" href="{{ path('scheduling_google_calendar_connect', {intent: 'export'}) }}">Conectar para exportar</a></span>
+        {% else %}
+            <p class="text-sm">Elige explícitamente un calendario Google y el lugar de trabajo Turnin. No leeremos otros calendarios.</p>
+            <label>Calendario Google<select class="field" data-calendar-integration-target="calendar">{% for calendar in calendars %}<option value="{{ calendar.id }}" data-writable="{{ calendar.writable ? '1' : '0' }}">{{ calendar.name }}</option>{% endfor %}</select></label>
+            <label>Importar/exportar en<select class="field" data-calendar-integration-target="assignment">{% for assignment in assignments %}<option value="{{ assignment.assignmentId }}">{{ assignment.shortLabel }}</option>{% endfor %}</select></label>
+            <span class="grid grid-cols-2 gap-2"><label>Desde<input class="field" type="date" data-calendar-integration-target="from"></label><label>Hasta<input class="field" type="date" data-calendar-integration-target="to"></label></span>
+            <span class="flex flex-wrap gap-2"><button class="btn-primary" type="button" data-action="calendar-integration#preview">Importar turnos</button><button class="btn-secondary" type="button" data-action="calendar-integration#export">Exportar turnos</button><button class="btn-ghost" type="button" data-action="calendar-integration#downloadIcs">Descargar .ics</button></span>
+            <div class="hidden flex-col gap-3" data-calendar-integration-target="preview" aria-live="polite"><strong data-calendar-integration-target="summary"></strong><div class="flex flex-col gap-2" data-calendar-integration-target="items"></div><button class="btn-primary" type="button" data-action="calendar-integration#importSelected">Confirmar importación</button></div>
+            <p class="text-sm text-ink-muted" data-calendar-integration-target="message" aria-live="polite"></p>
+            <button class="btn-ghost self-start text-danger" type="button" data-action="calendar-integration#disconnect">Desconectar</button>
+        {% endif %}
+    </section>
+</main>
+{% endblock %}

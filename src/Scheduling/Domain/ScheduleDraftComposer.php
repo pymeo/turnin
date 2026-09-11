@@ -13,7 +13,7 @@ namespace App\Scheduling\Domain;
 final readonly class ScheduleDraftComposer
 {
     /** @param list<DraftInstruction> $instructions */
-    public function compose(array $instructions, ShiftPresetResolver $presets, RosterSource $source): ScheduleDraft
+    public function compose(array $instructions, ShiftPresetResolver $presets, RosterSource $source, ?string $workerAssignmentId = null): ScheduleDraft
     {
         $entries = [];
 
@@ -40,6 +40,6 @@ final readonly class ScheduleDraftComposer
                 : ScheduleDraftEntry::work($instruction->date, $segments);
         }
 
-        return ScheduleDraft::of($entries, $source);
+        return ScheduleDraft::of($entries, $source, $workerAssignmentId);
     }
 }

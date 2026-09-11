@@ -12,4 +12,9 @@ namespace App\Scheduling\Domain;
 interface AssignedWorkers
 {
     public function primaryFor(string $workerId): ?AssignedWorker;
+
+    /** @return list<AssignedWorker> */
+    public function activeFor(string $workerId): array;
+
+    public function byIdFor(string $workerId, string $assignmentId): ?AssignedWorker;
 }

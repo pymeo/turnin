@@ -4,6 +4,7 @@ declare(strict_types=1);
 
 namespace App\Scheduling\Infrastructure\Persistence\Doctrine;
 
+use App\Scheduling\Domain\ShiftColor;
 use App\Scheduling\Domain\ShiftKind;
 use App\Scheduling\Domain\ShiftPreset;
 use App\Scheduling\Domain\ShiftPresets;
@@ -43,11 +44,11 @@ final readonly class DoctrineShiftPresets implements ShiftPresets
     {
         $this->connection->executeStatement(
             <<<'SQL'
-                INSERT INTO scheduling_shift_presets (id, worker_assignment_id, name, abbreviation, starts_at, ends_at, kind, aliases, position, active, created_at, updated_at)
-                     VALUES (:id, :assignment, :name, :abbreviation, :start, :end, :kind, :aliases, :position, :active, :created, :updated)
+                INSERT INTO scheduling_shift_presets (id, worker_assignment_id, name, abbreviation, starts_at, ends_at, kind, color_key, aliases, position, active, created_at, updated_at)
+                     VALUES (:id, :assignment, :name, :abbreviation, :start, :end, :kind, :color, :aliases, :position, :active, :created, :updated)
                 ON CONFLICT (id) DO UPDATE SET name = EXCLUDED.name, abbreviation = EXCLUDED.abbreviation,
                      starts_at = EXCLUDED.starts_at, ends_at = EXCLUDED.ends_at, kind = EXCLUDED.kind,
-                     aliases = EXCLUDED.aliases, position = EXCLUDED.position, active = EXCLUDED.active,
+                     color_key = EXCLUDED.color_key, aliases = EXCLUDED.aliases, position = EXCLUDED.position, active = EXCLUDED.active,
                      updated_at = EXCLUDED.updated_at
                 SQL,
             [
@@ -58,6 +59,7 @@ final readonly class DoctrineShiftPresets implements ShiftPresets
                 'start' => (string) $preset->window()->start,
                 'end' => (string) $preset->window()->end,
                 'kind' => $preset->kind()->value,
+                'color' => $preset->color()->value,
                 'aliases' => json_encode($preset->aliases(), \JSON_THROW_ON_ERROR),
                 'position' => $preset->position(),
                 'active' => $preset->active(),
@@ -99,6 +101,7 @@ final readonly class DoctrineShiftPresets implements ShiftPresets
             (bool) ($row['active'] ?? false),
             new DateTimeImmutable($this->text($row['created_at'] ?? null)),
             new DateTimeImmutable($this->text($row['updated_at'] ?? null)),
+            ShiftColor::from($this->text($row['color_key'] ?? null)),
         );
     }
 

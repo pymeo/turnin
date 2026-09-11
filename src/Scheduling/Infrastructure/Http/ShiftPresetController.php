@@ -4,7 +4,9 @@ declare(strict_types=1);
 
 namespace App\Scheduling\Infrastructure\Http;
 
+use App\Scheduling\Application\Command\CopyShiftPresets;
 use App\Scheduling\Application\Command\DeactivateShiftPreset;
+use App\Scheduling\Application\Command\EnsureShiftPresets;
 use App\Scheduling\Application\Command\ReorderShiftPresets;
 use App\Scheduling\Application\Command\SaveShiftPreset;
 use App\Scheduling\Application\Query\GetShiftPresets;
@@ -36,7 +38,7 @@ final readonly class ShiftPresetController
     }
 
     #[Route('/app/calendar/turnos', name: 'scheduling_shift_presets', methods: ['GET'])]
-    public function page(): Response
+    public function page(Request $request): Response
     {
         $workerId = $this->roster->workerId();
         if (null === $workerId) {
@@ -44,7 +46,8 @@ final readonly class ShiftPresetController
         }
 
         try {
-            $presets = $this->roster->handled($this->queryBus, new GetShiftPresets($workerId, true));
+            $assignmentId = $this->roster->assignmentId($request);
+            $presets = $this->roster->handled($this->queryBus, new GetShiftPresets($workerId, true, $assignmentId));
         } catch (Throwable $exception) {
             if (RosterRequest::rootCause($exception) instanceof RosterAccessDenied) {
                 return new RedirectResponse('/onboarding');
@@ -56,6 +59,7 @@ final readonly class ShiftPresetController
         return new Response($this->twig->render('scheduling/shift_presets.html.twig', [
             'presets' => $presets,
             'csrfToken' => $this->csrf->getToken(RosterRequest::CSRF_TOKEN_ID)->getValue(),
+            'assignmentId' => $assignmentId,
         ]));
     }
 
@@ -74,17 +78,42 @@ final readonly class ShiftPresetController
                 $this->required($payload, 'end'),
                 $this->required($payload, 'kind'),
                 $this->aliases($payload),
+                $this->required($payload, 'colorKey'),
+                $this->roster->assignmentId($request),
             ));
 
             return ['presetId' => \is_string($id) ? $id : null];
         });
     }
 
+    #[Route('/app/calendar/turnos/inicializar', name: 'scheduling_shift_presets_seed', methods: ['POST'])]
+    public function seed(Request $request): JsonResponse
+    {
+        return $this->roster->respond($request, function (string $workerId) use ($request): array {
+            $assignmentId = $this->roster->assignmentId($request);
+            $this->commandBus->dispatch(new EnsureShiftPresets($workerId, $assignmentId));
+
+            return [];
+        });
+    }
+
+    #[Route('/app/calendar/turnos/copiar', name: 'scheduling_shift_presets_copy', methods: ['POST'])]
+    public function copy(Request $request): JsonResponse
+    {
+        return $this->roster->respond($request, function (string $workerId) use ($request): array {
+            $payload = $this->roster->payload($request);
+            $target = $this->roster->assignmentId($request) ?? '';
+            $this->commandBus->dispatch(new CopyShiftPresets($workerId, $this->required($payload, 'sourceAssignmentId'), $target));
+
+            return [];
+        });
+    }
+
     #[Route('/app/calendar/turnos/{presetId}/retirar', name: 'scheduling_shift_presets_deactivate', methods: ['POST'])]
     public function deactivate(Request $request, string $presetId): JsonResponse
     {
-        return $this->roster->respond($request, function (string $workerId) use ($presetId): array {
-            $this->commandBus->dispatch(new DeactivateShiftPreset($workerId, $presetId));
+        return $this->roster->respond($request, function (string $workerId) use ($request, $presetId): array {
+            $this->commandBus->dispatch(new DeactivateShiftPreset($workerId, $presetId, $this->roster->assignmentId($request)));
 
             return [];
         });
@@ -104,7 +133,7 @@ final readonly class ShiftPresetController
                     }
                 }
             }
-            $this->commandBus->dispatch(new ReorderShiftPresets($workerId, $ids));
+            $this->commandBus->dispatch(new ReorderShiftPresets($workerId, $ids, $this->roster->assignmentId($request)));
 
             return [];
         });

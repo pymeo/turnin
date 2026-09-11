@@ -4,18 +4,17 @@
 
 {% block body %}
 {% set tones = {
-    'morning': 'calendar-tone-morning',
-    'evening': 'calendar-tone-evening',
-    'night': 'calendar-tone-night',
-    'oncall': 'calendar-tone-oncall',
+    'amber': 'calendar-tone-amber', 'orange': 'calendar-tone-orange', 'teal': 'calendar-tone-teal',
+    'blue': 'calendar-tone-blue', 'indigo': 'calendar-tone-indigo', 'violet': 'calendar-tone-violet',
+    'rose': 'calendar-tone-rose', 'slate': 'calendar-tone-slate', 'emerald': 'calendar-tone-emerald', 'cyan': 'calendar-tone-cyan',
     'rest': 'calendar-tone-rest',
     'unknown': 'calendar-tone-unknown',
 } %}
-<main class="page flex flex-col gap-5" data-controller="shift-presets" data-shift-presets-csrf-value="{{ csrfToken }}">
+<main class="page flex flex-col gap-5" data-controller="shift-presets" data-shift-presets-csrf-value="{{ csrfToken }}" data-shift-presets-assignment-value="{{ assignmentId }}">
     {% include 'identity/_authenticated_header.html.twig' %}
 
     <header class="flex flex-col gap-1">
-        <a class="text-sm text-ink-muted no-underline" href="{{ path('scheduling_calendar') }}">‹ Calendario</a>
+        <a class="text-sm text-ink-muted no-underline" href="{{ path('scheduling_calendar', {assignment: assignmentId}) }}">‹ Calendario</a>
         <h1 class="text-2xl font-bold tracking-tight">Mis turnos</h1>
         <p class="text-ink-muted">
             Son los botones que usas para pintar tu calendario. Cambiar un horario aquí
@@ -25,7 +24,7 @@
 
     <section class="flex flex-col gap-2" data-shift-presets-target="list">
         {% for preset in presets %}
-            <article class="preset-row" data-active="{{ preset.active ? 'true' : 'false' }}" data-preset-id="{{ preset.id }}">
+            <article class="preset-row" data-active="{{ preset.active ? 'true' : 'false' }}" data-preset-id="{{ preset.id }}" data-name="{{ preset.name }}" data-abbreviation="{{ preset.abbreviation }}" data-start="{{ preset.start }}" data-end="{{ preset.end }}" data-kind="{{ preset.kind }}" data-color="{{ preset.colorKey }}" data-aliases="{{ preset.aliases|join(', ') }}">
                 <span class="preset-mark {{ tones[preset.tone]|default('calendar-tone-unknown') }}" aria-hidden="true">{{ preset.abbreviation }}</span>
                 <span class="flex min-w-0 flex-1 flex-col">
                     <span class="truncate font-semibold">{{ preset.name }}</span>
@@ -37,6 +36,7 @@
                 <span class="flex shrink-0 items-center gap-1">
                     <button type="button" class="calendar-nav-button text-base" data-action="shift-presets#moveUp" aria-label="Subir {{ preset.name }}">↑</button>
                     <button type="button" class="btn-ghost px-3 text-sm" data-action="shift-presets#edit">Editar</button>
+                    <button type="button" class="btn-ghost px-2 text-sm" data-action="shift-presets#duplicate">Duplicar</button>
                 </span>
             </article>
         {% endfor %}
@@ -50,6 +50,16 @@
             <div class="sheet-header">
                 <h2 id="preset-sheet-title" data-shift-presets-target="sheetTitle">Editar turno</h2>
                 <button type="button" class="picker-close" data-action="bottom-sheet#close" aria-label="Cerrar">×</button>
+            </div>
+
+            <label class="field"><span class="field-label">¿Qué quieres crear?</span>
+                <select class="input" data-shift-presets-target="mode" data-action="shift-presets#derive">
+                    <option value="custom">Horario personalizado</option><option value="12h">Turno de 12 horas</option><option value="part">Parte de otro turno</option>
+                </select>
+            </label>
+            <div class="hidden grid grid-cols-2 gap-3" data-shift-presets-target="partOptions">
+                <label class="field"><span class="field-label">¿De cuál?</span><select class="input" data-shift-presets-target="base" data-action="shift-presets#derive">{% for preset in presets %}<option value="{{ preset.start }}|{{ preset.end }}">{{ preset.name }} · {{ preset.start }}–{{ preset.end }}</option>{% endfor %}</select></label>
+                <label class="field"><span class="field-label">Parte</span><select class="input" data-shift-presets-target="slice" data-action="shift-presets#derive"><option value="0/2">Primera mitad</option><option value="1/2">Segunda mitad</option><option value="0/3">Primer tercio</option><option value="1/3">Segundo tercio</option><option value="2/3">Último tercio</option></select></label>
             </div>
 
             <label class="field">
@@ -77,7 +87,7 @@
             <div class="grid grid-cols-2 gap-3">
                 <label class="field">
                     <span class="field-label">Empieza</span>
-                    <input class="input" type="time" name="start" required data-shift-presets-target="start">
+                    <input class="input" type="time" name="start" required data-shift-presets-target="start" data-action="shift-presets#derive">
                 </label>
                 <label class="field">
                     <span class="field-label">Termina</span>
@@ -85,6 +95,7 @@
                 </label>
             </div>
             <p class="text-sm text-ink-muted">Si termina antes de empezar, entendemos que acaba al día siguiente.</p>
+            <label class="field"><span class="field-label">Color</span><select class="input" name="colorKey" data-shift-presets-target="color">{% for key in ['amber','orange','teal','blue','indigo','violet','rose','slate','emerald','cyan'] %}<option value="{{ key }}">● {{ key }}</option>{% endfor %}</select><span class="text-sm text-ink-muted">El color es visual; las horas siguen siendo la verdad del turno.</span></label>
             <label class="field">
                 <span class="field-label">Cómo lo llamas al dictar</span>
                 <input class="input" name="aliases" data-shift-presets-target="aliases" placeholder="guardia, g, 24 horas">

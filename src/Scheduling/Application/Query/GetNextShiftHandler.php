@@ -31,7 +31,7 @@ final readonly class GetNextShiftHandler
 
     public function __invoke(GetNextShift $query): ?NextShiftView
     {
-        $worker = $this->workspace->find($query->workerId);
+        $worker = null === $query->assignmentId ? $this->workspace->find($query->workerId) : $this->workspace->requireAssignment($query->workerId, $query->assignmentId);
         if (null === $worker) {
             return null;
         }
@@ -56,7 +56,7 @@ final readonly class GetNextShiftHandler
                 $this->when($day->date(), $today),
                 $segment->labelSnapshot,
                 \sprintf('%s–%s', $segment->window->start, $segment->window->end),
-                $segment->kind->tone(),
+                $segment->colorSnapshot->value,
                 $segment->endsNextDay(),
             );
         }

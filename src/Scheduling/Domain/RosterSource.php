@@ -17,4 +17,5 @@ enum RosterSource: string
     case TEXT = 'text';
     case SWAP = 'swap';
     case IMPORT = 'import';
+    case GOOGLE_CALENDAR = 'google_calendar';
 }

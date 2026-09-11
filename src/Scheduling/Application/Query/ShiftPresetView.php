@@ -15,6 +15,7 @@ final readonly class ShiftPresetView
         public string $end,
         public string $kind,
         public string $tone,
+        public string $colorKey,
         public bool $endsNextDay,
         public int $position,
         public bool $active,

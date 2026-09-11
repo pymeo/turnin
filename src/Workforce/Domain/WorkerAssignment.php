@@ -22,6 +22,31 @@ final class WorkerAssignment
         return new self($id, $workerId, $workplaceId, $staffCategoryId, $specialtyId, $organizationalUnitId, $functionalArea, $employerId, $primary, true, $now, $now);
     }
 
+    public static function restore(string $id, string $workerId, WorkplaceId $workplaceId, string $staffCategoryId, ?string $specialtyId, ?string $organizationalUnitId, ?string $functionalArea, ?string $employerId, bool $primary, bool $active, DateTimeImmutable $createdAt, DateTimeImmutable $updatedAt): self
+    {
+        return new self($id, $workerId, $workplaceId, $staffCategoryId, $specialtyId, $organizationalUnitId, $functionalArea, $employerId, $primary, $active, $createdAt, $updatedAt);
+    }
+
+    public function makePrimary(DateTimeImmutable $now): void
+    {
+        $this->primary = true;
+        $this->active = true;
+        $this->updatedAt = $now;
+    }
+
+    public function makeSecondary(DateTimeImmutable $now): void
+    {
+        $this->primary = false;
+        $this->updatedAt = $now;
+    }
+
+    public function deactivate(DateTimeImmutable $now): void
+    {
+        $this->active = false;
+        $this->primary = false;
+        $this->updatedAt = $now;
+    }
+
     public function id(): string
     {
         return $this->id;

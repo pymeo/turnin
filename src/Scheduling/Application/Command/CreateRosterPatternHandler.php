@@ -24,7 +24,7 @@ final readonly class CreateRosterPatternHandler
 
     public function __invoke(CreateRosterPattern $command): string
     {
-        $worker = $this->workspace->require($command->workerId);
+        $worker = $this->workspace->require($command->workerId, $command->assignmentId);
         $presets = $this->workspace->presetsFor($worker);
 
         $slots = [];

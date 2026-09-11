@@ -28,6 +28,7 @@ final class ShiftPreset
         private string $abbreviation,
         private ShiftWindow $window,
         private ShiftKind $kind,
+        private ShiftColor $color,
         private array $aliases,
         private int $position,
         private bool $active,
@@ -38,24 +39,25 @@ final class ShiftPreset
     }
 
     /** @param list<string> $aliases */
-    public static function create(string $id, string $workerAssignmentId, string $name, string $abbreviation, ShiftWindow $window, ShiftKind $kind, array $aliases, int $position, DateTimeImmutable $now): self
+    public static function create(string $id, string $workerAssignmentId, string $name, string $abbreviation, ShiftWindow $window, ShiftKind $kind, array $aliases, int $position, DateTimeImmutable $now, ?ShiftColor $color = null): self
     {
-        return new self($id, $workerAssignmentId, $name, $abbreviation, $window, $kind, $aliases, $position, true, $now, $now);
+        return new self($id, $workerAssignmentId, $name, $abbreviation, $window, $kind, $color ?? ShiftColor::suggestedFor($kind), $aliases, $position, true, $now, $now);
     }
 
     /** @param list<string> $aliases */
-    public static function restore(string $id, string $workerAssignmentId, string $name, string $abbreviation, ShiftWindow $window, ShiftKind $kind, array $aliases, int $position, bool $active, DateTimeImmutable $createdAt, DateTimeImmutable $updatedAt): self
+    public static function restore(string $id, string $workerAssignmentId, string $name, string $abbreviation, ShiftWindow $window, ShiftKind $kind, array $aliases, int $position, bool $active, DateTimeImmutable $createdAt, DateTimeImmutable $updatedAt, ?ShiftColor $color = null): self
     {
-        return new self($id, $workerAssignmentId, $name, $abbreviation, $window, $kind, $aliases, $position, $active, $createdAt, $updatedAt);
+        return new self($id, $workerAssignmentId, $name, $abbreviation, $window, $kind, $color ?? ShiftColor::suggestedFor($kind), $aliases, $position, $active, $createdAt, $updatedAt);
     }
 
     /** @param list<string> $aliases */
-    public function reshape(string $name, string $abbreviation, ShiftWindow $window, ShiftKind $kind, array $aliases, DateTimeImmutable $now): void
+    public function reshape(string $name, string $abbreviation, ShiftWindow $window, ShiftKind $kind, array $aliases, DateTimeImmutable $now, ?ShiftColor $color = null): void
     {
         $this->name = $name;
         $this->abbreviation = $abbreviation;
         $this->window = $window;
         $this->kind = $kind;
+        $this->color = $color ?? $this->color;
         $this->aliases = $aliases;
         $this->updatedAt = $now;
         $this->guard();
@@ -105,6 +107,11 @@ final class ShiftPreset
     public function kind(): ShiftKind
     {
         return $this->kind;
+    }
+
+    public function color(): ShiftColor
+    {
+        return $this->color;
     }
 
     /** @return list<string> */

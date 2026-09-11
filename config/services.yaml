@@ -23,6 +23,9 @@ services:
             iterable $workplaceCatalogSources: !tagged_iterator turnin.workplace_catalog_source
             string $piiHmacKey: '%env(PII_HMAC_KEY)%'
             string $piiEncryptionKey: '%env(PII_ENCRYPTION_KEY)%'
+            string $calendarTokenEncryptionKey: '%env(CALENDAR_TOKEN_ENCRYPTION_KEY)%'
+            string $googleOAuthClientId: '%env(GOOGLE_OAUTH_CLIENT_ID)%'
+            string $googleOAuthClientSecret: '%env(GOOGLE_OAUTH_CLIENT_SECRET)%'
 
     App\:
         resource: '../src/'
@@ -99,6 +102,7 @@ services:
     App\Workforce\Domain\WorkplaceReader: '@App\Workforce\Infrastructure\Persistence\Doctrine\DoctrineWorkplaces'
     App\Workforce\Domain\WorkerAssignmentIdGenerator: '@App\Workforce\Infrastructure\Identity\SymfonyWorkerAssignmentIdGenerator'
     App\Workforce\Domain\WorkerAssignmentWriter: '@App\Workforce\Infrastructure\Persistence\Doctrine\DoctrineWorkerAssignmentWriter'
+    App\Workforce\Domain\WorkerAssignments: '@App\Workforce\Infrastructure\Persistence\Doctrine\DoctrineWorkerAssignmentWriter'
     App\Workforce\Domain\WorkerOnboardingDrafts: '@App\Workforce\Infrastructure\Persistence\Doctrine\DoctrineWorkerOnboardingDrafts'
     App\Workforce\Domain\SwapPoolResolver: ~
     App\Platform\Identity\Domain\Users: '@App\Platform\Identity\Infrastructure\Persistence\Doctrine\DoctrineUsers'
@@ -129,6 +133,11 @@ services:
     App\Scheduling\Domain\AssignedWorkers: '@App\Workforce\Infrastructure\Scheduling\WorkforceAssignedWorkers'
     App\Scheduling\Domain\AuthenticatedWorkers: '@App\Platform\Identity\Infrastructure\Scheduling\IdentityAuthenticatedWorkers'
     App\Scheduling\Domain\CalendarInsightSource: '@App\Scheduling\Domain\RestStreakInsights'
+    App\Scheduling\Application\ExternalCalendar\CalendarTokenCipher: '@App\Scheduling\Infrastructure\ExternalCalendar\SodiumCalendarTokenCipher'
+    App\Scheduling\Application\ExternalCalendar\ExternalCalendarConnections: '@App\Scheduling\Infrastructure\Persistence\Doctrine\DoctrineExternalCalendars'
+    App\Scheduling\Application\ExternalCalendar\ExternalCalendarMappings: '@App\Scheduling\Infrastructure\Persistence\Doctrine\DoctrineExternalCalendars'
+    App\Scheduling\Application\ExternalCalendar\ExternalRosterEvents: '@App\Scheduling\Infrastructure\Persistence\Doctrine\DoctrineExternalCalendars'
+    App\Scheduling\Application\ExternalCalendar\ExternalCalendarProvider: '@App\Scheduling\Infrastructure\ExternalCalendar\GoogleCalendarProvider'
     App\Scheduling\Domain\RestStreakInsights: ~
     App\Scheduling\Domain\ScheduleDraftComposer: ~
     App\Scheduling\Domain\ScheduleDraftResolver: ~

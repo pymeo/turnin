@@ -2,7 +2,7 @@ import { Controller } from '@hotwired/stimulus';
 
 export default class extends Controller {
 	static targets = ['step', 'counter', 'progress', 'progressLabel', 'error', 'primaryContext', 'additionalButton', 'summaryName', 'summaryCategory', 'summaryDestination', 'summaryWorkplace', 'summaryAdditional', 'summaryAdditionalNames'];
-	static values = { csrf: String };
+	static values = { csrf: String, completeUrl: String };
 
 	connect() {
 		this.index = this.firstIncompleteStep();
@@ -41,7 +41,7 @@ export default class extends Controller {
 		this.busy(button, true);
 		this.clearError();
 		try {
-			const payload = await this.post('/onboarding/complete', new URLSearchParams());
+			const payload = await this.post(this.completeUrlValue || '/onboarding/complete', new URLSearchParams());
 			window.location.assign(payload.result.redirect);
 		} catch (error) {
 			this.showError(error.message || 'No se pudo completar tu perfil.');

@@ -17,7 +17,7 @@ final readonly class RenameRosterPatternHandler
 
     public function __invoke(RenameRosterPattern $command): void
     {
-        $worker = $this->workspace->require($command->workerId);
+        $worker = $this->workspace->require($command->workerId, $command->assignmentId);
         $pattern = $this->patterns->byId($worker->assignmentId, $command->patternId)
             ?? throw new InvalidArgumentException('Ese patrón no existe.');
 

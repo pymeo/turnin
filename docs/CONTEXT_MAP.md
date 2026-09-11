@@ -224,3 +224,13 @@ unidades distinguen `fixed_service` de `floating_team`; esta última cubre
 como `service = null`: su ID forma parte de la clave de `SwapPool`, por lo que
 los volantes no se mezclan automáticamente con la plantilla fija de la unidad
 que cubran temporalmente. La ubicación puntual del turno quedará en Scheduling.
+# Calendario multi-asignación e integraciones
+
+Scheduling consume la proyección mínima de Workforce mediante `AssignedWorkers`
+(`primaryFor`, `activeFor`, `byIdFor`). Workforce implementa el puerto y conserva
+la propiedad de `WorkerAssignment`, workplace, timezone y SwapPool. Scheduling
+no lee sus tablas ni modifica sus entidades.
+
+Los proveedores de calendario son puertos de Scheduling Application.
+`GoogleCalendarProvider` es un adaptador Infrastructure; los DTO normalizados
+impiden que tipos del SDK/API entren en Domain.

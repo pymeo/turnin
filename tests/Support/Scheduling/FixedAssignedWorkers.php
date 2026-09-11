@@ -9,8 +9,13 @@ use App\Scheduling\Domain\AssignedWorkers;
 
 final readonly class FixedAssignedWorkers implements AssignedWorkers
 {
-    public function __construct(private ?AssignedWorker $worker)
+    /** @var list<AssignedWorker> */
+    private array $workers;
+
+    /** @param AssignedWorker|list<AssignedWorker>|null $worker */
+    public function __construct(AssignedWorker|array|null $worker)
     {
+        $this->workers = \is_array($worker) ? $worker : (null === $worker ? [] : [$worker]);
     }
 
     public static function inMadrid(string $workerId = 'worker-1', string $assignmentId = 'assignment-1'): self
@@ -30,6 +35,28 @@ final readonly class FixedAssignedWorkers implements AssignedWorkers
 
     public function primaryFor(string $workerId): ?AssignedWorker
     {
-        return null !== $this->worker && $this->worker->workerId === $workerId ? $this->worker : null;
+        foreach ($this->workers as $worker) {
+            if ($worker->workerId === $workerId && $worker->primary) {
+                return $worker;
+            }
+        }
+
+        return null;
+    }
+
+    public function activeFor(string $workerId): array
+    {
+        return array_values(array_filter($this->workers, static fn (AssignedWorker $worker): bool => $worker->workerId === $workerId));
+    }
+
+    public function byIdFor(string $workerId, string $assignmentId): ?AssignedWorker
+    {
+        foreach ($this->activeFor($workerId) as $worker) {
+            if ($worker->assignmentId === $assignmentId) {
+                return $worker;
+            }
+        }
+
+        return null;
     }
 }

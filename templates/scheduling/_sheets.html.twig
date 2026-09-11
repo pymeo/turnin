@@ -1,8 +1,7 @@
 {% set tones = {
-    'morning': 'calendar-tone-morning',
-    'evening': 'calendar-tone-evening',
-    'night': 'calendar-tone-night',
-    'oncall': 'calendar-tone-oncall',
+    'amber': 'calendar-tone-amber', 'orange': 'calendar-tone-orange', 'teal': 'calendar-tone-teal',
+    'blue': 'calendar-tone-blue', 'indigo': 'calendar-tone-indigo', 'violet': 'calendar-tone-violet',
+    'rose': 'calendar-tone-rose', 'slate': 'calendar-tone-slate', 'emerald': 'calendar-tone-emerald', 'cyan': 'calendar-tone-cyan',
     'rest': 'calendar-tone-rest',
     'unknown': 'calendar-tone-unknown',
 } %}
@@ -14,9 +13,16 @@
     <div class="sheet-inner">
         <span class="sheet-handle" aria-hidden="true"></span>
         <div class="sheet-header">
-            <h2 id="add-sheet-title">¿Cómo quieres añadirlos?</h2>
+            <h2 id="add-sheet-title">{{ combined ? '¿Para qué trabajo?' : '¿Cómo quieres añadirlos?' }}</h2>
             <button type="button" class="picker-close" data-action="bottom-sheet#close" aria-label="Cerrar">×</button>
         </div>
+        {% if combined %}
+        <div class="grid gap-2">
+            {% for assignment in assignments %}
+                <a class="sheet-choice" href="{{ path('scheduling_calendar', {assignment: assignment.assignmentId, month: month.month}) }}"><span class="sheet-choice-icon" aria-hidden="true">▣</span><span><strong>{{ assignment.workplaceName }}</strong><span class="sheet-choice-detail">{{ assignment.destinationName }}</span></span></a>
+            {% endfor %}
+        </div>
+        {% else %}
         <div class="grid gap-2">
             <button type="button" class="sheet-choice" data-action="calendar#startPainting">
                 <span class="sheet-choice-icon" aria-hidden="true">🎨</span>
@@ -35,7 +41,8 @@
                 <span><strong>Escribir cuadrante</strong><span class="sheet-choice-detail">«1 y 2 mañana, 3 tarde…»</span></span>
             </button>
         </div>
-        <a class="btn-ghost btn-block" href="{{ path('scheduling_shift_presets') }}">Gestionar mis turnos</a>
+        <a class="btn-ghost btn-block" href="{{ path('scheduling_shift_presets', {assignment: selectedAssignment.assignmentId}) }}">Gestionar mis turnos</a>
+        {% endif %}
     </div>
 </dialog>
 
@@ -63,6 +70,13 @@
                 <span class="paint-swatch-mark calendar-tone-rest" aria-hidden="true">L</span>
                 Libre
             </button>
+        </div>
+        <button type="button" class="btn-secondary btn-block" data-action="calendar#showManual">Cambiar solo este día</button>
+        <div class="hidden flex-col gap-3 rounded-xl border border-line p-3" data-calendar-target="manualFields">
+            <div class="grid grid-cols-[1fr_5rem] gap-2"><label class="field"><span class="field-label">Nombre</span><input class="input" value="Turno puntual" maxlength="40" data-calendar-target="manualLabel"></label><label class="field"><span class="field-label">Código</span><input class="input" value="TP" maxlength="3" data-calendar-target="manualAbbreviation"></label></div>
+            <div class="grid grid-cols-2 gap-2"><label class="field"><span class="field-label">Desde</span><input class="input" type="time" value="07:00" data-calendar-target="manualStart"></label><label class="field"><span class="field-label">Hasta</span><input class="input" type="time" value="15:00" data-calendar-target="manualEnd"></label></div>
+            <div class="grid grid-cols-2 gap-2"><label class="field"><span class="field-label">Tipo</span><select class="input" data-calendar-target="manualKind"><option value="other">Otro</option><option value="morning">Día</option><option value="night">Noche</option><option value="on_call">Guardia</option></select></label><label class="field"><span class="field-label">Color</span><select class="input" data-calendar-target="manualColor">{% for key in ['amber','orange','teal','blue','indigo','violet','rose','slate','emerald','cyan'] %}<option value="{{ key }}">● {{ key }}</option>{% endfor %}</select></label></div>
+            <button type="button" class="btn-primary btn-block" data-action="calendar#saveManual">Guardar solo este día</button>
         </div>
         <button type="button" class="btn-ghost btn-block" data-action="calendar#clearDay" data-calendar-target="daySheetClear">
             Eliminar información del día

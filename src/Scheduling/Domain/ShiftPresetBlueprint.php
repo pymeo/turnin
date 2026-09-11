@@ -13,6 +13,7 @@ final readonly class ShiftPresetBlueprint
         public ShiftWindow $window,
         public ShiftKind $kind,
         public array $aliases,
+        public ?ShiftColor $color = null,
     ) {
     }
 }

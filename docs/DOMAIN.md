@@ -361,3 +361,15 @@ completarlo se crea o sustituye la asignación primaria, se materializan los
 accesos principal y adicionales a pools y se elimina el borrador. Repetir el
 flujo permite actualizar la asignación sin dejar dos asignaciones o memberships
 primarias activas.
+# Calendarios y turnos exactos
+
+Una persona puede tener `0..N WorkerAssignment` activos y, entre ellos, como
+máximo uno principal. Cada assignment posee su calendario, sus `ShiftPreset`,
+sus patrones y sus pools; `REST` es relativo al assignment.
+
+`ShiftPreset` es una plantilla visual/de entrada. `ShiftSegment` es el snapshot
+histórico (incluido `colorKeySnapshot`) y `ShiftInterval` materializa
+`WorkDate + ShiftWindow + timezone` en instantes. `ShiftKind`, abreviatura,
+nombre y color nunca determinan compatibilidad. La vista «Todos» deriva
+`GLOBAL_FREE`, `WORKING`, `PARTIALLY_KNOWN`, `UNKNOWN` u `OVERLAPPING` sin crear
+filas combinadas.

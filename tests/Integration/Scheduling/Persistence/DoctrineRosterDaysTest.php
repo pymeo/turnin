@@ -150,12 +150,13 @@ final class DoctrineRosterDaysTest extends KernelTestCase
     {
         $preset = $this->preset('Mañana', 'M', '08:00', '15:00', ShiftKind::MORNING);
         $date = WorkDate::fromString('2026-10-29');
-        $this->days->apply($this->assignmentId, [RosterDay::working(Uuid::v7()->toRfc4122(), $this->assignmentId, $date, [ShiftSegment::fromPreset(Uuid::v7()->toRfc4122(), $preset, 0)], RosterSource::MANUAL, $this->now())], []);
+        $dayId = Uuid::v7()->toRfc4122();
+        $this->days->apply($this->assignmentId, [RosterDay::working($dayId, $this->assignmentId, $date, [ShiftSegment::fromPreset(Uuid::v7()->toRfc4122(), $preset, 0)], RosterSource::MANUAL, $this->now())], []);
 
         $this->days->apply($this->assignmentId, [], [$date]);
 
         self::assertNull($this->days->onDate($this->assignmentId, $date));
-        $remainingSegments = $this->connection->fetchOne('SELECT COUNT(*) FROM scheduling_roster_segments');
+        $remainingSegments = $this->connection->fetchOne('SELECT COUNT(*) FROM scheduling_roster_segments WHERE roster_day_id = :day', ['day' => $dayId]);
         self::assertIsNumeric($remainingSegments);
         self::assertSame(0, (int) $remainingSegments, 'Deleting the day must take its segments with it.');
     }

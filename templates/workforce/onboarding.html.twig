@@ -4,7 +4,7 @@
 {% set additional_ids = draft ? draft.additionalDestinationIds : [] %}
 {% set additional_names = [] %}
 {% if draft %}{% for destination in draft.additionalDestinations %}{% set additional_names = additional_names|merge([destination.name]) %}{% endfor %}{% endif %}
-<main class="onboarding-shell" data-controller="onboarding" data-onboarding-csrf-value="{{ csrf_token('onboarding') }}">
+<main class="onboarding-shell" data-controller="onboarding" data-onboarding-csrf-value="{{ csrf_token('onboarding') }}" data-onboarding-complete-url-value="{{ addMode ? path('workforce_assignment_add') : path('workforce_onboarding_complete') }}">
     {% include 'identity/_authenticated_header.html.twig' %}
     <div class="onboarding-progress" aria-label="Progreso del perfil">
         <div class="flex items-center justify-between text-sm text-ink-muted"><span data-onboarding-target="counter">1 de 7</span><span class="font-medium" data-onboarding-target="progressLabel">Identidad</span></div>
@@ -63,7 +63,7 @@
     </section>
 
     <section class="onboarding-step hidden" data-onboarding-target="step" data-step="summary">
-        <p class="eyebrow">Todo listo</p><h1>Tu puesto en Turnin</h1>
+        <p class="eyebrow">Todo listo</p><h1>{{ addMode ? 'Tu nuevo lugar de trabajo' : 'Tu puesto en Turnin' }}</h1>
         <article class="profile-summary">
             <p class="text-xl font-bold" data-onboarding-target="summaryName"></p>
             <p class="text-lg font-semibold"><span data-onboarding-target="summaryCategory"></span> · <span data-onboarding-target="summaryDestination"></span></p>
@@ -71,7 +71,7 @@
             <div class="hidden pt-3" data-onboarding-target="summaryAdditional"><p class="text-sm font-semibold">También puedes cambiar con</p><p class="text-ink-muted" data-onboarding-target="summaryAdditionalNames"></p></div>
         </article>
         <p class="alert-info">Eres de los primeros de tu grupo en Turnin.</p>
-        <div class="step-actions"><button class="btn-ghost" type="button" data-action="onboarding#back">Atrás</button><button class="btn-primary" type="button" data-action="onboarding#finish">Entrar en Turnin</button></div>
+        <div class="step-actions"><button class="btn-ghost" type="button" data-action="onboarding#back">Atrás</button><button class="btn-primary" type="button" data-action="onboarding#finish">{{ addMode ? 'Guardar lugar de trabajo' : 'Entrar en Turnin' }}</button></div>
     </section>
 </main>
 {% endblock %}

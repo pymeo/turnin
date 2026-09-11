@@ -20,7 +20,7 @@ final readonly class ReorderShiftPresetsHandler
 
     public function __invoke(ReorderShiftPresets $command): void
     {
-        $worker = $this->workspace->require($command->workerId);
+        $worker = $this->workspace->require($command->workerId, $command->assignmentId);
         $now = $this->clock->now();
         $moved = [];
 

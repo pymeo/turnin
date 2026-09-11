@@ -48,7 +48,7 @@ final readonly class RosterPatternController
             }
 
             $name = \is_string($payload['name'] ?? null) && '' !== trim($payload['name']) ? trim($payload['name']) : null;
-            $id = $this->roster->handled($this->commandBus, new CreateRosterPattern($workerId, $name, $slots));
+            $id = $this->roster->handled($this->commandBus, new CreateRosterPattern($workerId, $name, $slots, $this->roster->assignmentId($request)));
 
             return ['patternId' => \is_string($id) ? $id : null];
         });
@@ -59,7 +59,7 @@ final readonly class RosterPatternController
     {
         return $this->roster->respond($request, function (string $workerId) use ($request, $patternId): array {
             $payload = $this->roster->payload($request);
-            $this->commandBus->dispatch(new RenameRosterPattern($workerId, $patternId, \is_string($payload['name'] ?? null) ? $payload['name'] : ''));
+            $this->commandBus->dispatch(new RenameRosterPattern($workerId, $patternId, \is_string($payload['name'] ?? null) ? $payload['name'] : '', $this->roster->assignmentId($request)));
 
             return [];
         });
@@ -76,6 +76,7 @@ final readonly class RosterPatternController
                 $this->date($payload, 'from'),
                 $this->date($payload, 'to'),
                 ConflictPolicy::fromRequest(\is_string($payload['policy'] ?? null) ? $payload['policy'] : null),
+                $this->roster->assignmentId($request),
             ));
 
             if (!$preview instanceof ScheduleDraftPreview) {
@@ -108,6 +109,7 @@ final readonly class RosterPatternController
                 $this->date($payload, 'from'),
                 $this->date($payload, 'to'),
                 ConflictPolicy::fromRequest(\is_string($payload['policy'] ?? null) ? $payload['policy'] : null),
+                $this->roster->assignmentId($request),
             ));
 
             if (!$applied instanceof ScheduleDraftApplied) {

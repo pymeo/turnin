@@ -17,7 +17,7 @@ final readonly class GetShiftPresetsHandler
     /** @return list<ShiftPresetView> */
     public function __invoke(GetShiftPresets $query): array
     {
-        $worker = $this->workspace->require($query->workerId);
+        $worker = $this->workspace->require($query->workerId, $query->assignmentId);
 
         $presets = $this->presets->forAssignment($worker->assignmentId);
         if (!$query->includeInactive) {
@@ -31,7 +31,8 @@ final readonly class GetShiftPresetsHandler
             (string) $preset->window()->start,
             (string) $preset->window()->end,
             $preset->kind()->value,
-            $preset->kind()->tone(),
+            $preset->color()->value,
+            $preset->color()->value,
             $preset->window()->endsNextDay(),
             $preset->position(),
             $preset->active(),

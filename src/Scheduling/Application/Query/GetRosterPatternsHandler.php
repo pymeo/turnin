@@ -20,7 +20,7 @@ final readonly class GetRosterPatternsHandler
     /** @return list<RosterPatternView> */
     public function __invoke(GetRosterPatterns $query): array
     {
-        $worker = $this->workspace->require($query->workerId);
+        $worker = $this->workspace->require($query->workerId, $query->assignmentId);
         $presets = $this->workspace->presetsFor($worker);
 
         return array_map(fn (RosterPattern $pattern): RosterPatternView => $this->view($pattern, $presets), $this->patterns->forAssignment($worker->assignmentId));

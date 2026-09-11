@@ -5,21 +5,60 @@
 
 {% block body %}
 {% set tones = {
-    'morning': 'calendar-tone-morning',
-    'evening': 'calendar-tone-evening',
-    'night': 'calendar-tone-night',
-    'oncall': 'calendar-tone-oncall',
+    'amber': 'calendar-tone-amber', 'orange': 'calendar-tone-orange', 'teal': 'calendar-tone-teal',
+    'blue': 'calendar-tone-blue', 'indigo': 'calendar-tone-indigo', 'violet': 'calendar-tone-violet',
+    'rose': 'calendar-tone-rose', 'slate': 'calendar-tone-slate', 'emerald': 'calendar-tone-emerald', 'cyan': 'calendar-tone-cyan',
     'rest': 'calendar-tone-rest',
     'unknown': 'calendar-tone-unknown',
 } %}
 <main class="calendar-shell"
-      data-controller="calendar calendar-paint schedule-draft"
+      data-controller="calendar{% if not combined %} calendar-paint schedule-draft{% endif %}"
       data-calendar-month-value="{{ month.month }}"
       data-calendar-today-value="{{ month.today }}"
       data-calendar-csrf-value="{{ csrfToken }}"
+      data-calendar-assignment-value="{{ selectedAssignment ? selectedAssignment.assignmentId : '' }}"
+      data-calendar-view-value="{{ combined ? 'all' : 'assignment' }}"
       data-schedule-draft-csrf-value="{{ csrfToken }}">
 
     {% include 'identity/_authenticated_header.html.twig' %}
+
+    <div class="flex justify-end"><a class="btn-ghost text-sm" href="{{ path('scheduling_calendar_integrations') }}">⋯ Integraciones</a></div>
+
+    <section class="flex flex-col gap-1" aria-label="Calendario seleccionado">
+        {% if assignments|length > 1 %}
+            <details class="rounded-xl border border-line bg-surface px-3 py-2">
+                <summary class="cursor-pointer font-semibold">{{ combined ? 'Todos mis trabajos' : selectedAssignment.shortLabel }}</summary>
+                <nav class="mt-2 flex flex-col gap-1" aria-label="Mis calendarios">
+                    {% for assignment in assignments %}
+                        <a class="btn-ghost justify-start px-2 text-sm" href="{{ path('scheduling_calendar', {assignment: assignment.assignmentId, month: month.month}) }}">{{ assignment.shortLabel }}{% if assignment.primary %} · Principal{% endif %}</a>
+                    {% endfor %}
+                    <a class="btn-ghost justify-start px-2 text-sm" href="{{ path('scheduling_calendar', {view: 'all', month: month.month}) }}">Todos mis trabajos</a>
+                    <a class="btn-ghost justify-start px-2 text-sm" href="{{ path('workforce_onboarding', {mode: 'add'}) }}">＋ Añadir lugar de trabajo</a>
+                </nav>
+            </details>
+        {% elseif selectedAssignment %}
+            <strong>{{ selectedAssignment.workplaceName }}</strong>
+            {% if selectedAssignment.destinationName %}<span class="text-sm text-ink-muted">{{ selectedAssignment.destinationName }}</span>{% endif %}
+        {% endif %}
+    </section>
+
+    {% if not combined and presets is empty %}
+        <section class="empty-state">
+            <p class="text-lg font-semibold text-ink">Aún no has configurado los turnos de este centro</p>
+            <p>Empieza con unos horarios habituales o copia otro calendario. Podrás cambiarlos después sin alterar el histórico.</p>
+            <button class="btn-primary" type="button" data-action="calendar#seedPresets">Usar turnos habituales</button>
+            {% for assignment in assignments %}{% if assignment.assignmentId != selectedAssignment.assignmentId %}<button class="btn-secondary" type="button" data-assignment-id="{{ assignment.assignmentId }}" data-action="calendar#copyPresets">Copiar de {{ assignment.workplaceName }}</button>{% endif %}{% endfor %}
+            <a class="btn-ghost" href="{{ path('scheduling_shift_presets', {assignment: selectedAssignment.assignmentId}) }}">Configurar</a>
+        </section>
+    {% endif %}
+
+    {% if not combined and presets is not empty and not month.hasAnyRoster %}
+        <section class="card flex flex-col gap-3">
+            <span><h2 class="text-lg font-semibold">Tus turnos habituales</h2><p class="text-sm text-ink-muted">Puedes usarlos ya y ajustar sus horarios cuando quieras.</p></span>
+            <div class="grid gap-2 sm:grid-cols-3">{% for preset in presets|filter(preset => preset.active) %}<span class="flex items-center gap-2"><b class="preset-mark {{ tones[preset.tone]|default('calendar-tone-unknown') }}">{{ preset.abbreviation }}</b><span><strong>{{ preset.name }}</strong><br><small>{{ preset.start }} – {{ preset.end }}</small></span></span>{% endfor %}</div>
+            <a class="btn-secondary self-start" href="{{ path('scheduling_shift_presets', {assignment: selectedAssignment.assignmentId}) }}">Ajustar horarios</a>
+        </section>
+    {% endif %}
 
     {% if nextShift %}
         <section class="next-shift-card" aria-label="Próximo turno">
@@ -45,10 +84,10 @@
         {% for initial in weekdays %}<span>{{ initial }}</span>{% endfor %}
     </div>
 
-    {% include 'scheduling/_month_grid.html.twig' %}
-    {% include 'scheduling/_month_summary.html.twig' %}
+    {% include combined ? 'scheduling/_combined_month_grid.html.twig' : 'scheduling/_month_grid.html.twig' %}
+    {% include combined ? 'scheduling/_combined_month_summary.html.twig' : 'scheduling/_month_summary.html.twig' %}
 
-    {% if not month.hasAnyRoster %}
+    {% if not combined and not month.hasAnyRoster %}
         <section class="empty-state" data-calendar-target="emptyState">
             <p class="text-lg font-semibold text-ink">Añade tu cuadrante</p>
             <p>Pinta tus turnos, usa tu patrón o dínoslo por voz. Se tarda menos de un minuto.</p>
@@ -64,7 +103,7 @@
     </section>
 
     <div class="calendar-dock">
-        {% include 'scheduling/_paint_bar.html.twig' %}
+        {% if not combined %}{% include 'scheduling/_paint_bar.html.twig' %}{% endif %}
         <button type="button" class="btn-primary btn-block" data-calendar-target="addButton" data-action="calendar#openAdd">
             <span aria-hidden="true">＋</span> Añadir turnos
         </button>

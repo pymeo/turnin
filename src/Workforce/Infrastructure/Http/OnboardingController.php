@@ -4,6 +4,7 @@ declare(strict_types=1);
 
 namespace App\Workforce\Infrastructure\Http;
 
+use App\Workforce\Application\Command\AddWorkerAssignment;
 use App\Workforce\Application\Command\CompleteWorkerOnboarding;
 use App\Workforce\Application\Command\SaveWorkerOnboardingDraft;
 use App\Workforce\Application\Query\GetWorkerOnboardingDraft;
@@ -32,7 +33,7 @@ final readonly class OnboardingController
     }
 
     #[Route('/onboarding', name: 'workforce_onboarding', methods: ['GET'])]
-    public function page(): Response
+    public function page(Request $request): Response
     {
         $workerId = $this->workerId();
         if (null === $workerId) {
@@ -44,6 +45,7 @@ final readonly class OnboardingController
         return new Response($this->twig->render('workforce/onboarding.html.twig', [
             'profile' => $profile,
             'draft' => $draft instanceof WorkerOnboardingDraft ? $draft : null,
+            'addMode' => 'add' === $request->query->getString('mode'),
         ]));
     }
 
@@ -88,6 +90,23 @@ final readonly class OnboardingController
             $this->handled($this->commandBus, new CompleteWorkerOnboarding($workerId, $draft->workplaceId, $draft->staffCategoryId, $draft->primaryDestination->selectionId, $draft->additionalDestinationIds()));
 
             return ['redirect' => '/app'];
+        });
+    }
+
+    #[Route('/onboarding/add-assignment', name: 'workforce_assignment_add', methods: ['POST'])]
+    public function addAssignment(Request $request): JsonResponse
+    {
+        return $this->mutate($request, function (string $workerId): array {
+            $draft = $this->handled($this->queryBus, new GetWorkerOnboardingDraft($workerId));
+            if (!$draft instanceof WorkerOnboardingDraft || null === $draft->workplaceId || null === $draft->staffCategoryId || null === $draft->primaryDestination) {
+                throw new InvalidArgumentException('Completa los datos del nuevo lugar de trabajo.');
+            }
+            $id = $this->handled($this->commandBus, new AddWorkerAssignment($workerId, $draft->workplaceId, $draft->staffCategoryId, $draft->primaryDestination->selectionId, $draft->additionalDestinationIds()));
+            if (!\is_string($id)) {
+                throw new InvalidArgumentException('No se pudo crear el lugar de trabajo.');
+            }
+
+            return ['redirect' => '/app/calendar?assignment='.rawurlencode($id)];
         });
     }
 

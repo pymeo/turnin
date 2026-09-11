@@ -28,7 +28,7 @@ final readonly class EnsureShiftPresetsHandler
 
     public function __invoke(EnsureShiftPresets $command): void
     {
-        $worker = $this->workspace->require($command->workerId);
+        $worker = $this->workspace->require($command->workerId, $command->assignmentId);
         if ([] !== $this->presets->forAssignment($worker->assignmentId)) {
             return;
         }
@@ -36,7 +36,7 @@ final readonly class EnsureShiftPresetsHandler
         $now = $this->clock->now();
         $created = [];
         foreach (SuggestedShiftPresets::catalogue() as $position => $blueprint) {
-            $created[] = ShiftPreset::create($this->ids->next(), $worker->assignmentId, $blueprint->name, $blueprint->abbreviation, $blueprint->window, $blueprint->kind, $blueprint->aliases, $position + 1, $now);
+            $created[] = ShiftPreset::create($this->ids->next(), $worker->assignmentId, $blueprint->name, $blueprint->abbreviation, $blueprint->window, $blueprint->kind, $blueprint->aliases, $position + 1, $now, $blueprint->color);
         }
 
         $this->presets->saveAll($created);
