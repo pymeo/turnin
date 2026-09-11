@@ -83,7 +83,7 @@ final class DoctrineWorkplacesTest extends KernelTestCase
         for ($index = 0; $index < 12; ++$index) {
             $externalId = 'pc-'.$index;
             $primaryCareIds[] = $externalId;
-            $this->workplaces->save($this->workplace(sprintf('019b76da-a800-7000-8000-%012d', 200 + $index), WorkplaceSource::MINISTRY_PRIMARY_CARE, $externalId, sprintf('Centro %02d', $index), 'Abanilla', $now, 'Murcia'));
+            $this->workplaces->save($this->workplace(\sprintf('019b76da-a800-7000-8000-%012d', 200 + $index), WorkplaceSource::MINISTRY_PRIMARY_CARE, $externalId, \sprintf('Centro %02d', $index), 'Abanilla', $now, 'Murcia'));
         }
         $this->workplaces->deactivateMissingFrom(WorkplaceSource::MINISTRY_HOSPITALS, $hospitalIds, $now);
         $this->workplaces->deactivateMissingFrom(WorkplaceSource::MINISTRY_PRIMARY_CARE, $primaryCareIds, $now);
@@ -93,7 +93,7 @@ final class DoctrineWorkplacesTest extends KernelTestCase
         self::assertSame([
             'Hospital Clínico Universitario Virgen de la Arrixaca',
             'Hospital G. Universitario J.M. Morales Meseguer',
-        ], array_slice($names, 0, 2));
+        ], \array_slice($names, 0, 2));
     }
 
     private function workplace(string $id, WorkplaceSource $source, string $externalId, string $name, string $municipality, DateTimeImmutable $now, string $province = 'Provincia'): Workplace

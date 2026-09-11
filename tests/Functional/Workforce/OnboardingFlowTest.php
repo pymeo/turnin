@@ -82,8 +82,8 @@ final class OnboardingFlowTest extends WebTestCase
         self::assertTrue((bool) $this->connection->fetchOne('SELECT has_worker_profile FROM identity_users WHERE id = :worker', ['worker' => $this->userId]));
         self::assertSame(1, $this->countRows('SELECT COUNT(*) FROM workforce_worker_assignments WHERE worker_id = :worker AND active = TRUE', ['worker' => $this->userId]));
         self::assertSame(2, $this->countRows('SELECT COUNT(*) FROM workforce_swap_pool_memberships WHERE worker_id = :worker AND active = TRUE', ['worker' => $this->userId]));
-		$memberships = $this->connection->fetchAllAssociative(
-			<<<'SQL'
+        $memberships = $this->connection->fetchAllAssociative(
+            <<<'SQL'
 				SELECT unit.name, membership.is_primary, membership.source
 				  FROM workforce_swap_pool_memberships membership
 				  JOIN workforce_swap_pools pool ON pool.id = membership.swap_pool_id
@@ -91,12 +91,12 @@ final class OnboardingFlowTest extends WebTestCase
 				 WHERE membership.worker_id = :worker AND membership.active = TRUE
 				 ORDER BY membership.is_primary DESC, unit.name
 				SQL,
-			['worker' => $this->userId],
-		);
-		self::assertSame([
-			['name' => 'Urgencias', 'is_primary' => true, 'source' => 'self_declared'],
-			['name' => 'UCI', 'is_primary' => false, 'source' => 'self_declared'],
-		], $memberships);
+            ['worker' => $this->userId],
+        );
+        self::assertSame([
+            ['name' => 'Urgencias', 'is_primary' => true, 'source' => 'self_declared'],
+            ['name' => 'UCI', 'is_primary' => false, 'source' => 'self_declared'],
+        ], $memberships);
         self::assertNotSame('600123123', $this->scalar('SELECT phone_encrypted FROM identity_personal_profiles WHERE user_id = :worker', ['worker' => $this->userId]));
         self::assertNotSame('12345678Z', $this->scalar('SELECT identity_document_fingerprint FROM identity_usage_identities WHERE user_id = :worker', ['worker' => $this->userId]));
 

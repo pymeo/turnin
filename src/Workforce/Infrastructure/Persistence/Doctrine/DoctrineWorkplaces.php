@@ -82,7 +82,7 @@ final readonly class DoctrineWorkplaces implements Workplaces, WorkplaceReader
             $parameters[$parameter] = '%'.addcslashes($token, '%_\\').'%';
         }
 
-        $sql = sprintf(
+        $sql = \sprintf(
             <<<'SQL'
                 SELECT id
                   FROM workforce_workplaces

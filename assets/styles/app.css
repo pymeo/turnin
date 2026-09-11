@@ -58,6 +58,7 @@
 	--color-shift-morning: #d97706;
 	--color-shift-evening: #db6a4b;
 	--color-shift-night: #6366f1;
+	--color-shift-oncall: #7c3aed;
 
 	/* Feedback */
 	--color-positive: #15803d;
@@ -429,6 +430,342 @@
 
 @utility profile-summary {
 	@apply flex flex-col gap-1 rounded-[var(--radius-card)] bg-surface p-5 shadow-sm ring-1 ring-line;
+}
+
+/* --- Calendar -------------------------------------------------------------
+   A month grid, not a diary. Every rule below serves one of four questions, in
+   order: what do I work today, what do I work next, where do I have days off,
+   and how do I get my rota in here quickly.
+
+   Shift colour is support, never the signal: each cell also carries its letter,
+   because a fifth of men have some colour vision deficiency and because a
+   phone in sunlight flattens everything anyway.
+   -------------------------------------------------------------------------- */
+:root {
+	--shift-rest: #0d947e;
+	--shift-unknown: var(--line);
+	--calendar-cell-radius: 0.7rem;
+}
+
+@media (prefers-color-scheme: dark) {
+	:root {
+		--shift-rest: #34d3b4;
+	}
+}
+
+@utility calendar-shell {
+	@apply mx-auto flex w-full max-w-lg flex-col gap-4 px-3 sm:px-5;
+	padding-top: max(0.75rem, env(safe-area-inset-top));
+	/* Room for the docked CTA so the last week is never hidden behind it. */
+	padding-bottom: calc(6.5rem + env(safe-area-inset-bottom));
+}
+
+@utility calendar-header {
+	@apply flex items-center justify-between gap-2;
+
+	h2 {
+		@apply text-xl font-bold tracking-tight;
+	}
+}
+
+@utility calendar-nav-button {
+	@apply grid shrink-0 place-items-center rounded-full text-lg text-ink-muted transition hover:bg-surface-muted active:scale-95;
+	width: var(--size-touch);
+	height: var(--size-touch);
+}
+
+@utility calendar-weekdays {
+	@apply grid grid-cols-7 gap-1 px-0.5 text-center text-[0.68rem] font-bold tracking-[0.08em] text-ink-muted uppercase;
+}
+
+@utility calendar-grid {
+	@apply grid grid-cols-7 gap-1;
+	/* Nothing in here should ever be a drag-to-select target: painting uses
+	   pointer events and the browser's text selection fights it. */
+	touch-action: pan-y;
+	user-select: none;
+	-webkit-user-select: none;
+}
+
+@utility calendar-cell {
+	@apply relative flex flex-col items-center justify-center gap-0.5 border border-transparent
+		bg-surface p-0 text-ink transition;
+	border-radius: var(--calendar-cell-radius);
+	/* A square-ish cell keeps six weeks on a 375 px screen without scrolling,
+	   and still leaves a thumb-sized target. */
+	aspect-ratio: 1 / 1.06;
+	min-height: 2.6rem;
+
+	& > .calendar-cell-number {
+		@apply text-[0.82rem] leading-none font-semibold;
+	}
+
+	& > .calendar-cell-code {
+		@apply text-[0.72rem] leading-none font-bold tracking-wide;
+	}
+
+	&[data-outside="true"] {
+		@apply opacity-35;
+	}
+
+	&[data-today="true"] {
+		box-shadow: inset 0 0 0 2px var(--ring);
+	}
+
+	/* Painted in this draft but not saved yet. */
+	&[aria-pressed="true"] {
+		@apply ring-2 ring-brand-600 ring-offset-1;
+		--tw-ring-offset-color: var(--canvas);
+	}
+
+	&:focus-visible {
+		@apply z-1;
+	}
+}
+
+/* Tones. One muted fill plus a saturated letter: legible in both schemes and
+   calm enough to look at a whole month of. */
+@utility calendar-tone-morning {
+	background-color: color-mix(in srgb, var(--color-shift-morning) 16%, var(--surface));
+	color: color-mix(in srgb, var(--color-shift-morning) 78%, var(--ink));
+}
+
+@utility calendar-tone-evening {
+	background-color: color-mix(in srgb, var(--color-shift-evening) 16%, var(--surface));
+	color: color-mix(in srgb, var(--color-shift-evening) 78%, var(--ink));
+}
+
+@utility calendar-tone-night {
+	background-color: color-mix(in srgb, var(--color-shift-night) 18%, var(--surface));
+	color: color-mix(in srgb, var(--color-shift-night) 80%, var(--ink));
+}
+
+@utility calendar-tone-oncall {
+	background-color: color-mix(in srgb, var(--color-shift-oncall) 16%, var(--surface));
+	color: color-mix(in srgb, var(--color-shift-oncall) 78%, var(--ink));
+}
+
+@utility calendar-tone-rest {
+	background-color: color-mix(in srgb, var(--shift-rest) 14%, var(--surface));
+	color: color-mix(in srgb, var(--shift-rest) 80%, var(--ink));
+}
+
+/* An unknown day is quiet and empty. It must never read as "libre". */
+@utility calendar-tone-unknown {
+	@apply bg-surface text-ink-muted;
+	border-color: var(--line);
+	border-style: dashed;
+}
+
+@utility calendar-summary {
+	@apply flex flex-wrap items-center gap-x-2 gap-y-1 px-1 text-[0.8rem] text-ink-muted;
+
+	& strong {
+		@apply font-semibold text-ink;
+	}
+}
+
+@utility calendar-insight {
+	@apply flex items-start gap-2 rounded-[var(--radius-control)] bg-surface-muted px-3 py-2 text-sm;
+}
+
+@utility next-shift-card {
+	@apply flex items-center gap-3 rounded-[var(--radius-card)] border border-line bg-surface px-4 py-3;
+}
+
+@utility next-shift-mark {
+	@apply grid size-11 shrink-0 place-items-center rounded-xl text-base font-black;
+}
+
+@utility calendar-dock {
+	@apply fixed inset-x-0 bottom-0 z-20 mx-auto flex w-full max-w-lg flex-col gap-2 px-3 pt-3 sm:px-5;
+	padding-bottom: max(0.75rem, env(safe-area-inset-bottom));
+	background: linear-gradient(to top, var(--canvas) 62%, transparent);
+}
+
+/* --- Paint mode ----------------------------------------------------------- */
+@utility paint-bar {
+	@apply flex items-center gap-2 overflow-x-auto rounded-[var(--radius-card)] border border-line bg-surface p-2;
+	scrollbar-width: none;
+
+	&::-webkit-scrollbar {
+		display: none;
+	}
+}
+
+/* Inside a sheet there is vertical room, so the palette wraps instead of
+   scrolling sideways. A horizontal strip hides half the options behind a
+   gesture, and a wrapped row puts every shift under a thumb at once. */
+@utility shift-palette {
+	@apply flex flex-wrap items-center gap-2 rounded-[var(--radius-card)] border border-line bg-surface p-2;
+}
+
+@utility paint-swatch {
+	@apply inline-flex shrink-0 items-center gap-1.5 rounded-full border border-line px-3 text-sm font-semibold transition active:scale-95;
+	min-height: var(--size-touch);
+
+	&[aria-pressed="true"] {
+		@apply border-transparent ring-2 ring-brand-600;
+	}
+}
+
+@utility paint-swatch-mark {
+	@apply grid size-6 place-items-center rounded-full text-[0.7rem] font-black;
+}
+
+/* --- Bottom sheets --------------------------------------------------------
+   Generic version of the onboarding picker's sheet: a sheet on a phone, a
+   centred panel on a desktop. Modal in both cases, so focus is trapped by the
+   platform rather than by us.
+   -------------------------------------------------------------------------- */
+@utility sheet {
+	@apply m-0 mt-auto max-h-[90dvh] w-full max-w-none overflow-hidden rounded-t-3xl border-0
+		bg-surface p-0 text-ink shadow-2xl sm:m-auto sm:max-w-lg sm:rounded-3xl;
+
+	&::backdrop {
+		background: rgb(0 0 0 / 45%);
+		backdrop-filter: blur(2px);
+	}
+
+	&[open] {
+		animation: sheet-in 180ms ease-out both;
+	}
+}
+
+@keyframes sheet-in {
+	from {
+		opacity: 0;
+		transform: translateY(1.25rem);
+	}
+	to {
+		opacity: 1;
+		transform: translateY(0);
+	}
+}
+
+@utility sheet-inner {
+	@apply flex max-h-[90dvh] flex-col gap-4 overflow-y-auto px-4 pt-2 sm:p-6;
+	padding-bottom: max(1.25rem, env(safe-area-inset-bottom));
+}
+
+@utility sheet-handle {
+	@apply mx-auto h-1.5 w-12 shrink-0 rounded-full bg-line sm:hidden;
+}
+
+@utility sheet-header {
+	@apply flex items-start justify-between gap-4;
+
+	h2 {
+		@apply text-xl font-bold tracking-tight;
+	}
+}
+
+@utility sheet-choice {
+	@apply flex w-full items-center gap-3 rounded-[var(--radius-control)] border border-line bg-surface px-4 py-3 text-left transition hover:bg-surface-muted active:scale-[0.99];
+	min-height: var(--size-touch);
+
+	& .sheet-choice-icon {
+		@apply grid size-10 shrink-0 place-items-center rounded-xl bg-surface-muted text-lg;
+	}
+
+	& strong {
+		@apply block text-base font-semibold;
+	}
+
+	& span.sheet-choice-detail {
+		@apply block text-sm text-ink-muted;
+	}
+}
+
+@utility sheet-actions {
+	@apply mt-1 grid gap-2;
+}
+
+/* --- Draft preview -------------------------------------------------------- */
+@utility preview-list {
+	@apply flex max-h-64 flex-col divide-y divide-line overflow-y-auto rounded-[var(--radius-control)] border border-line;
+}
+
+@utility preview-row {
+	@apply flex items-center gap-3 px-3 py-2 text-sm;
+
+	& .preview-row-date {
+		@apply w-10 shrink-0 text-right font-semibold tabular-nums;
+	}
+}
+
+@utility preview-code {
+	@apply grid size-7 shrink-0 place-items-center rounded-lg text-[0.72rem] font-black;
+}
+
+@utility preview-counts {
+	@apply flex flex-wrap gap-x-3 gap-y-1 text-sm text-ink-muted;
+
+	& strong {
+		@apply text-ink;
+	}
+}
+
+@utility conflict-choice {
+	@apply flex cursor-pointer items-start gap-3 rounded-[var(--radius-control)] border border-line p-3 text-sm;
+
+	&:has(input:checked) {
+		@apply border-brand-600 bg-brand-50 dark:bg-brand-900/30;
+	}
+}
+
+/* --- Pattern builder ------------------------------------------------------ */
+@utility pattern-sequence {
+	@apply flex min-h-16 flex-wrap content-start items-start gap-1.5 rounded-[var(--radius-control)] border border-dashed border-line bg-surface-muted p-2.5;
+}
+
+@utility pattern-slot {
+	@apply grid size-8 place-items-center rounded-lg text-[0.72rem] font-black;
+}
+
+@utility range-option {
+	@apply inline-flex items-center rounded-full border border-line px-4 text-sm font-semibold transition;
+	min-height: var(--size-touch);
+
+	&[aria-pressed="true"] {
+		@apply border-brand-600 bg-brand-50 text-brand-800 dark:bg-brand-900/40 dark:text-brand-100;
+	}
+}
+
+/* --- Voice ---------------------------------------------------------------- */
+@utility mic-button {
+	@apply mx-auto grid size-20 place-items-center rounded-full bg-brand-700 text-3xl text-white transition active:scale-95;
+
+	&[data-listening="true"] {
+		animation: mic-pulse 1.6s ease-in-out infinite;
+	}
+}
+
+@keyframes mic-pulse {
+	0%,
+	100% {
+		box-shadow: 0 0 0 0 color-mix(in srgb, var(--ring) 45%, transparent);
+	}
+	50% {
+		box-shadow: 0 0 0 0.9rem color-mix(in srgb, var(--ring) 0%, transparent);
+	}
+}
+
+@utility transcript {
+	@apply min-h-24 w-full rounded-[var(--radius-control)] border border-line bg-surface p-3 text-base text-ink;
+}
+
+/* --- Shift preset management ---------------------------------------------- */
+@utility preset-row {
+	@apply flex items-center gap-3 rounded-[var(--radius-card)] border border-line bg-surface p-3;
+
+	&[data-active="false"] {
+		@apply opacity-55;
+	}
+}
+
+@utility preset-mark {
+	@apply grid size-11 shrink-0 place-items-center rounded-xl text-sm font-black;
 }
 
 /* Bottom navigation. Unused until there are screens to navigate between, but

@@ -1,7 +1,21 @@
 import { startStimulusApp } from '@symfony/stimulus-bundle';
+import BottomSheetController from './controllers/bottom_sheet_controller.js';
+import CalendarController from './controllers/calendar_controller.js';
+import CalendarPaintController from './controllers/calendar_paint_controller.js';
 import OnboardingController from './controllers/onboarding_controller.js';
+import PatternBuilderController from './controllers/pattern_builder_controller.js';
+import ScheduleDraftController from './controllers/schedule_draft_controller.js';
 import SearchablePickerController from './controllers/searchable_picker_controller.js';
+import ShiftPresetsController from './controllers/shift_presets_controller.js';
+import VoiceScheduleController from './controllers/voice_schedule_controller.js';
 
 const app = startStimulusApp();
 app.register('onboarding', OnboardingController);
 app.register('searchable-picker', SearchablePickerController);
+app.register('bottom-sheet', BottomSheetController);
+app.register('calendar', CalendarController);
+app.register('calendar-paint', CalendarPaintController);
+app.register('schedule-draft', ScheduleDraftController);
+app.register('pattern-builder', PatternBuilderController);
+app.register('voice-schedule', VoiceScheduleController);
+app.register('shift-presets', ShiftPresetsController);

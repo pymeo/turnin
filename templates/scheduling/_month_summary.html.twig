@@ -1,0 +1,27 @@
+{# Two or three numbers, never a dashboard. Unknown days are counted separately
+   and never folded into "libres": see docs/DOMAIN.md § Scheduling. #}
+<div data-calendar-target="summary" class="flex flex-col gap-2">
+    <p class="calendar-summary">
+        {% if month.summary.isEmpty %}
+            <span>Aún no has indicado ningún turno este mes.</span>
+        {% else %}
+            <span><strong>{{ month.summary.restDays }}</strong> libres</span>
+            <span aria-hidden="true">·</span>
+            <span><strong>{{ month.summary.workedDays }}</strong> de trabajo</span>
+            {% if month.summary.nightShifts > 0 %}
+                <span aria-hidden="true">·</span>
+                <span><strong>{{ month.summary.nightShifts }}</strong> noches</span>
+            {% endif %}
+            {% if month.summary.unknownDays > 0 %}
+                <span aria-hidden="true">·</span>
+                <span>{{ month.summary.unknownDays }} sin indicar</span>
+            {% endif %}
+        {% endif %}
+    </p>
+    {% for insight in month.insights %}
+        <p class="calendar-insight">
+            <span aria-hidden="true">🌤</span>
+            <span><strong class="font-semibold text-ink">{{ insight.headline }}</strong> {{ insight.detail }}</span>
+        </p>
+    {% endfor %}
+</div>

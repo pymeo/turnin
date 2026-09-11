@@ -1,0 +1,60 @@
+{# Paint mode's palette. Horizontal, fixed above the dock CTA and always within
+   a thumb's reach: this is the fastest way in, so it is the one that must not
+   require aiming. #}
+{% set tones = {
+    'morning': 'calendar-tone-morning',
+    'evening': 'calendar-tone-evening',
+    'night': 'calendar-tone-night',
+    'oncall': 'calendar-tone-oncall',
+    'rest': 'calendar-tone-rest',
+    'unknown': 'calendar-tone-unknown',
+} %}
+<div class="hidden flex-col gap-2" data-calendar-paint-target="panel">
+    <div class="paint-bar" role="group" aria-label="Turnos para pintar">
+        {% for preset in presets %}
+            <button type="button"
+                    class="paint-swatch"
+                    data-calendar-paint-target="swatch"
+                    data-paint-value="{{ preset.id }}"
+                    data-paint-tone="{{ preset.tone }}"
+                    data-paint-code="{{ preset.abbreviation }}"
+                    aria-pressed="false"
+                    data-action="calendar-paint#choose">
+                <span class="paint-swatch-mark {{ tones[preset.tone]|default('calendar-tone-unknown') }}" aria-hidden="true">{{ preset.abbreviation }}</span>
+                {{ preset.name }}
+            </button>
+        {% endfor %}
+        {# Libre sits beside the shifts because that is where a thumb expects it,
+           but it is a day state, not a preset. See docs/DOMAIN.md. #}
+        <button type="button"
+                class="paint-swatch"
+                data-calendar-paint-target="swatch"
+                data-paint-value="rest"
+                data-paint-tone="rest"
+                data-paint-code="L"
+                aria-pressed="false"
+                data-action="calendar-paint#choose">
+            <span class="paint-swatch-mark calendar-tone-rest" aria-hidden="true">L</span>
+            Libre
+        </button>
+        <button type="button"
+                class="paint-swatch"
+                data-calendar-paint-target="swatch"
+                data-paint-value="clear"
+                data-paint-tone="unknown"
+                data-paint-code="·"
+                aria-pressed="false"
+                data-action="calendar-paint#choose">
+            <span class="paint-swatch-mark calendar-tone-unknown" aria-hidden="true">·</span>
+            Borrar
+        </button>
+    </div>
+    <div class="flex items-center gap-2">
+        <button type="button" class="btn-secondary px-3 text-sm" data-action="calendar-paint#undo" data-calendar-paint-target="undo" disabled>
+            <span aria-hidden="true">↶</span> Deshacer
+        </button>
+        <span class="flex-1 text-sm text-ink-muted" data-calendar-paint-target="counter" aria-live="polite">Toca los días para pintarlos</span>
+        <button type="button" class="btn-ghost px-3 text-sm" data-action="calendar-paint#cancel">Cancelar</button>
+    </div>
+    <button type="button" class="btn-primary btn-block" data-action="calendar-paint#save" data-calendar-paint-target="save" disabled>Guardar</button>
+</div>

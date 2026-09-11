@@ -1,3 +1,35 @@
 {% extends 'base.html.twig' %}
 {% block title %}Turnin — Inicio{% endblock %}
-{% block body %}<main class="page flex flex-col gap-6">{% include 'identity/_authenticated_header.html.twig' %}<header><p class="text-ink-muted">Hola</p><h1 class="text-3xl font-bold">Tu grupo de trabajo</h1></header><section class="card flex flex-col gap-2"><p class="text-lg font-semibold">Tu perfil laboral está listo</p><p class="text-ink-muted">Aquí aparecerán tus compañeros compatibles.</p></section><nav class="flex flex-col gap-3"><button class="btn-primary btn-block" type="button" disabled>Buscar un cambio <span class="text-xs opacity-70">Próximamente</span></button><button class="btn-secondary btn-block" type="button" disabled>Ofrecer un turno <span class="text-xs opacity-70">Próximamente</span></button><a class="btn-ghost btn-block" href="{{ path('workforce_onboarding') }}">Editar perfil laboral</a></nav></main>{% endblock %}
+{% block body %}
+<main class="page flex flex-col gap-6">
+    {% include 'identity/_authenticated_header.html.twig' %}
+
+    <header>
+        <p class="text-ink-muted">Hola</p>
+        <h1 class="text-3xl font-bold">Tu grupo de trabajo</h1>
+    </header>
+
+    {# The calendar is the thing that makes everything else possible, so it is
+       the first card and the only primary action. Skippable on purpose: nobody
+       is blocked out of Turnin for not having filled in their rota yet. #}
+    <section class="card flex flex-col gap-3">
+        <p class="text-lg font-semibold">Añade tu cuadrante</p>
+        <p class="text-ink-muted">
+            Píntalo, repite tu patrón o dínoslo por voz. Con tu calendario en Turnin
+            podremos ayudarte de verdad con tus cambios.
+        </p>
+        <a class="btn-primary btn-block" href="{{ path('scheduling_calendar') }}">Abrir mi calendario</a>
+    </section>
+
+    <section class="card flex flex-col gap-2">
+        <p class="text-lg font-semibold">Tu perfil laboral está listo</p>
+        <p class="text-ink-muted">Aquí aparecerán tus compañeros compatibles.</p>
+    </section>
+
+    <nav class="flex flex-col gap-3">
+        <button class="btn-primary btn-block" type="button" disabled>Buscar un cambio <span class="text-xs opacity-70">Próximamente</span></button>
+        <button class="btn-secondary btn-block" type="button" disabled>Ofrecer un turno <span class="text-xs opacity-70">Próximamente</span></button>
+        <a class="btn-ghost btn-block" href="{{ path('workforce_onboarding') }}">Editar perfil laboral</a>
+    </nav>
+</main>
+{% endblock %}

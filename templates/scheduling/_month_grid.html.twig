@@ -1,0 +1,28 @@
+{# The month grid. Always six weeks so paging never changes the page height,
+   and every cell carries its letter as well as its colour. The tone map is
+   written out in full because Tailwind only emits utilities it can see as
+   literals in the source. #}
+{% set tones = {
+    'morning': 'calendar-tone-morning',
+    'evening': 'calendar-tone-evening',
+    'night': 'calendar-tone-night',
+    'oncall': 'calendar-tone-oncall',
+    'rest': 'calendar-tone-rest',
+    'unknown': 'calendar-tone-unknown',
+} %}
+<div class="calendar-grid" role="grid" aria-label="Calendario de turnos" data-calendar-target="grid" data-month="{{ month.month }}">
+    {% for cell in month.cells %}
+        <button type="button"
+                role="gridcell"
+                class="calendar-cell {{ tones[cell.tone]|default('calendar-tone-unknown') }}"
+                data-day="{{ cell.date }}"
+                data-state="{{ cell.state }}"
+                data-outside="{{ cell.inMonth ? 'false' : 'true' }}"
+                data-today="{{ cell.isToday ? 'true' : 'false' }}"
+                aria-pressed="false"
+                aria-label="{{ cell.ariaLabel }}{{ cell.isToday ? ', hoy' : '' }}">
+            <span class="calendar-cell-number">{{ cell.dayNumber }}</span>
+            <span class="calendar-cell-code" aria-hidden="true">{{ cell.abbreviation|default('·') }}</span>
+        </button>
+    {% endfor %}
+</div>

@@ -1,0 +1,78 @@
+{% extends 'base.html.twig' %}
+
+{% block title %}Turnin — Mi calendario{% endblock %}
+{% block description %}Tu cuadrante de turnos en Turnin: píntalo, repite tu patrón o díctalo.{% endblock %}
+
+{% block body %}
+{% set tones = {
+    'morning': 'calendar-tone-morning',
+    'evening': 'calendar-tone-evening',
+    'night': 'calendar-tone-night',
+    'oncall': 'calendar-tone-oncall',
+    'rest': 'calendar-tone-rest',
+    'unknown': 'calendar-tone-unknown',
+} %}
+<main class="calendar-shell"
+      data-controller="calendar calendar-paint schedule-draft"
+      data-calendar-month-value="{{ month.month }}"
+      data-calendar-today-value="{{ month.today }}"
+      data-calendar-csrf-value="{{ csrfToken }}"
+      data-schedule-draft-csrf-value="{{ csrfToken }}">
+
+    {% include 'identity/_authenticated_header.html.twig' %}
+
+    {% if nextShift %}
+        <section class="next-shift-card" aria-label="Próximo turno">
+            <span class="next-shift-mark {{ tones[nextShift.tone]|default('calendar-tone-unknown') }}" aria-hidden="true">{{ nextShift.label|slice(0, 1)|upper }}</span>
+            <span class="flex min-w-0 flex-col">
+                <span class="text-xs font-semibold tracking-wide text-ink-muted uppercase">Próximo turno</span>
+                <span class="truncate text-base font-semibold">{{ nextShift.when }} · {{ nextShift.label }}</span>
+                <span class="text-sm text-ink-muted">{{ nextShift.hours }}{% if nextShift.endsNextDay %} <span class="text-xs">(termina al día siguiente)</span>{% endif %}</span>
+            </span>
+        </section>
+    {% endif %}
+
+    <header class="calendar-header">
+        <button type="button" class="calendar-nav-button" data-action="calendar#previous" aria-label="Mes anterior">‹</button>
+        <h2 data-calendar-target="title" aria-live="polite">{{ month.title }}</h2>
+        <span class="flex items-center gap-1">
+            <button type="button" class="btn-ghost px-3 text-sm" data-action="calendar#goToToday">Hoy</button>
+            <button type="button" class="calendar-nav-button" data-action="calendar#next" aria-label="Mes siguiente">›</button>
+        </span>
+    </header>
+
+    <div class="calendar-weekdays" aria-hidden="true">
+        {% for initial in weekdays %}<span>{{ initial }}</span>{% endfor %}
+    </div>
+
+    {% include 'scheduling/_month_grid.html.twig' %}
+    {% include 'scheduling/_month_summary.html.twig' %}
+
+    {% if not month.hasAnyRoster %}
+        <section class="empty-state" data-calendar-target="emptyState">
+            <p class="text-lg font-semibold text-ink">Añade tu cuadrante</p>
+            <p>Pinta tus turnos, usa tu patrón o dínoslo por voz. Se tarda menos de un minuto.</p>
+            <button type="button" class="btn-primary" data-action="calendar#openAdd">Añadir turnos</button>
+        </section>
+    {% endif %}
+
+    {# A repeating rotation we spotted in what the worker already entered. Only
+       ever shown for an exact repetition over at least two whole cycles. #}
+    <section class="calendar-insight hidden" data-calendar-target="detection" aria-live="polite">
+        <span aria-hidden="true">🔁</span>
+        <span class="flex min-w-0 flex-col gap-1">
+            <span data-calendar-target="detectionText"></span>
+            <button type="button" class="btn-ghost self-start px-0 text-sm" data-action="calendar#repeatDetectedPattern">Repetir automáticamente</button>
+        </span>
+    </section>
+
+    <div class="calendar-dock">
+        {% include 'scheduling/_paint_bar.html.twig' %}
+        <button type="button" class="btn-primary btn-block" data-calendar-target="addButton" data-action="calendar#openAdd">
+            <span aria-hidden="true">＋</span> Añadir turnos
+        </button>
+    </div>
+
+    {% include 'scheduling/_sheets.html.twig' %}
+</main>
+{% endblock %}

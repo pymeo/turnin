@@ -1,0 +1,238 @@
+{% set tones = {
+    'morning': 'calendar-tone-morning',
+    'evening': 'calendar-tone-evening',
+    'night': 'calendar-tone-night',
+    'oncall': 'calendar-tone-oncall',
+    'rest': 'calendar-tone-rest',
+    'unknown': 'calendar-tone-unknown',
+} %}
+
+{# ── Cómo quieres añadirlos ───────────────────────────────────────────────
+   Four ways in, no more. Everything advanced lives behind this one button so
+   that the normal screen stays a month, some shifts and "Añadir". #}
+<dialog class="sheet" data-controller="bottom-sheet" data-calendar-target="addSheet" aria-labelledby="add-sheet-title">
+    <div class="sheet-inner">
+        <span class="sheet-handle" aria-hidden="true"></span>
+        <div class="sheet-header">
+            <h2 id="add-sheet-title">¿Cómo quieres añadirlos?</h2>
+            <button type="button" class="picker-close" data-action="bottom-sheet#close" aria-label="Cerrar">×</button>
+        </div>
+        <div class="grid gap-2">
+            <button type="button" class="sheet-choice" data-action="calendar#startPainting">
+                <span class="sheet-choice-icon" aria-hidden="true">🎨</span>
+                <span><strong>Pintar calendario</strong><span class="sheet-choice-detail">Elige un turno y toca los días</span></span>
+            </button>
+            <button type="button" class="sheet-choice" data-action="calendar#openPattern">
+                <span class="sheet-choice-icon" aria-hidden="true">⚡</span>
+                <span><strong>Usar un patrón</strong><span class="sheet-choice-detail">Repite tu rotación durante meses</span></span>
+            </button>
+            <button type="button" class="sheet-choice" data-calendar-target="voiceChoice" data-action="calendar#openVoice">
+                <span class="sheet-choice-icon" aria-hidden="true">🎙</span>
+                <span><strong>Dictar cuadrante</strong><span class="sheet-choice-detail">Habla y lo interpretamos</span></span>
+            </button>
+            <button type="button" class="sheet-choice" data-action="calendar#openText">
+                <span class="sheet-choice-icon" aria-hidden="true">⌨️</span>
+                <span><strong>Escribir cuadrante</strong><span class="sheet-choice-detail">«1 y 2 mañana, 3 tarde…»</span></span>
+            </button>
+        </div>
+        <a class="btn-ghost btn-block" href="{{ path('scheduling_shift_presets') }}">Gestionar mis turnos</a>
+    </div>
+</dialog>
+
+{# ── Un día ───────────────────────────────────────────────────────────────
+   Quick selection, never a form. An unknown day offers the palette straight
+   away; a known day offers the three things you might want to change. #}
+<dialog class="sheet" data-controller="bottom-sheet" data-calendar-target="daySheet" aria-labelledby="day-sheet-title">
+    <div class="sheet-inner">
+        <span class="sheet-handle" aria-hidden="true"></span>
+        <div class="sheet-header">
+            <span class="flex flex-col gap-0.5">
+                <h2 id="day-sheet-title" data-calendar-target="daySheetTitle">Día</h2>
+                <p class="text-sm text-ink-muted" data-calendar-target="daySheetDetail"></p>
+            </span>
+            <button type="button" class="picker-close" data-action="bottom-sheet#close" aria-label="Cerrar">×</button>
+        </div>
+        <div class="flex flex-wrap gap-2" role="group" aria-label="Elegir turno">
+            {% for preset in presets %}
+                <button type="button" class="picker-chip" data-action="calendar#setDayPreset" data-preset-id="{{ preset.id }}">
+                    <span class="paint-swatch-mark {{ tones[preset.tone]|default('calendar-tone-unknown') }}" aria-hidden="true">{{ preset.abbreviation }}</span>
+                    {{ preset.name }}
+                </button>
+            {% endfor %}
+            <button type="button" class="picker-chip" data-action="calendar#setDayRest">
+                <span class="paint-swatch-mark calendar-tone-rest" aria-hidden="true">L</span>
+                Libre
+            </button>
+        </div>
+        <button type="button" class="btn-ghost btn-block" data-action="calendar#clearDay" data-calendar-target="daySheetClear">
+            Eliminar información del día
+        </button>
+    </div>
+</dialog>
+
+{# ── Patrón ───────────────────────────────────────────────────────────────
+   Two steps: tap the rotation, then say how far to repeat it. The name is
+   generated, because nobody wants to name a rota before trying it. #}
+<dialog class="sheet"
+        data-controller="bottom-sheet pattern-builder"
+        data-calendar-target="patternSheet"
+        data-pattern-builder-csrf-value="{{ csrfToken }}"
+        aria-labelledby="pattern-sheet-title">
+    <div class="sheet-inner">
+        <span class="sheet-handle" aria-hidden="true"></span>
+        <div class="sheet-header">
+            <h2 id="pattern-sheet-title">Crea tu patrón</h2>
+            <button type="button" class="picker-close" data-action="bottom-sheet#close" aria-label="Cerrar">×</button>
+        </div>
+
+        <section data-pattern-builder-target="buildStep" class="flex flex-col gap-3">
+            <p class="text-sm text-ink-muted">Toca los turnos en el orden en que se repiten.</p>
+            <div class="shift-palette" role="group" aria-label="Turnos del patrón">
+                {% for preset in presets %}
+                    <button type="button" class="paint-swatch" data-action="pattern-builder#push" data-slot-value="{{ preset.id }}" data-slot-tone="{{ preset.tone }}" data-slot-code="{{ preset.abbreviation }}">
+                        <span class="paint-swatch-mark {{ tones[preset.tone]|default('calendar-tone-unknown') }}" aria-hidden="true">{{ preset.abbreviation }}</span>
+                        {{ preset.name }}
+                    </button>
+                {% endfor %}
+                <button type="button" class="paint-swatch" data-action="pattern-builder#push" data-slot-value="rest" data-slot-tone="rest" data-slot-code="L">
+                    <span class="paint-swatch-mark calendar-tone-rest" aria-hidden="true">L</span>
+                    Libre
+                </button>
+            </div>
+            <div class="pattern-sequence" data-pattern-builder-target="sequence" aria-live="polite" aria-label="Secuencia del patrón"></div>
+            <div class="flex items-center gap-2">
+                <button type="button" class="btn-secondary px-3 text-sm" data-action="pattern-builder#pop">← Borrar último</button>
+                <button type="button" class="btn-ghost px-3 text-sm" data-action="pattern-builder#reset">Limpiar</button>
+                <span class="flex-1 text-right text-sm text-ink-muted" data-pattern-builder-target="length"></span>
+            </div>
+            <button type="button" class="btn-primary btn-block" data-action="pattern-builder#toRange" data-pattern-builder-target="continue" disabled>Continuar</button>
+            {% if patterns|length %}
+                <div class="flex flex-col gap-2 border-t border-line pt-3">
+                    <p class="card-title">O reutiliza uno tuyo</p>
+                    {% for pattern in patterns %}
+                        <button type="button" class="sheet-choice" data-action="pattern-builder#useExisting" data-pattern-id="{{ pattern.id }}" data-pattern-length="{{ pattern.length }}">
+                            <span class="sheet-choice-icon" aria-hidden="true">🔁</span>
+                            <span><strong>{{ pattern.name }}</strong><span class="sheet-choice-detail">{{ pattern.sequence }}</span></span>
+                        </button>
+                    {% endfor %}
+                </div>
+            {% endif %}
+        </section>
+
+        <section data-pattern-builder-target="rangeStep" class="hidden flex-col gap-3">
+            <p class="text-sm text-ink-muted" data-pattern-builder-target="rangeSummary"></p>
+            <label class="field">
+                <span class="field-label">¿Cuándo empieza?</span>
+                <input type="date" class="input" data-pattern-builder-target="from">
+            </label>
+            <span class="field-label">¿Hasta cuándo lo repetimos?</span>
+            <div class="flex flex-wrap gap-2" role="group" aria-label="Duración">
+                <button type="button" class="range-option" data-action="pattern-builder#chooseSpan" data-span="month" aria-pressed="false">Este mes</button>
+                <button type="button" class="range-option" data-action="pattern-builder#chooseSpan" data-span="3" aria-pressed="true">3 meses</button>
+                <button type="button" class="range-option" data-action="pattern-builder#chooseSpan" data-span="6" aria-pressed="false">6 meses</button>
+                <button type="button" class="range-option" data-action="pattern-builder#chooseSpan" data-span="custom" aria-pressed="false">Elegir fecha</button>
+            </div>
+            <label class="field hidden" data-pattern-builder-target="customRange">
+                <span class="field-label">Hasta</span>
+                <input type="date" class="input" data-pattern-builder-target="to">
+            </label>
+            <p class="field-error hidden" data-pattern-builder-target="error" role="alert"></p>
+            <div class="grid grid-cols-[auto_1fr] gap-2">
+                <button type="button" class="btn-secondary" data-action="pattern-builder#backToBuild">Atrás</button>
+                <button type="button" class="btn-primary" data-action="pattern-builder#preview" data-pattern-builder-target="previewButton">Ver qué haría</button>
+            </div>
+        </section>
+    </div>
+</dialog>
+
+{# ── Voz y texto ──────────────────────────────────────────────────────────
+   The microphone is progressive enhancement. The textarea is the feature:
+   it also catches the phone keyboard's own dictation, which is what most
+   people actually have. No audio is sent anywhere. #}
+<dialog class="sheet"
+        data-controller="bottom-sheet voice-schedule"
+        data-calendar-target="voiceSheet"
+        data-voice-schedule-csrf-value="{{ csrfToken }}"
+        aria-labelledby="voice-sheet-title">
+    <div class="sheet-inner">
+        <span class="sheet-handle" aria-hidden="true"></span>
+        <div class="sheet-header">
+            <h2 id="voice-sheet-title" data-voice-schedule-target="title">Dicta tu cuadrante</h2>
+            <button type="button" class="picker-close" data-action="bottom-sheet#close" aria-label="Cerrar">×</button>
+        </div>
+
+        <div class="hidden flex-col items-center gap-2" data-voice-schedule-target="microphone">
+            <button type="button" class="mic-button" data-action="voice-schedule#toggleListening" data-voice-schedule-target="micButton" aria-label="Pulsa y habla">🎙</button>
+            <p class="text-sm text-ink-muted" data-voice-schedule-target="status" aria-live="polite">Pulsa y habla</p>
+        </div>
+
+        <label class="field">
+            <span class="field-label">Tu cuadrante</span>
+            <textarea class="transcript"
+                      rows="3"
+                      data-voice-schedule-target="text"
+                      data-action="input->voice-schedule#textChanged"
+                      placeholder="1 y 2 mañana, 3 y 4 tarde, 5 noche, 6 y 7 libres"></textarea>
+        </label>
+        <p class="text-sm text-ink-muted">
+            También puedes usar el dictado del teclado de tu móvil. Turnin no guarda audio: solo recibe el texto.
+        </p>
+
+        <p class="field-error hidden" data-voice-schedule-target="error" role="alert"></p>
+
+        <div class="hidden flex-col gap-2" data-voice-schedule-target="unresolved">
+            <p class="alert-info">
+                <span aria-hidden="true">⚠</span>
+                <span><strong>No hemos entendido esta parte:</strong> <span data-voice-schedule-target="unresolvedText"></span></span>
+            </p>
+        </div>
+
+        <div class="hidden flex-col gap-2" data-voice-schedule-target="patternOffer">
+            <p class="alert-info">
+                <span aria-hidden="true">🔁</span>
+                <span>Parece un patrón: <strong data-voice-schedule-target="patternSequence"></strong>. ¿Lo repetimos?</span>
+            </p>
+            <button type="button" class="btn-secondary btn-block" data-action="voice-schedule#continueAsPattern">Usar como patrón</button>
+        </div>
+
+        <button type="button" class="btn-primary btn-block" data-action="voice-schedule#interpret" data-voice-schedule-target="interpretButton" disabled>Interpretar</button>
+    </div>
+</dialog>
+
+{# ── Previsualizar y confirmar ────────────────────────────────────────────
+   The single confirmation screen. Painting, rotations and dictation all end
+   here, so conflicts are always reported the same way and nothing is ever
+   written without this step. #}
+<dialog class="sheet" data-controller="bottom-sheet" data-schedule-draft-target="sheet" aria-labelledby="preview-sheet-title">
+    <div class="sheet-inner">
+        <span class="sheet-handle" aria-hidden="true"></span>
+        <div class="sheet-header">
+            <h2 id="preview-sheet-title" data-schedule-draft-target="title">Esto es lo que haremos</h2>
+            <button type="button" class="picker-close" data-action="bottom-sheet#close" aria-label="Cerrar">×</button>
+        </div>
+
+        <p class="preview-counts" data-schedule-draft-target="counts" aria-live="polite"></p>
+
+        <div class="preview-list" data-schedule-draft-target="list"></div>
+
+        <div class="hidden flex-col gap-2" data-schedule-draft-target="conflicts">
+            <p class="text-sm font-semibold" data-schedule-draft-target="conflictHeadline"></p>
+            <label class="conflict-choice">
+                <input type="radio" name="conflict-policy" value="skip_existing" checked data-action="schedule-draft#changePolicy">
+                <span><strong>Mantener lo que ya tengo</strong><span class="block text-ink-muted">No tocamos esos días.</span></span>
+            </label>
+            <label class="conflict-choice">
+                <input type="radio" name="conflict-policy" value="replace_existing" data-action="schedule-draft#changePolicy">
+                <span><strong>Reemplazar esos días</strong><span class="block text-ink-muted">Se sustituye lo que había.</span></span>
+            </label>
+        </div>
+
+        <div class="hidden" data-schedule-draft-target="warnings"></div>
+        <p class="field-error hidden" data-schedule-draft-target="error" role="alert"></p>
+
+        <div class="sheet-actions">
+            <button type="button" class="btn-primary btn-block" data-action="schedule-draft#confirm" data-schedule-draft-target="confirm">Guardar</button>
+            <button type="button" class="btn-ghost btn-block" data-action="bottom-sheet#close">Cancelar</button>
+        </div>
+    </div>
+</dialog>

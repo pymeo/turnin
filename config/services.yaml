@@ -73,6 +73,18 @@ services:
         tags:
             - { name: 'messenger.message_handler', bus: 'command.bus' }
 
+    turnin.scheduling_query_handlers:
+        namespace: App\Scheduling\Application\Query\
+        resource: '../src/Scheduling/Application/Query/*Handler.php'
+        tags:
+            - { name: 'messenger.message_handler', bus: 'query.bus' }
+
+    turnin.scheduling_command_handlers:
+        namespace: App\Scheduling\Application\Command\
+        resource: '../src/Scheduling/Application/Command/*Handler.php'
+        tags:
+            - { name: 'messenger.message_handler', bus: 'command.bus' }
+
     turnin.identity_command_handlers:
         namespace: App\Platform\Identity\Application\Command\
         resource: '../src/Platform/Identity/Application/Command/*Handler.php'
@@ -104,6 +116,25 @@ services:
     App\Workforce\Domain\WorkerProfileCompletion: '@App\Platform\Identity\Infrastructure\Workforce\IdentityWorkerProfileCompletion'
     App\Workforce\Domain\AuthenticatedWorker: '@App\Platform\Identity\Infrastructure\Workforce\DatabaseAuthenticatedWorker'
     App\Workforce\Domain\WorkerOnboardingIdentity: '@App\Platform\Identity\Infrastructure\Workforce\IdentityWorkerOnboardingIdentity'
+
+    # --- Scheduling ---------------------------------------------------------
+    # The roster repositories talk DBAL rather than the ORM: a roster day owns a
+    # collection of segments, and an ORM association would put a Doctrine
+    # Collection on a Domain class. See docs/adr/0008-roster-and-calendar-model.md.
+    App\Scheduling\Domain\RosterDays: '@App\Scheduling\Infrastructure\Persistence\Doctrine\DoctrineRosterDays'
+    App\Scheduling\Domain\ShiftPresets: '@App\Scheduling\Infrastructure\Persistence\Doctrine\DoctrineShiftPresets'
+    App\Scheduling\Domain\RosterPatterns: '@App\Scheduling\Infrastructure\Persistence\Doctrine\DoctrineRosterPatterns'
+    App\Scheduling\Domain\RosterIdGenerator: '@App\Scheduling\Infrastructure\Identity\SymfonyRosterIdGenerator'
+    # Declared by Scheduling, implemented by Workforce, which owns the data.
+    App\Scheduling\Domain\AssignedWorkers: '@App\Workforce\Infrastructure\Scheduling\WorkforceAssignedWorkers'
+    App\Scheduling\Domain\AuthenticatedWorkers: '@App\Platform\Identity\Infrastructure\Scheduling\IdentityAuthenticatedWorkers'
+    App\Scheduling\Domain\CalendarInsightSource: '@App\Scheduling\Domain\RestStreakInsights'
+    App\Scheduling\Domain\RestStreakInsights: ~
+    App\Scheduling\Domain\ScheduleDraftComposer: ~
+    App\Scheduling\Domain\ScheduleDraftResolver: ~
+    App\Scheduling\Domain\ScheduleTextParser: ~
+    App\Scheduling\Domain\DateExpressionParser: ~
+    App\Scheduling\Domain\RepeatingRosterPatternDetector: ~
 
     workforce.ministry.primary_care:
         class: App\Workforce\Infrastructure\Ministry\MinistryWorkplaceCatalog

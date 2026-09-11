@@ -1,0 +1,105 @@
+{% extends 'base.html.twig' %}
+
+{% block title %}Turnin — Mis turnos{% endblock %}
+
+{% block body %}
+{% set tones = {
+    'morning': 'calendar-tone-morning',
+    'evening': 'calendar-tone-evening',
+    'night': 'calendar-tone-night',
+    'oncall': 'calendar-tone-oncall',
+    'rest': 'calendar-tone-rest',
+    'unknown': 'calendar-tone-unknown',
+} %}
+<main class="page flex flex-col gap-5" data-controller="shift-presets" data-shift-presets-csrf-value="{{ csrfToken }}">
+    {% include 'identity/_authenticated_header.html.twig' %}
+
+    <header class="flex flex-col gap-1">
+        <a class="text-sm text-ink-muted no-underline" href="{{ path('scheduling_calendar') }}">‹ Calendario</a>
+        <h1 class="text-2xl font-bold tracking-tight">Mis turnos</h1>
+        <p class="text-ink-muted">
+            Son los botones que usas para pintar tu calendario. Cambiar un horario aquí
+            no altera los turnos que ya has guardado.
+        </p>
+    </header>
+
+    <section class="flex flex-col gap-2" data-shift-presets-target="list">
+        {% for preset in presets %}
+            <article class="preset-row" data-active="{{ preset.active ? 'true' : 'false' }}" data-preset-id="{{ preset.id }}">
+                <span class="preset-mark {{ tones[preset.tone]|default('calendar-tone-unknown') }}" aria-hidden="true">{{ preset.abbreviation }}</span>
+                <span class="flex min-w-0 flex-1 flex-col">
+                    <span class="truncate font-semibold">{{ preset.name }}</span>
+                    <span class="text-sm text-ink-muted">
+                        {{ preset.start }} – {{ preset.end }}{% if preset.endsNextDay %} <span class="text-xs">(+1 día)</span>{% endif %}
+                        {%- if not preset.active %} · retirado{% endif %}
+                    </span>
+                </span>
+                <span class="flex shrink-0 items-center gap-1">
+                    <button type="button" class="calendar-nav-button text-base" data-action="shift-presets#moveUp" aria-label="Subir {{ preset.name }}">↑</button>
+                    <button type="button" class="btn-ghost px-3 text-sm" data-action="shift-presets#edit">Editar</button>
+                </span>
+            </article>
+        {% endfor %}
+    </section>
+
+    <button type="button" class="btn-secondary btn-block" data-action="shift-presets#create">＋ Crear un turno</button>
+
+    <dialog class="sheet" data-controller="bottom-sheet" data-shift-presets-target="sheet" aria-labelledby="preset-sheet-title">
+        <form class="sheet-inner" data-action="submit->shift-presets#submit">
+            <span class="sheet-handle" aria-hidden="true"></span>
+            <div class="sheet-header">
+                <h2 id="preset-sheet-title" data-shift-presets-target="sheetTitle">Editar turno</h2>
+                <button type="button" class="picker-close" data-action="bottom-sheet#close" aria-label="Cerrar">×</button>
+            </div>
+
+            <label class="field">
+                <span class="field-label">Nombre</span>
+                <input class="input" name="name" maxlength="40" required data-shift-presets-target="name">
+            </label>
+            <div class="grid grid-cols-[5.5rem_1fr] gap-3">
+                <label class="field">
+                    <span class="field-label">Abreviatura</span>
+                    <input class="input" name="abbreviation" maxlength="3" required data-shift-presets-target="abbreviation">
+                </label>
+                <label class="field">
+                    <span class="field-label">Tipo</span>
+                    <select class="input" name="kind" data-shift-presets-target="kind">
+                        <option value="morning">Mañana</option>
+                        <option value="evening">Tarde</option>
+                        <option value="night">Noche</option>
+                        <option value="long_day">12 h día</option>
+                        <option value="long_night">12 h noche</option>
+                        <option value="on_call">Guardia</option>
+                        <option value="other">Otro</option>
+                    </select>
+                </label>
+            </div>
+            <div class="grid grid-cols-2 gap-3">
+                <label class="field">
+                    <span class="field-label">Empieza</span>
+                    <input class="input" type="time" name="start" required data-shift-presets-target="start">
+                </label>
+                <label class="field">
+                    <span class="field-label">Termina</span>
+                    <input class="input" type="time" name="end" required data-shift-presets-target="end">
+                </label>
+            </div>
+            <p class="text-sm text-ink-muted">Si termina antes de empezar, entendemos que acaba al día siguiente.</p>
+            <label class="field">
+                <span class="field-label">Cómo lo llamas al dictar</span>
+                <input class="input" name="aliases" data-shift-presets-target="aliases" placeholder="guardia, g, 24 horas">
+                <span class="text-sm text-ink-muted">Separado por comas. Lo usamos para entenderte cuando dictas.</span>
+            </label>
+
+            <p class="field-error hidden" data-shift-presets-target="error" role="alert"></p>
+
+            <div class="sheet-actions">
+                <button type="submit" class="btn-primary btn-block">Guardar turno</button>
+                <button type="button" class="btn-ghost btn-block hidden" data-action="shift-presets#deactivate" data-shift-presets-target="deactivate">
+                    Retirar este turno
+                </button>
+            </div>
+        </form>
+    </dialog>
+</main>
+{% endblock %}

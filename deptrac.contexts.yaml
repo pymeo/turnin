@@ -29,6 +29,11 @@ parameters:
               - type: classNameRegex
                 value: '#^App\\Workforce\\#'
 
+        - name: Scheduling
+          collectors:
+              - type: classNameRegex
+                value: '#^App\\Scheduling\\#'
+
         # The kernel: framework glue that belongs to no context. Narrow on
         # purpose — see the note about uncovered tokens above.
         - name: AppRoot
@@ -50,7 +55,15 @@ parameters:
             - Vendor
         PlatformWeb:
             - Vendor
+        # Workforce implements a port Scheduling declares (AssignedWorkers), which
+        # is the customer-supplier direction docs/CONTEXT_MAP.md describes: the
+        # consumer states what it needs, the owner of the data provides it. The
+        # edge is Workforce -> Scheduling\Domain and never the other way.
         Workforce:
+            - Vendor
+            - Scheduling
+
+        Scheduling:
             - Vendor
         AppRoot:
             - Vendor
