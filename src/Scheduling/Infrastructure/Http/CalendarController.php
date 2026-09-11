@@ -4,8 +4,8 @@ declare(strict_types=1);
 
 namespace App\Scheduling\Infrastructure\Http;
 
-use App\Scheduling\Application\Command\ApplyScheduleDraft;
 use App\Scheduling\Application\Command\ApplyManualShift;
+use App\Scheduling\Application\Command\ApplyScheduleDraft;
 use App\Scheduling\Application\Command\EnsureShiftPresets;
 use App\Scheduling\Application\Command\ScheduleDraftApplied;
 use App\Scheduling\Application\Query\CombinedRosterMonthView;

@@ -246,6 +246,80 @@ final class CalendarFlowTest extends WebTestCase
         self::assertSelectorExists('a[href="/app/calendar"]');
     }
 
+    /**
+     * The whole colour feature end to end: a custom shift keeps the tone it was
+     * created with, the calendar paints that tone, and recolouring the preset
+     * afterwards leaves the days already worked exactly as they were.
+     */
+    public function test_a_custom_shift_carries_its_colour_into_the_calendar_and_keeps_it_afterwards(): void
+    {
+        $client = $this->workerWithAssignment();
+        $page = $client->request('GET', '/app/calendar');
+        $token = $this->csrfTokenFrom($page);
+
+        $created = $this->json($client, 'POST', '/app/calendar/turnos/guardar', [
+            'name' => 'Media mañana',
+            'abbreviation' => '½M',
+            'start' => '07:00',
+            'end' => '11:00',
+            'kind' => 'morning',
+            'colorKey' => 'teal',
+            'aliases' => 'media manana',
+        ], $token);
+        $presetId = $created['presetId'];
+        self::assertIsString($presetId);
+
+        $this->json($client, 'POST', '/app/calendar/apply', [
+            'source' => 'manual',
+            'entries' => [['date' => '2026-09-22', 'intent' => 'work', 'presetIds' => [$presetId]]],
+        ], $token);
+
+        $cell = $client->request('GET', '/app/calendar?month=2026-09')->filter('[data-day="2026-09-22"]');
+        self::assertStringContainsString('calendar-tone-teal', (string) $cell->attr('class'));
+
+        // Recolour the preset. From now on it paints rose; September does not move.
+        $this->json($client, 'POST', '/app/calendar/turnos/guardar', [
+            'presetId' => $presetId,
+            'name' => 'Media mañana',
+            'abbreviation' => '½M',
+            'start' => '07:00',
+            'end' => '11:00',
+            'kind' => 'morning',
+            'colorKey' => 'rose',
+            'aliases' => 'media manana',
+        ], $token);
+
+        $unchanged = $client->request('GET', '/app/calendar?month=2026-09')->filter('[data-day="2026-09-22"]');
+        self::assertStringContainsString('calendar-tone-teal', (string) $unchanged->attr('class'), 'A recolour must not repaint history.');
+
+        $this->json($client, 'POST', '/app/calendar/apply', [
+            'source' => 'manual',
+            'entries' => [['date' => '2026-09-23', 'intent' => 'work', 'presetIds' => [$presetId]]],
+        ], $token);
+        $repainted = $client->request('GET', '/app/calendar?month=2026-09')->filter('[data-day="2026-09-23"]');
+        self::assertStringContainsString('calendar-tone-rose', (string) $repainted->attr('class'));
+    }
+
+    /** The picker offers the ten named tones, each one showing its own colour. */
+    public function test_the_preset_editor_offers_the_whole_palette_as_visible_swatches(): void
+    {
+        $client = $this->workerWithAssignment();
+        $client->request('GET', '/app/calendar');
+        $page = $client->request('GET', '/app/calendar/turnos');
+
+        self::assertResponseIsSuccessful();
+        $swatches = $page->filter('[role="radiogroup"] [data-color-key]');
+        self::assertCount(10, $swatches);
+
+        foreach (['amber', 'rose', 'teal', 'cyan'] as $key) {
+            $swatch = $page->filter(\sprintf('[data-color-key="%s"]', $key));
+            self::assertCount(1, $swatch);
+            // The colour is on the swatch itself, not a bullet in a dropdown.
+            self::assertStringContainsString('shift-fill-'.$key, (string) $swatch->attr('class'));
+            self::assertNotSame('', (string) $swatch->attr('aria-label'), 'Never colour alone.');
+        }
+    }
+
     public function test_shift_presets_can_be_managed_and_retired_without_losing_history(): void
     {
         $client = $this->workerWithAssignment();

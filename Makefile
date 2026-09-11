@@ -131,7 +131,13 @@ architecture: up ## Deptrac: Domain ← Application ← Infrastructure y límite
 audit: up ## Vulnerabilidades conocidas en dependencias
 	$(APP_EXEC) composer audit
 
-qa: up ## Puerta de calidad completa: composer validate + lint + PHPStan + deptrac + tests
+qa: up ## Puerta de calidad completa: assets + composer validate + lint + PHPStan + deptrac + tests
+	@# Los assets van primero y no por comodidad: `public/assets/` es salida
+	@# compilada y Symfony la sirve mientras exista, así que un cambio en
+	@# app.css o en una plantilla puede tener toda la suite en verde y la
+	@# pantalla sin actualizar. Recompilar aquí cuesta segundos y cierra ese
+	@# hueco. Ver docs/DEVELOPMENT.md § Problemas conocidos.
+	$(MAKE) assets
 	$(APP_EXEC) composer validate --strict
 	$(MAKE) lint
 	$(MAKE) static-analysis

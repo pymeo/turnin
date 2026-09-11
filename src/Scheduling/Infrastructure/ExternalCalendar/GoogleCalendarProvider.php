@@ -155,10 +155,14 @@ final readonly class GoogleCalendarProvider implements ExternalCalendarProvider
         }
         $result = [];
         foreach ($items as $item) {
-            if (\is_array($item)) {
-                /* @var array<string, mixed> $item */
-                $result[] = $item;
+            if (!\is_array($item)) {
+                continue;
             }
+            $row = [];
+            foreach ($item as $key => $value) {
+                $row[(string) $key] = $value;
+            }
+            $result[] = $row;
         }
 
         return $result;

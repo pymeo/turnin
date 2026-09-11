@@ -119,5 +119,20 @@ extensiones; a partir de ahí va en caché.
 Playwright con los navegadores y sus librerías de sistema. A cambio, no hay que
 instalar nada en tu máquina y CI ejecuta exactamente lo mismo.
 
-**Assets que no se actualizan.** `public/assets/` es salida compilada; si algo se
-queda pegado, `make assets`.
+**Assets que no se actualizan.** `public/assets/` es salida compilada y, mientras
+exista, Symfony la sirve en lugar de leer `assets/`. Es la trampa más fácil de
+este repo: añades una utilidad en `app.css`, la plantilla la usa, y la pantalla
+sigue exactamente igual porque el navegador recibe el CSS de la última
+compilación. **Si tocas CSS, plantillas o JS, `make assets`.**
+
+El síntoma típico es una clase que existe en el fuente y no aparece en el CSS
+servido. Para comprobarlo sin abrir el navegador:
+
+```bash
+grep -c '\.calendar-tone-amber{' var/tailwind/app.built.css   # 0 = compilación vieja
+```
+
+Tailwind v4 solo emite las utilidades que *ve escritas* en el código, así que un
+nombre de clase construido concatenando (`'calendar-tone-' ~ color`) tampoco
+aparecerá nunca. Por eso las plantillas declaran el mapa completo de tonos como
+literales.

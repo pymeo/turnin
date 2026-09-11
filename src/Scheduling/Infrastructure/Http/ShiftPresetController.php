@@ -11,6 +11,7 @@ use App\Scheduling\Application\Command\ReorderShiftPresets;
 use App\Scheduling\Application\Command\SaveShiftPreset;
 use App\Scheduling\Application\Query\GetShiftPresets;
 use App\Scheduling\Application\RosterAccessDenied;
+use App\Scheduling\Domain\ShiftColor;
 use Symfony\Component\HttpFoundation\JsonResponse;
 use Symfony\Component\HttpFoundation\RedirectResponse;
 use Symfony\Component\HttpFoundation\Request;
@@ -58,6 +59,10 @@ final readonly class ShiftPresetController
 
         return new Response($this->twig->render('scheduling/shift_presets.html.twig', [
             'presets' => $presets,
+            'colors' => array_map(
+                static fn (ShiftColor $color): array => ['key' => $color->value, 'label' => $color->label()],
+                ShiftColor::palette(),
+            ),
             'csrfToken' => $this->csrf->getToken(RosterRequest::CSRF_TOKEN_ID)->getValue(),
             'assignmentId' => $assignmentId,
         ]));

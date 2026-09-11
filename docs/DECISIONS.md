@@ -209,7 +209,8 @@ La búsqueda tokeniza nombre, municipio y provincia, limita en SQL y filtra
 `active=true`. Con unas quince mil filas un recorrido de PostgreSQL es suficiente;
 un índice B-tree no ayuda a patrones `%texto%` y `pg_trgm` sería optimización
 prematura. Se medirá de nuevo cuando onboarding aporte consultas reales.
-# 2026-09 — Color histórico y Google Calendar manual
+
+## 2026-09-11 — Color histórico y Google Calendar manual
 
 - El `colorKey` del preset se copia al segmento. Así un cambio visual futuro no
   repinta retrospectivamente un cuadrante confirmado.
@@ -218,3 +219,22 @@ prematura. Se medirá de nuevo cuando onboarding aporte consultas reales.
   definir UX de borrados y ediciones concurrentes.
 - Import `.ics` se pospone; export `.ics` cubre ya Apple, Outlook y el fallback
   manual sin abrir otra superficie de parsing.
+
+## 2026-09-11 — El color se elige en una paleta, no en un `input[type=color]`
+
+Diez tonos con nombre (`ShiftColor`) en lugar de hex libre. Un hex arbitrario
+rompe el contraste, no tiene respuesta en modo oscuro y convierte el calendario
+en un collage; con una paleta cerrada cada tono tiene fondo suave, texto legible
+y acento definidos de una vez.
+
+Se persiste la **clave semántica** (`amber`), nunca una clase de Tailwind: el
+frontend traduce `colorKey → token`, así que renombrar utilidades no obliga a
+migrar datos.
+
+El selector muestra el color real, no `● amber` en un desplegable: elegir color
+es justo lo que un desplegable no deja hacer. Y como el color nunca puede ser la
+única señal, cada muestra lleva su nombre accesible y la celda sigue llevando su
+letra.
+
+Si la clave no se reconoce, el preset cae en el tono habitual de su
+`ShiftKind`, no en gris: un turno de mañana que aparece en gris parece un fallo.

@@ -23,7 +23,7 @@ final class InMemoryExternalCalendars implements ExternalCalendarConnections, Ex
     {
     }
 
-    public function activeFor(string $userId): ?ExternalCalendarConnection
+    public function activeFor(string $userId): ExternalCalendarConnection
     {
         return new ExternalCalendarConnection('google:'.$userId, $userId, 'subject', 'access', 'refresh', null, [], null);
     }

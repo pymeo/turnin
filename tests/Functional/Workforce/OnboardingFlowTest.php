@@ -17,6 +17,9 @@ final class OnboardingFlowTest extends WebTestCase
     private string $userId;
     private string $csrf;
 
+    /** @var list<string> Two centres this test owns, seeded inside its transaction. */
+    private array $workplaceIds;
+
     protected function setUp(): void
     {
         $this->client = static::createClient();
@@ -35,6 +38,7 @@ final class OnboardingFlowTest extends WebTestCase
             'has_supervisor_profile' => false,
             'created_at' => '2026-09-11T08:00:00+00:00',
         ], ['has_worker_profile' => 'boolean', 'has_supervisor_profile' => 'boolean']);
+        $this->workplaceIds = [$this->seedWorkplace('Hospital de pruebas Uno'), $this->seedWorkplace('Hospital de pruebas Dos')];
         $this->client->loginUser(new SecurityUser($this->userId, $email, null, false, false));
         $page = $this->client->request('GET', '/onboarding');
         self::assertResponseIsSuccessful();
@@ -54,7 +58,7 @@ final class OnboardingFlowTest extends WebTestCase
 
     public function test_onboarding_is_resumable_protects_identity_and_can_update_the_assignment(): void
     {
-        $workplaceId = $this->scalar('SELECT id FROM workforce_workplaces WHERE active = TRUE ORDER BY name LIMIT 1');
+        $workplaceId = $this->workplaceIds[0];
         $categoryId = $this->scalar('SELECT id FROM workforce_staff_categories WHERE active = TRUE AND specialty_required = FALSE ORDER BY name LIMIT 1');
 
         $this->post('/onboarding/name', ['given_name' => 'Ana', 'family_name' => 'García']);
@@ -121,10 +125,7 @@ final class OnboardingFlowTest extends WebTestCase
 
     public function test_a_worker_can_add_a_second_active_workplace_without_reentering_identity(): void
     {
-        $workplaces = $this->connection->fetchFirstColumn('SELECT id FROM workforce_workplaces WHERE active = TRUE ORDER BY name LIMIT 2');
-        self::assertCount(2, $workplaces);
-        self::assertIsString($workplaces[0]);
-        self::assertIsString($workplaces[1]);
+        $workplaces = $this->workplaceIds;
         $categoryId = $this->scalar('SELECT id FROM workforce_staff_categories WHERE active = TRUE AND specialty_required = FALSE ORDER BY name LIMIT 1');
         $this->post('/onboarding/name', ['given_name' => 'Ana', 'family_name' => 'García']);
         $this->post('/onboarding/identity', ['identity_document' => '12 345 678-z', 'phone' => '600 123 123']);
@@ -137,7 +138,11 @@ final class OnboardingFlowTest extends WebTestCase
         $this->post('/onboarding/progress', ['workplace_id' => $workplaces[1], 'staff_category_id' => $categoryId, 'primary_destination_id' => 'reference:intensive_care']);
         $result = $this->post('/onboarding/add-assignment');
 
-        self::assertStringStartsWith('/app/calendar?assignment=', (string) (($result['result']['redirect'] ?? '')));
+        $added = $result['result'] ?? null;
+        self::assertIsArray($added);
+        self::assertArrayHasKey('redirect', $added);
+        self::assertIsString($added['redirect']);
+        self::assertStringStartsWith('/app/calendar?assignment=', $added['redirect']);
         self::assertSame(2, $this->countRows('SELECT COUNT(*) FROM workforce_worker_assignments WHERE worker_id = :worker AND active = TRUE', ['worker' => $this->userId]));
         self::assertSame(1, $this->countRows('SELECT COUNT(*) FROM workforce_worker_assignments WHERE worker_id = :worker AND active = TRUE AND primary_assignment = TRUE', ['worker' => $this->userId]));
         self::assertSame(2, $this->countRows('SELECT COUNT(*) FROM workforce_swap_pool_memberships WHERE worker_id = :worker AND active = TRUE AND is_primary = TRUE', ['worker' => $this->userId]));
@@ -155,6 +160,34 @@ final class OnboardingFlowTest extends WebTestCase
         self::assertIsArray($payload);
 
         return $payload;
+    }
+
+    /**
+     * The catalogue is imported from the Ministry, so it is not there after a
+     * migrations-only reset. Each run seeds the two centres it needs inside its
+     * own transaction rather than relying on rows another test left behind —
+     * phpunit.dist.xml runs in random order precisely to catch that.
+     */
+    private function seedWorkplace(string $name): string
+    {
+        $id = Uuid::v7()->toRfc4122();
+        $this->connection->insert('workforce_workplaces', [
+            'id' => $id,
+            'source' => 'ministry_hospitals',
+            'external_id' => 'onboarding-'.$id,
+            'name' => $name,
+            'type' => 'hospital',
+            'autonomous_community' => 'Región de Murcia',
+            'province' => 'Murcia',
+            'municipality' => 'Murcia',
+            'ownership' => 'public',
+            'active' => true,
+            'source_updated_at' => '2026-09-10T00:00:00+00:00',
+            'created_at' => '2026-09-10T00:00:00+00:00',
+            'updated_at' => '2026-09-10T00:00:00+00:00',
+        ], ['active' => 'boolean']);
+
+        return $id;
     }
 
     /** @param array<string, mixed> $parameters */

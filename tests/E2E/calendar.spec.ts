@@ -179,7 +179,7 @@ test.describe('personal shift calendar', () => {
 		await sheet.locator('[data-shift-presets-target="name"]').fill('12 horas día');
 		await sheet.locator('[data-shift-presets-target="abbreviation"]').fill('12D');
 		await sheet.locator('[data-shift-presets-target="start"]').fill('08:00');
-		await sheet.locator('[data-shift-presets-target="color"]').selectOption('emerald');
+		await sheet.locator('[data-color-key="emerald"]').click();
 		await sheet.getByRole('button', { name: 'Guardar turno' }).click();
 		await page.waitForLoadState('domcontentloaded');
 		await expect(page.locator('[data-preset-id]').filter({ hasText: '12 horas día' })).toContainText('08:00 – 20:00');
@@ -226,5 +226,53 @@ test.describe('dictation without a speech API', () => {
 		await voiceSheet.locator('[data-voice-schedule-target="interpretButton"]').click();
 
 		await expect(page.locator('[data-schedule-draft-target="sheet"]')).toBeVisible();
+	});
+});
+
+/*
+ * Colour is how a month becomes readable at a glance, so it has to survive the
+ * whole round trip: picked in the editor, painted into the grid, and kept on the
+ * days already worked when the preset is later recoloured.
+ */
+test.describe('shift colours', () => {
+	test('a custom shift is created with a visible colour and paints the calendar with it', async ({ page }) => {
+		const month = '2027-04';
+		await openCalendar(page, month);
+		await page.goto('/app/calendar/turnos');
+
+		await page.getByRole('button', { name: /Crear un turno/ }).click();
+		const sheet = page.locator('[data-shift-presets-target="sheet"]');
+		await expect(sheet).toBeVisible();
+
+		// Ten tones, each showing the colour it actually paints.
+		const swatches = sheet.locator('[role="radiogroup"] [data-color-key]');
+		await expect(swatches).toHaveCount(10);
+
+		await sheet.locator('[data-shift-presets-target="name"]').fill('Media mañana');
+		await sheet.locator('[data-shift-presets-target="abbreviation"]').fill('½M');
+		await sheet.locator('[data-shift-presets-target="start"]').fill('07:00');
+		await sheet.locator('[data-shift-presets-target="end"]').fill('11:00');
+		await sheet.locator('[data-color-key="teal"]').click();
+
+		// Chosen, named, and previewed before saving anything.
+		await expect(sheet.locator('[data-color-key="teal"]')).toHaveAttribute('aria-checked', 'true');
+		await expect(sheet.locator('[data-shift-presets-target="colorName"]')).toHaveText('Verde azulado');
+		await expect(sheet.locator('[data-shift-presets-target="previewCell"]')).toHaveClass(/calendar-tone-teal/);
+		await expect(sheet.locator('[data-shift-presets-target="previewCode"]')).toHaveText('½M');
+
+		await sheet.getByRole('button', { name: 'Guardar turno' }).click();
+		await expect(page.locator('[data-shift-presets-target="list"]')).toContainText('Media mañana');
+
+		// It behaves like any other preset: it is offered for a day…
+		await openCalendar(page, month);
+		await cell(page, month, 8).click();
+		const daySheet = page.locator('[data-calendar-target="daySheet"]');
+		await expect(daySheet).toBeVisible();
+		await daySheet.locator('.picker-chip').filter({ hasText: 'Media mañana' }).click();
+		await expect(daySheet).not.toBeVisible();
+
+		// …and the day wears its colour, letter included.
+		await expect(cell(page, month, 8)).toHaveClass(/calendar-tone-teal/);
+		await expect(cell(page, month, 8).locator('.calendar-cell-code')).toHaveText('½M');
 	});
 });

@@ -46,7 +46,14 @@ final class DoctrineExternalCalendarsTest extends KernelTestCase
         self::assertSame('plain-refresh-token', $connections->activeFor($userId)?->refreshToken);
 
         $connections->disconnect($userId);
+
+        // The row survives as an audit trail, but the reusable credential does
+        // not: the refresh token is gone and the connection reads as revoked,
+        // so nothing can act on the account again without a fresh consent.
         self::assertNull($connections->activeFor($userId));
-        self::assertFalse($this->database->fetchOne('SELECT encrypted_refresh_token FROM scheduling_external_calendar_connections WHERE user_id = :user', ['user' => $userId]));
+        $revoked = $this->database->fetchAssociative('SELECT encrypted_refresh_token, revoked_at FROM scheduling_external_calendar_connections WHERE user_id = :user', ['user' => $userId]);
+        self::assertIsArray($revoked);
+        self::assertNull($revoked['encrypted_refresh_token']);
+        self::assertNotNull($revoked['revoked_at']);
     }
 }

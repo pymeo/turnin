@@ -30,7 +30,9 @@ final readonly class SaveShiftPresetHandler
         $now = $this->clock->now();
         $window = ShiftWindow::fromStrings($command->start, $command->end);
         $kind = ShiftKind::tryFrom($command->kind) ?? ShiftKind::OTHER;
-        $color = ShiftColor::tryFrom($command->colorKey) ?? ShiftColor::SLATE;
+        // An unknown key falls back to the tone this kind usually wears, not to
+        // grey: a preset that silently turns slate looks like a bug.
+        $color = ShiftColor::fromKeyOrSuggestion($command->colorKey, $kind);
 
         if (null === $command->presetId) {
             $resolver = $this->workspace->presetsFor($worker);

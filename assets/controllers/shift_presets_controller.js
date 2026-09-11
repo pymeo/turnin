@@ -1,5 +1,5 @@
 import { Controller } from '@hotwired/stimulus';
-import { configureCalendarContext, openSheet, postJson } from '../scheduling/roster_api.js';
+import { applyTone, configureCalendarContext, openSheet, postJson } from '../scheduling/roster_api.js';
 
 /*
  * "Gestionar mis turnos".
@@ -8,12 +8,67 @@ import { configureCalendarContext, openSheet, postJson } from '../scheduling/ros
  * so the button says "Retirar" and the row stays visible, dimmed.
  */
 export default class extends Controller {
-	static targets = ['list', 'sheet', 'sheetTitle', 'name', 'abbreviation', 'start', 'end', 'kind', 'color', 'aliases', 'error', 'deactivate', 'mode', 'partOptions', 'base', 'slice'];
+	static targets = ['list', 'sheet', 'sheetTitle', 'name', 'abbreviation', 'start', 'end', 'kind', 'color', 'colors', 'colorName', 'aliases', 'error', 'deactivate', 'mode', 'partOptions', 'base', 'slice', 'previewCell', 'previewCode', 'previewName', 'previewHours'];
 	static values = { csrf: String, assignment: String };
 
 	connect() {
 		configureCalendarContext(this.hasAssignmentValue ? this.assignmentValue : null);
 		this.editing = null;
+		// True once the worker picks a colour by hand: after that, changing the
+		// kind must not quietly repaint their choice.
+		this.colorChosenByHand = false;
+		this.sheetTarget.addEventListener('input', () => this.renderPreview());
+		this.kindTarget.addEventListener('change', () => this.suggestColorForKind());
+	}
+
+	/* --- colour ---------------------------------------------------------- */
+
+	chooseColor(event) {
+		this.colorChosenByHand = true;
+		this.applyColor(event.currentTarget.dataset.colorKey);
+	}
+
+	/** Arrow keys move through the palette, as a radio group should. */
+	moveColor(event) {
+		const swatches = [...this.colorsTarget.querySelectorAll('[data-color-key]')];
+		const current = swatches.indexOf(event.currentTarget);
+		const step = { ArrowRight: 1, ArrowDown: 1, ArrowLeft: -1, ArrowUp: -1 }[event.key];
+		if (undefined === step) return;
+		event.preventDefault();
+		const next = swatches[(current + step + swatches.length) % swatches.length];
+		this.colorChosenByHand = true;
+		this.applyColor(next.dataset.colorKey);
+		next.focus();
+	}
+
+	applyColor(key) {
+		this.colorTarget.value = key;
+		for (const swatch of this.colorsTarget.querySelectorAll('[data-color-key]')) {
+			const chosen = swatch.dataset.colorKey === key;
+			swatch.setAttribute('aria-checked', String(chosen));
+			// Only the selected swatch stays in the tab order, so a keyboard
+			// reaches the group once and then moves within it.
+			swatch.tabIndex = chosen ? 0 : -1;
+			if (chosen) this.colorNameTarget.textContent = swatch.getAttribute('aria-label');
+		}
+		this.renderPreview();
+	}
+
+	suggestColorForKind() {
+		if (this.colorChosenByHand) return;
+		const suggestion = {
+			morning: 'amber', evening: 'orange', night: 'blue', long_night: 'blue',
+			long_day: 'emerald', on_call: 'violet', other: 'slate',
+		}[this.kindTarget.value];
+		if (suggestion) this.applyColor(suggestion);
+	}
+
+	/** What this preset will look like in a calendar cell, as it is filled in. */
+	renderPreview() {
+		applyTone(this.previewCellTarget, this.colorTarget.value);
+		this.previewCodeTarget.textContent = this.abbreviationTarget.value.trim() || '·';
+		this.previewNameTarget.textContent = this.nameTarget.value.trim() || 'Sin nombre';
+		this.previewHoursTarget.textContent = `${this.startTarget.value} – ${this.endTarget.value}`;
 	}
 
 	create() {
@@ -24,7 +79,8 @@ export default class extends Controller {
 		this.startTarget.value = '08:00';
 		this.endTarget.value = '15:00';
 		this.kindTarget.value = 'morning';
-		this.colorTarget.value = 'amber';
+		this.colorChosenByHand = false;
+		this.applyColor('amber');
 		this.aliasesTarget.value = '';
 		this.deactivateTarget.classList.add('hidden');
 		this.modeTarget.value = 'custom';
@@ -46,7 +102,9 @@ export default class extends Controller {
 		this.partOptionsTarget.classList.add('hidden');
 		this.deactivateTarget.classList.remove('hidden');
 		this.kindTarget.value = row.dataset.kind || 'other';
-		this.colorTarget.value = row.dataset.color || 'slate';
+		// An existing preset already has a colour somebody chose; keep it.
+		this.colorChosenByHand = true;
+		this.applyColor(row.dataset.color || 'slate');
 		this.clearError();
 		openSheet(this.sheetTarget);
 	}
@@ -71,6 +129,7 @@ export default class extends Controller {
 			const to = start + Math.ceil(duration * (index + 1) / count);
 			this.startTarget.value = this.time(from); this.endTarget.value = this.time(to);
 		}
+		this.renderPreview();
 	}
 
 	minutes(value) { const [hour, minute] = value.split(':').map(Number); return hour * 60 + minute; }

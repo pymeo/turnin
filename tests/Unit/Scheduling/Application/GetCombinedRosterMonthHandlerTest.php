@@ -14,7 +14,6 @@ use App\Scheduling\Domain\RosterSource;
 use App\Scheduling\Domain\ShiftKind;
 use App\Scheduling\Domain\ShiftSegment;
 use App\Scheduling\Domain\ShiftWindow;
-use App\Scheduling\Domain\SuggestedShiftPresets;
 use App\Scheduling\Domain\WorkDate;
 use App\Tests\Support\Scheduling\FixedAssignedWorkers;
 use App\Tests\Support\Scheduling\InMemoryRosterDays;
@@ -27,8 +26,8 @@ final class GetCombinedRosterMonthHandlerTest extends TestCase
 {
     public function test_it_detects_same_day_and_cross_date_overlaps_and_global_free_state(): void
     {
-        $a = new AssignedWorker('worker', 'a', 'Europe/Madrid', 'Hospital A', true, 'Urgencias', 'Hospital A');
-        $b = new AssignedWorker('worker', 'b', 'Europe/Madrid', 'Hospital B', false, 'UCI', 'Hospital B');
+        $a = new AssignedWorker('worker', 'a', 'Europe/Madrid', 'Hospital A', true, 'Urgencias');
+        $b = new AssignedWorker('worker', 'b', 'Europe/Madrid', 'Hospital B', false, 'UCI');
         $workers = new FixedAssignedWorkers([$a, $b]);
         $days = new InMemoryRosterDays([
             $this->work('da', 'a', '2026-09-15', '22:00', '08:00', 'N'),
@@ -38,7 +37,7 @@ final class GetCombinedRosterMonthHandlerTest extends TestCase
         ]);
         // InMemoryRosterDays seeds all entries even when they belong to different assignments.
         $presets = new InMemoryShiftPresets();
-        $workspace = new RosterWorkspace($workers, $presets, new SuggestedShiftPresets($presets, new \App\Tests\Support\Scheduling\SequentialRosterIds(), new MockClock('2026-09-11')));
+        $workspace = new RosterWorkspace($workers, $presets);
         $view = (new GetCombinedRosterMonthHandler($workspace, $days, new RosterCalendar(new MockClock('2026-09-11T10:00:00+02:00'))))(new GetCombinedRosterMonth('worker', '2026-09'));
 
         $cells = [];

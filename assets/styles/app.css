@@ -572,6 +572,70 @@
 	border-style: dashed;
 }
 
+/* --- Colour picker ---------------------------------------------------------
+   Ten accessible tones instead of a free hex field. The swatch shows the actual
+   colour, because "● amber" in a dropdown tells you nothing about what the
+   calendar will look like — and picking the colour is the whole point.
+
+   Colour is never the only signal: every swatch carries its name for a screen
+   reader and a check mark when chosen.
+   -------------------------------------------------------------------------- */
+@utility shift-swatches {
+	@apply flex flex-wrap gap-2;
+}
+
+@utility shift-swatch {
+	@apply relative grid shrink-0 place-items-center rounded-full text-base font-black text-white
+		transition active:scale-95;
+	width: var(--size-touch);
+	height: var(--size-touch);
+	box-shadow: inset 0 0 0 1px rgb(0 0 0 / 12%);
+
+	& > .shift-swatch-check {
+		@apply opacity-0 transition-opacity;
+		text-shadow: 0 1px 2px rgb(0 0 0 / 45%);
+	}
+
+	&[aria-checked="true"] {
+		@apply ring-2 ring-offset-2;
+		--tw-ring-color: var(--ink);
+		--tw-ring-offset-color: var(--surface);
+	}
+
+	&[aria-checked="true"] > .shift-swatch-check {
+		@apply opacity-100;
+	}
+}
+
+/* Solid fills for the picker. The calendar cells use a 16% tint of the same
+   token, so a preset looks like itself in both places. */
+@utility shift-fill-amber { background-color: var(--shift-amber); }
+@utility shift-fill-orange { background-color: var(--shift-orange); }
+@utility shift-fill-teal { background-color: var(--shift-teal); }
+@utility shift-fill-blue { background-color: var(--shift-blue); }
+@utility shift-fill-indigo { background-color: var(--shift-indigo); }
+@utility shift-fill-violet { background-color: var(--shift-violet); }
+@utility shift-fill-rose { background-color: var(--shift-rose); }
+@utility shift-fill-slate { background-color: var(--shift-slate); }
+@utility shift-fill-emerald { background-color: var(--shift-emerald); }
+@utility shift-fill-cyan { background-color: var(--shift-cyan); }
+
+/* The live preview at the top of the editor: what this preset will look like in
+   a calendar cell, updated as the form is filled in. */
+/* Sticky, because the colour picker sits near the bottom of a long form and the
+   whole point of the preview is seeing the effect while you choose. */
+@utility preset-preview {
+	@apply sticky top-0 z-1 flex items-center gap-3 rounded-[var(--radius-card)] p-3;
+	background-color: var(--surface-muted);
+	box-shadow: 0 0 0 0.75rem var(--surface);
+}
+
+@utility preset-preview-cell {
+	@apply grid place-items-center rounded-[var(--calendar-cell-radius)] text-center;
+	width: 3rem;
+	height: 3.2rem;
+}
+
 @utility calendar-tone-amber { background-color: color-mix(in srgb, var(--shift-amber) 16%, var(--surface)); color: color-mix(in srgb, var(--shift-amber) 82%, var(--ink)); }
 @utility calendar-tone-orange { background-color: color-mix(in srgb, var(--shift-orange) 16%, var(--surface)); color: color-mix(in srgb, var(--shift-orange) 82%, var(--ink)); }
 @utility calendar-tone-teal { background-color: color-mix(in srgb, var(--shift-teal) 16%, var(--surface)); color: color-mix(in srgb, var(--shift-teal) 82%, var(--ink)); }

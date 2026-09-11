@@ -13,17 +13,14 @@ use App\Scheduling\Domain\RosterSource;
 use App\Scheduling\Domain\ShiftKind;
 use App\Scheduling\Domain\ShiftSegment;
 use App\Scheduling\Domain\ShiftWindow;
-use App\Scheduling\Domain\SuggestedShiftPresets;
 use App\Scheduling\Domain\WorkDate;
 use App\Tests\Support\Scheduling\FakeExternalCalendarProvider;
 use App\Tests\Support\Scheduling\FixedAssignedWorkers;
 use App\Tests\Support\Scheduling\InMemoryExternalCalendars;
 use App\Tests\Support\Scheduling\InMemoryRosterDays;
 use App\Tests\Support\Scheduling\InMemoryShiftPresets;
-use App\Tests\Support\Scheduling\SequentialRosterIds;
 use DateTimeImmutable;
 use PHPUnit\Framework\TestCase;
-use Symfony\Component\Clock\MockClock;
 
 final class ExportRosterCalendarHandlerTest extends TestCase
 {
@@ -34,7 +31,7 @@ final class ExportRosterCalendarHandlerTest extends TestCase
         $external = new InMemoryExternalCalendars();
         $provider = new FakeExternalCalendarProvider();
         $presets = new InMemoryShiftPresets();
-        $workspace = new RosterWorkspace(FixedAssignedWorkers::inMadrid(), $presets, new SuggestedShiftPresets($presets, new SequentialRosterIds(), new MockClock('2026-09-01')));
+        $workspace = new RosterWorkspace(FixedAssignedWorkers::inMadrid(), $presets);
         $handler = new ExportRosterCalendarHandler($workspace, $days, new RosterCalendarExporter(), $provider, $external, $external, $external);
         $command = new ExportRosterCalendar('worker-1', 'assignment-1', 'google-shifts', WorkDate::fromString('2026-09-01'), WorkDate::fromString('2026-09-30'));
 

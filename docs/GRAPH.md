@@ -44,7 +44,7 @@ Todo el repositorio menos lo ignorado: `src/`, `tests/`, `config/`, `assets/`,
 y TypeScript, así que el service worker y las specs de Playwright también están
 en el grafo.
 
-Estado actual: **351 ficheros, 2.120 nodos, 3.953 aristas**.
+Estado actual: **423 ficheros, 2.554 nodos, 4.774 aristas**.
 
 ## Qué no versionamos
 

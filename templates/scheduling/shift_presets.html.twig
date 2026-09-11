@@ -10,6 +10,11 @@
     'rest': 'calendar-tone-rest',
     'unknown': 'calendar-tone-unknown',
 } %}
+{% set fills = {
+    'amber': 'shift-fill-amber', 'orange': 'shift-fill-orange', 'teal': 'shift-fill-teal',
+    'blue': 'shift-fill-blue', 'indigo': 'shift-fill-indigo', 'violet': 'shift-fill-violet',
+    'rose': 'shift-fill-rose', 'slate': 'shift-fill-slate', 'emerald': 'shift-fill-emerald', 'cyan': 'shift-fill-cyan',
+} %}
 <main class="page flex flex-col gap-5" data-controller="shift-presets" data-shift-presets-csrf-value="{{ csrfToken }}" data-shift-presets-assignment-value="{{ assignmentId }}">
     {% include 'identity/_authenticated_header.html.twig' %}
 
@@ -50,6 +55,16 @@
             <div class="sheet-header">
                 <h2 id="preset-sheet-title" data-shift-presets-target="sheetTitle">Editar turno</h2>
                 <button type="button" class="picker-close" data-action="bottom-sheet#close" aria-label="Cerrar">×</button>
+            </div>
+
+            <div class="preset-preview" aria-hidden="true">
+                <span class="preset-preview-cell {{ tones['amber'] }}" data-shift-presets-target="previewCell">
+                    <span class="text-[0.72rem] leading-none font-black" data-shift-presets-target="previewCode">M</span>
+                </span>
+                <span class="flex min-w-0 flex-col">
+                    <span class="truncate font-semibold" data-shift-presets-target="previewName">Mañana</span>
+                    <span class="text-sm text-ink-muted" data-shift-presets-target="previewHours">08:00 – 15:00</span>
+                </span>
             </div>
 
             <label class="field"><span class="field-label">¿Qué quieres crear?</span>
@@ -95,7 +110,27 @@
                 </label>
             </div>
             <p class="text-sm text-ink-muted">Si termina antes de empezar, entendemos que acaba al día siguiente.</p>
-            <label class="field"><span class="field-label">Color</span><select class="input" name="colorKey" data-shift-presets-target="color">{% for key in ['amber','orange','teal','blue','indigo','violet','rose','slate','emerald','cyan'] %}<option value="{{ key }}">● {{ key }}</option>{% endfor %}</select><span class="text-sm text-ink-muted">El color es visual; las horas siguen siendo la verdad del turno.</span></label>
+            <div class="field">
+                <span class="field-label" id="preset-color-label">Color</span>
+                <div class="shift-swatches" role="radiogroup" aria-labelledby="preset-color-label" data-shift-presets-target="colors">
+                    {% for color in colors %}
+                        <button type="button"
+                                class="shift-swatch {{ fills[color.key]|default('shift-fill-slate') }}"
+                                role="radio"
+                                aria-checked="false"
+                                aria-label="{{ color.label }}"
+                                title="{{ color.label }}"
+                                data-color-key="{{ color.key }}"
+                                data-action="click->shift-presets#chooseColor keydown->shift-presets#moveColor">
+                            <span class="shift-swatch-check" aria-hidden="true">✓</span>
+                        </button>
+                    {% endfor %}
+                </div>
+                <input type="hidden" name="colorKey" data-shift-presets-target="color" value="amber">
+                <span class="text-sm text-ink-muted">
+                    <span data-shift-presets-target="colorName">Ámbar</span>. El color es visual; las horas siguen siendo la verdad del turno.
+                </span>
+            </div>
             <label class="field">
                 <span class="field-label">Cómo lo llamas al dictar</span>
                 <input class="input" name="aliases" data-shift-presets-target="aliases" placeholder="guardia, g, 24 horas">
