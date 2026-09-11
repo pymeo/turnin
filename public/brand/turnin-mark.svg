@@ -1,8 +1,30 @@
 <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 64 64" role="img" aria-label="TURNIN">
-  <circle cx="32" cy="32" r="30" fill="#0F4C5C"/>
-  <path d="M16.5 28.5A16.7 16.7 0 0 1 43.8 18" fill="none" stroke="#FFFFFF" stroke-width="5" stroke-linecap="round"/>
-  <path d="m42 12.5 8.5 3.2-6.7 6.1Z" fill="#FFFFFF"/>
-  <path d="M47.5 35.5A16.7 16.7 0 0 1 20.2 46" fill="none" stroke="#14B8A6" stroke-width="5" stroke-linecap="round"/>
-  <path d="m22 51.5-8.5-3.2 6.7-6.1Z" fill="#14B8A6"/>
-  <path d="M24 25.5h16M32 25.5v17" fill="none" stroke="#FFFFFF" stroke-width="5" stroke-linecap="round"/>
+  <title>TURNIN</title>
+  <defs>
+    <!-- Dark on the left, luminous at the tip: the two arrows run opposite ways
+         so the pair reads as one continuous circular movement. -->
+    <linearGradient id="tm-up" x1="8" y1="30" x2="56" y2="16" gradientUnits="userSpaceOnUse">
+      <stop offset="0" stop-color="#0F4C5C"/>
+      <stop offset=".52" stop-color="#087C83"/>
+      <stop offset="1" stop-color="#20D1BB"/>
+    </linearGradient>
+    <linearGradient id="tm-down" x1="56" y1="34" x2="8" y2="48" gradientUnits="userSpaceOnUse">
+      <stop offset="0" stop-color="#0F4C5C"/>
+      <stop offset=".5" stop-color="#14B8A6"/>
+      <stop offset="1" stop-color="#20D1BB"/>
+    </linearGradient>
+    <linearGradient id="tm-t" x1="24" y1="20" x2="40" y2="48" gradientUnits="userSpaceOnUse">
+      <stop offset="0" stop-color="#216B7B"/>
+      <stop offset="1" stop-color="#0F4C5C"/>
+    </linearGradient>
+  </defs>
+
+  <!-- Open, never a closed ring: the gap is what makes it read as movement. -->
+  <path d="M11.1 23.7A23 23 0 0 1 49.6 17.6" fill="none" stroke="url(#tm-up)" stroke-width="7" stroke-linecap="round"/>
+  <path d="M47.2 8.6 58 16.2 46.4 22.2Z" fill="url(#tm-up)"/>
+
+  <path d="M52.9 40.3A23 23 0 0 1 14.4 46.4" fill="none" stroke="url(#tm-down)" stroke-width="7" stroke-linecap="round"/>
+  <path d="M16.8 55.4 6 47.8l11.6-6Z" fill="url(#tm-down)"/>
+
+  <path d="M23.4 27.4h17.2M32 27.4v14.4" fill="none" stroke="url(#tm-t)" stroke-width="6.6" stroke-linecap="round"/>
 </svg>
