@@ -50,13 +50,14 @@ La diferencia importa cuando hay veinte contextos. Un directorio por capa técni
 te obliga a abrir cuatro carpetas para entender una funcionalidad; un directorio
 por contexto te deja borrar una funcionalidad entera con `rm -rf`.
 
-Hoy existen físicamente dos módulos bajo `Platform` y un contexto de producto:
+Hoy existen físicamente tres módulos bajo `Platform` y un contexto de producto:
 
 | Módulo             | Qué es                                                                |
 | ------------------ | --------------------------------------------------------------------- |
 | `Platform\System`  | Salud del sistema: `/health`, `turnin:health`, correlación de logs.    |
 | `Platform\Web`     | El shell web: la landing pública. Sin dominio propio, y así se declara. |
-| `Workforce`        | Catálogo oficial de centros públicos y búsqueda para onboarding.       |
+| `Platform\Identity` | Cuenta, contraseña, OAuth, sesión y perfil personal protegido.        |
+| `Workforce`        | Catálogo, asignación, pools y onboarding laboral reanudable.            |
 
 No hay más porque no hay más producto todavía. El mapa de contextos previsto está
 en [CONTEXT_MAP.md](CONTEXT_MAP.md); se crean cuando se implementan, no antes.

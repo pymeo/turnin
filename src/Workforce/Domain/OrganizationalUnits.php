@@ -6,8 +6,12 @@ namespace App\Workforce\Domain;
 
 interface OrganizationalUnits
 {
-    /** @return list<OrganizationalUnit> */
-    public function search(WorkplaceId $workplaceId, string $term, int $limit): array;
+    /** @return list<OrganizationalUnitOption> */
+    public function discover(WorkplaceId $workplaceId, string $term, int $limit): array;
 
     public function byId(string $id): ?OrganizationalUnit;
+
+    public function resolveSelection(WorkplaceId $workplaceId, string $selectionId): OrganizationalUnit;
+
+    public function addLocal(WorkplaceId $workplaceId, string $name): OrganizationalUnit;
 }

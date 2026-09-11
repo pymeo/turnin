@@ -5,13 +5,15 @@
 ```
 Platform
 ├── System     salud del sistema, correlación de peticiones     [IMPLEMENTADO]
-└── Web        shell web público (landing, PWA)                 [IMPLEMENTADO]
+├── Web        shell web público (landing, PWA)                 [IMPLEMENTADO]
+└── Identity   cuenta, credenciales, sesión y perfil personal   [IMPLEMENTADO]
 
 Workforce
 └── Workplace + Workforce assignment + SwapPool                 [IMPLEMENTADO]
 ```
 
-Eso es todo. El resto de este documento es el destino, no el presente.
+Scheduling, Swap, Matching, Notification, Billing y Coverage siguen siendo el
+destino, no el presente.
 
 **Un contexto se crea cuando se implementa.** Crear veinte directorios vacíos con
 sus tres capas cada uno no es diseño, es ruido: nadie sabe cuáles están vivos, el
@@ -154,6 +156,11 @@ entradas separadas; el primero es el contexto por defecto para quien tiene ambos
 Google OAuth es un adapter de Infrastructure de Identity. KnpU/League no cruzan
 hacia Application o Domain; ambos reciben únicamente proveedor, subject, email y
 la confirmación de verificación.
+
+El onboarding laboral consume nombre y evidencia identificativa a través del
+puerto `WorkerOnboardingIdentity`, declarado por Workforce e implementado por un
+adapter de Identity. Así el controlador de Workforce no conoce comandos, vistas
+ni tipos de seguridad internos de otro contexto.
 
 El catálogo público español entra por un puerto en `Workforce\Domain`:
 

@@ -13,7 +13,8 @@ urgencias— y se extenderá a otros sectores por turnos.
 > **Estado: primeras slices.** La base técnica y el catálogo oficial de centros
 > sanitarios públicos están completos y probados. Workforce ya tiene categorías,
 > unidades locales, asignaciones y pools; Identity dispone de contraseña, Google
-> OAuth, sesión y onboarding autenticado. Lo que viene, en orden, está en
+> OAuth, sesión y datos personales protegidos. El onboarding autenticado se puede
+> reanudar y también sirve para actualizar la asignación. Lo que viene está en
 > [docs/ROADMAP.md](docs/ROADMAP.md).
 
 ## Arrancar

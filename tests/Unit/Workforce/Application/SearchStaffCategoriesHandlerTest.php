@@ -37,5 +37,6 @@ final class SearchStaffCategoriesHandlerTest extends TestCase
         self::assertCount(1, $results);
         self::assertSame(['auxiliar de clínica'], $results[0]->aliases);
         self::assertSame('TCAE', $results[0]->name);
+        self::assertTrue($results[0]->featured);
     }
 }

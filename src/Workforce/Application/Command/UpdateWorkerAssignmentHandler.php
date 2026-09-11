@@ -4,8 +4,10 @@ declare(strict_types=1);
 
 namespace App\Workforce\Application\Command;
 
+use App\Workforce\Domain\MembershipSource;
 use App\Workforce\Domain\OrganizationalUnits;
 use App\Workforce\Domain\StaffCategories;
+use App\Workforce\Domain\SwapPoolAccess;
 use App\Workforce\Domain\SwapPoolResolver;
 use App\Workforce\Domain\WorkerAssignment;
 use App\Workforce\Domain\WorkerAssignmentIdGenerator;
@@ -17,7 +19,7 @@ use Psr\Clock\ClockInterface;
 
 final readonly class UpdateWorkerAssignmentHandler
 {
-    public function __construct(private WorkplaceReader $workplaces, private StaffCategories $categories, private OrganizationalUnits $units, private WorkerAssignmentIdGenerator $ids, private WorkerAssignmentWriter $writer, private SwapPoolResolver $poolResolver, private ClockInterface $clock)
+    public function __construct(private WorkplaceReader $workplaces, private StaffCategories $categories, private OrganizationalUnits $units, private WorkerAssignmentIdGenerator $ids, private WorkerAssignmentWriter $writer, private SwapPoolResolver $resolver, private ClockInterface $clock)
     {
     }
 
@@ -25,27 +27,24 @@ final readonly class UpdateWorkerAssignmentHandler
     {
         $workplaceId = new WorkplaceId($command->workplaceId);
         $workplace = $this->workplaces->byId($workplaceId);
-        if (null === $workplace || !$workplace->active()) {
-            throw new InvalidArgumentException('The selected workplace is not available.');
-        }
         $category = $this->categories->byId($command->staffCategoryId);
-        if (null === $category || !$category->active()) {
-            throw new InvalidArgumentException('The selected staff category is not available.');
+        if (null === $workplace || !$workplace->active() || null === $category || !$category->active()) {
+            throw new InvalidArgumentException('Selecciona un centro y una categoría válidos.');
         }
         if ($category->specialtyRequired() && null === $command->specialtyId) {
-            throw new InvalidArgumentException('This category needs a specialty.');
+            throw new InvalidArgumentException('Esta categoría necesita una especialidad.');
         }
-        if ($category->functionalAreaRequired() && null === $command->functionalArea && null === $command->organizationalUnitId) {
-            throw new InvalidArgumentException('This category needs an area or an assigned unit.');
-        }
-        if (null !== $command->organizationalUnitId) {
-            $unit = $this->units->byId($command->organizationalUnitId);
-            if (null === $unit || !$unit->workplaceId()->equals($workplaceId)) {
-                throw new InvalidArgumentException('The selected unit does not belong to the workplace.');
+        $primaryUnit = $this->units->resolveSelection($workplaceId, $command->primaryDestinationId);
+        $assignment = WorkerAssignment::create($this->ids->next(), $command->workerId, $workplaceId, $category->id(), $command->specialtyId, $primaryUnit->id(), $command->functionalArea, $command->employerId, true, $this->clock->now());
+        $accesses = [new SwapPoolAccess($this->resolver->resolve($assignment), $this->ids->next(), $this->ids->next(), MembershipSource::SELF_DECLARED, true)];
+        $seen = [$primaryUnit->id() => true];
+        foreach (array_values(array_unique($command->additionalDestinationIds)) as $selectionId) {
+            $unit = $this->units->resolveSelection($workplaceId, $selectionId);
+            if (!isset($seen[$unit->id()])) {
+                $seen[$unit->id()] = true;
+                $accesses[] = new SwapPoolAccess($this->resolver->resolveForDestination($assignment, $unit->id()), $this->ids->next(), $this->ids->next(), MembershipSource::SELF_DECLARED, false);
             }
         }
-        $assignment = WorkerAssignment::create($this->ids->next(), $command->workerId, $workplaceId, $category->id(), $command->specialtyId, $command->organizationalUnitId, $command->functionalArea, $command->employerId, true, $this->clock->now());
-        $key = $this->poolResolver->resolve($assignment);
-        $this->writer->replacePrimary($assignment, $key, $this->ids->next(), $this->ids->next());
+        $this->writer->replacePrimary($assignment, $accesses);
     }
 }

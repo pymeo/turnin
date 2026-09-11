@@ -96,7 +96,7 @@ reemplazar en el siguiente despliegue.
 
 ## Contraseñas y sesión
 
-Todavía no hay autenticación. Cuando la haya:
+La autenticación ya está implementada:
 
 * hashing con el algoritmo por defecto de Symfony (`auto` → bcrypt/argon2id), sin
   inventar nada;
@@ -105,6 +105,18 @@ Todavía no hay autenticación. Cuando la haya:
 * sesión en Redis, no en disco: con varios contenedores el sistema de ficheros no
   es compartido;
 * rate limiting en login y recuperación.
+
+## Identificadores personales del onboarding
+
+El DNI/NIE y el teléfono se normalizan antes de compararlos. La unicidad se
+comprueba con HMAC-SHA-256 y una clave exclusiva; una fuga de base de datos no
+permite probar valores candidatos sin esa clave. El DNI/NIE no se conserva de
+forma reversible. El teléfono, necesario para funciones futuras de cuenta, se
+cifra con XChaCha20-Poly1305 y una clave independiente.
+
+Las dos claves entran por `PII_HMAC_KEY` y `PII_ENCRYPTION_KEY`; producción falla
+al arrancar si faltan. Los identificadores ya asociados no se pueden cambiar
+desde el onboarding: requieren un futuro proceso de soporte con verificación.
 
 ## `/health`
 

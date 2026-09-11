@@ -13,6 +13,8 @@ use App\Platform\Identity\Domain\ExternalIdentity;
 use App\Platform\Identity\Domain\ExternalIdentityIdGenerator;
 use App\Platform\Identity\Domain\ExternalIdentityProvider;
 use App\Platform\Identity\Domain\IdentityTransaction;
+use App\Platform\Identity\Domain\PersonalProfile;
+use App\Platform\Identity\Domain\PersonalProfiles;
 use App\Platform\Identity\Domain\User;
 use App\Platform\Identity\Domain\UserId;
 use App\Platform\Identity\Domain\UserIdGenerator;
@@ -33,7 +35,7 @@ final class AuthenticateWithExternalIdentityHandlerTest extends TestCase
     {
         $this->users = new InMemoryUsers();
         $this->identities = new InMemoryExternalIdentities();
-        $this->handler = new AuthenticateWithExternalIdentityHandler($this->users, $this->identities, new FixedUserIdGenerator(), new FixedExternalIdentityIdGenerator(), new ImmediateIdentityTransaction(), new FixedClock());
+        $this->handler = new AuthenticateWithExternalIdentityHandler($this->users, $this->identities, new FixedUserIdGenerator(), new FixedExternalIdentityIdGenerator(), new ImmediateIdentityTransaction(), new InMemoryPersonalProfiles(), new FixedClock());
     }
 
     public function test_verified_google_identity_creates_passwordless_user_and_link(): void
@@ -172,6 +174,22 @@ final class FixedUserIdGenerator implements UserIdGenerator
     public function next(): UserId
     {
         return new UserId('019b0000-0000-7000-8000-000000000002');
+    }
+}
+
+final class InMemoryPersonalProfiles implements PersonalProfiles
+{
+    /** @var array<string, PersonalProfile> */
+    private array $profiles = [];
+
+    public function byUserId(UserId $userId): ?PersonalProfile
+    {
+        return $this->profiles[$userId->value] ?? null;
+    }
+
+    public function save(PersonalProfile $profile): void
+    {
+        $this->profiles[$profile->userId()->value] = $profile;
     }
 }
 

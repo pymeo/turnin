@@ -44,6 +44,10 @@ export default defineConfig({
 			use: { ...devices['iPhone 14 Pro Max'] },
 		},
 		{
+			name: 'tablet-768',
+			use: { viewport: { width: 768, height: 1024 } },
+		},
+		{
 			name: 'desktop',
 			use: { ...devices['Desktop Chrome'], viewport: { width: 1280, height: 800 } },
 		},

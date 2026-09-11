@@ -16,6 +16,8 @@ services:
             DEFAULT_URI: ${DEFAULT_URI:-https://turnin.es}
             GOOGLE_OAUTH_CLIENT_ID: ${GOOGLE_OAUTH_CLIENT_ID:?GOOGLE_OAUTH_CLIENT_ID must be provided}
             GOOGLE_OAUTH_CLIENT_SECRET: ${GOOGLE_OAUTH_CLIENT_SECRET:?GOOGLE_OAUTH_CLIENT_SECRET must be provided}
+            PII_HMAC_KEY: ${PII_HMAC_KEY:?PII_HMAC_KEY must be provided}
+            PII_ENCRYPTION_KEY: ${PII_ENCRYPTION_KEY:?PII_ENCRYPTION_KEY must be provided}
             DATABASE_URL: ${DATABASE_URL:?DATABASE_URL must be provided}
             REDIS_URL: ${REDIS_URL:?REDIS_URL must be provided}
             SYMFONY_TRUSTED_PROXIES: ${SYMFONY_TRUSTED_PROXIES:-private_ranges}

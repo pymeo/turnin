@@ -57,7 +57,7 @@ final class GoogleAuthenticator extends OAuth2Authenticator
         }
 
         try {
-            $user = $this->handle(new AuthenticateWithExternalIdentity(ExternalIdentityProvider::GOOGLE, (string) $subject, (string) $googleUser->getEmail(), true === $googleUser->getEmailVerified()));
+            $user = $this->handle(new AuthenticateWithExternalIdentity(ExternalIdentityProvider::GOOGLE, (string) $subject, (string) $googleUser->getEmail(), true === $googleUser->getEmailVerified(), $googleUser->getFirstName(), $googleUser->getLastName()));
         } catch (ExternalAuthenticationRejected $exception) {
             throw new CustomUserMessageAuthenticationException('No hemos podido vincular esta cuenta de Google.', [], 0, $exception);
         }

@@ -97,6 +97,7 @@ test-architecture: up ## Reglas de dependencia entre capas y contextos
 	$(APP_EXEC) composer test-architecture
 
 test-e2e: up ## Playwright contra la aplicación levantada
+	$(MAKE) assets
 	@# Playwright corre en su imagen oficial, no en el host: trae los navegadores
 	@# y todas sus librerías de sistema, de modo que local y CI ejecutan lo mismo.
 	@#

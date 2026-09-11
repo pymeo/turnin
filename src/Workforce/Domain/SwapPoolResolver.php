@@ -10,4 +10,9 @@ final class SwapPoolResolver
     {
         return new SwapPoolKey($assignment->workplaceId(), $assignment->staffCategoryId(), $assignment->specialtyId(), $assignment->organizationalUnitId(), $assignment->functionalArea(), $assignment->employerId());
     }
+
+    public function resolveForDestination(WorkerAssignment $assignment, string $organizationalUnitId): SwapPoolKey
+    {
+        return new SwapPoolKey($assignment->workplaceId(), $assignment->staffCategoryId(), $assignment->specialtyId(), $organizationalUnitId, $assignment->functionalArea(), $assignment->employerId());
+    }
 }

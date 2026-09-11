@@ -8,6 +8,8 @@
         <field name="aliases" column="aliases" type="json" />
         <field name="kind" column="kind" type="string" enum-type="App\Workforce\Domain\OrganizationalUnitKind" />
         <field name="status" column="status" type="string" enum-type="App\Workforce\Domain\OrganizationalUnitStatus" />
+        <field name="origin" column="origin" type="string" enum-type="App\Workforce\Domain\OrganizationalUnitOrigin" />
+        <field name="group" column="group_name" type="string" enum-type="App\Workforce\Domain\DestinationGroup" />
         <field name="parentId" column="parent_id" type="guid" nullable="true" />
         <field name="createdAt" column="created_at" type="datetime_immutable" />
         <field name="updatedAt" column="updated_at" type="datetime_immutable" />

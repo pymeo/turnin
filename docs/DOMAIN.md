@@ -4,10 +4,10 @@ Este documento es el vocabulario compartido. Si un nombre no está aquí, no
 debería aparecer en el código; si aparece en el código y no está aquí, falta
 actualizarlo.
 
-> **Estado**: `Platform\System`, el catálogo `Workforce.Workplace` y la base del
-> contexto laboral (`StaffCategory`, `OrganizationalUnit`, `WorkerAssignment` y
-> `SwapPool`) están implementados. Identity, turnos y matching siguen siendo
-> trabajo posterior.
+> **Estado**: `Platform\System`, `Platform\Identity`, el catálogo
+> `Workforce.Workplace` y la base del contexto laboral (`StaffCategory`,
+> `OrganizationalUnit`, `WorkerAssignment` y `SwapPool`) están implementados.
+> Turnos y matching siguen siendo trabajo posterior.
 
 ## Vocabulario
 
@@ -21,6 +21,8 @@ actualizarlo.
 | **Specialty** | Especialidad opcional ligada a una categoría. |
 | **OrganizationalUnit** | Destino o unidad de adscripción dentro de un centro; fija o volante. |
 | **WorkerAssignment** | Asignación laboral actual, separada de la cuenta. |
+| **PersonalProfile** | Nombre y teléfono protegido de una persona, separado de su asignación laboral. |
+| **UsageIdentity** | Evidencia privada que impide cuentas duplicadas mediante huellas no reversibles de DNI/NIE y teléfono. |
 | **Employer** | Empresa o servicio de salud que emplea a la persona en el centro. |
 | **Shift** | Un turno concreto: quién, dónde, qué día laboral, qué franja. |
 | **ShiftKind** | Mañana, tarde, noche… La franja, no las horas exactas. |
@@ -250,7 +252,8 @@ Es la vía por la que los contextos se comunican sin conocerse
 
 ## Identity y capacidades
 
-`Platform/Identity` modela `User`, `Email`, `UserId` y el hash de contraseña.
+`Platform/Identity` modela `User`, `Email`, `UserId`, el hash de contraseña,
+`PersonalProfile` y `UsageIdentity`.
 La identidad no contiene centro, categoría ni destino: esas decisiones viven en
 `Workforce\WorkerAssignment`. Las capacidades `worker` y `supervisor` son
 independientes para permitir una misma cuenta con ambos perfiles. El supervisor
@@ -261,3 +264,15 @@ público de autoasignación.
 subject estable, email observado al vincular y fecha; nunca tokens OAuth. El
 subject resuelve al usuario antes de considerar el email. Un email verificado
 solo permite enlazar durante el primer acceso.
+
+El nombre se puede corregir desde el onboarding. DNI/NIE y teléfono se
+normalizan antes de comparar: solo se guardan huellas HMAC para detectar su uso
+en otra cuenta, y el teléfono recuperable se cifra con XChaCha20-Poly1305. El
+DNI/NIE no se persiste de forma reversible. Una vez asociados, esos
+identificadores no se sustituyen silenciosamente desde la interfaz.
+
+`WorkerOnboardingDraft` conserva el progreso laboral entre sesiones. Al
+completarlo se crea o sustituye la asignación primaria, se materializan los
+accesos principal y adicionales a pools y se elimina el borrador. Repetir el
+flujo permite actualizar la asignación sin dejar dos asignaciones o memberships
+primarias activas.

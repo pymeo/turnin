@@ -6,7 +6,8 @@ namespace App\Workforce\Application\Command;
 
 final readonly class CompleteWorkerOnboarding
 {
-    public function __construct(public string $workerId, public string $workplaceId, public string $staffCategoryId, public ?string $specialtyId = null, public ?string $organizationalUnitId = null, public ?string $functionalArea = 'General', public ?string $employerId = null)
+    /** @param list<string> $additionalDestinationIds */
+    public function __construct(public string $workerId, public string $workplaceId, public string $staffCategoryId, public string $primaryDestinationId, public array $additionalDestinationIds = [], public ?string $specialtyId = null, public ?string $functionalArea = null, public ?string $employerId = null)
     {
     }
 }

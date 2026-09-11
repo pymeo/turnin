@@ -14,13 +14,14 @@ con tests: media funcionalidad sin pantalla no es media funcionalidad, es deuda.
 * **1b. Workforce assignment foundation.** Categorías con aliases, unidades por
   centro (incluidos equipos volantes), asignación y clave conservadora de
   `SwapPool`.
+* **2. Identity + Google OAuth.** Registro, login, sesión, CSRF, rate limiting,
+  credenciales externas sin tokens persistidos y perfil personal protegido.
+* **3. Perfil profesional + onboarding.** Flujo móvil reanudable para nombre,
+  identidad, centro, categoría y destinos; crea memberships y permite actualizar
+  la asignación laboral existente.
 
 ## Siguiente
 
-2. **Identity + Google OAuth — registro y login.** Trae sesión, CSRF, hashing,
-   rate limiting y la primera pantalla autenticada (y con ella la CSP).
-3. **Perfil profesional + onboarding.** Categoría, unidad y selección de un
-   `Workplace` del catálogo. Alimenta la compatibilidad.
 4. **SwapPool y Membership.** El concepto del que depende todo el matching
    (→ [DOMAIN.md](DOMAIN.md#swappool-el-concepto-que-hay-que-entender)).
 5. **Calendario y Shift.** Introducción manual de turnos. La importación de
@@ -70,7 +71,7 @@ Problemas reales, no una lista de deseos.
 * **REGCESS privado.** Es una fuente futura posible para clínicas y otros centros
   privados; el catálogo inicial se limita deliberadamente a sanidad pública/SNS.
 
-## Slice actual: Identity y entrada a Workforce
+## Slice completada: Identity y entrada a Workforce
 
 La landing enlaza a registro/login con sesión Symfony, y un usuario autenticado
 sin asignación laboral completa continúa en `/onboarding`. El onboarding usa los
@@ -82,4 +83,6 @@ la siguiente slice.
 
 Google OAuth queda integrado como credencial principal de la identidad existente,
 con contraseña como fallback. La única operación externa pendiente es cargar las
-credenciales reales y las dos redirect URIs en Google Cloud Console.
+credenciales reales fuera del repositorio y las dos redirect URIs en Google Cloud
+Console. El onboarding añade datos personales protegidos y un borrador persistente;
+al terminar crea la asignación primaria y los accesos adicionales declarados.

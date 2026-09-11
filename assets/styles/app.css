@@ -90,6 +90,7 @@
 		background-color: var(--canvas);
 		color: var(--ink);
 		font-family: var(--font-sans);
+		min-height: 100dvh;
 		/* Never let a layout push the page sideways on a small screen. */
 		overflow-x: hidden;
 	}
@@ -219,6 +220,215 @@
 
 @utility skeleton {
 	@apply animate-pulse rounded-[var(--radius-control)] bg-surface-muted;
+}
+
+/* Progressive onboarding and the shared search/browse picker. */
+@utility onboarding-shell {
+	@apply mx-auto flex min-h-dvh w-full max-w-3xl flex-col gap-5 px-4 sm:px-6;
+	padding-top: max(1.25rem, env(safe-area-inset-top));
+	padding-bottom: max(2rem, env(safe-area-inset-bottom));
+}
+
+@utility session-header {
+	@apply flex min-h-12 items-center justify-between gap-4;
+}
+
+@utility session-brand {
+	@apply inline-flex items-center gap-2.5 text-lg font-bold text-ink no-underline;
+}
+
+@utility session-mark {
+	@apply grid size-9 place-items-center rounded-xl bg-brand-700 text-sm font-black text-white shadow-sm;
+}
+
+@utility onboarding-progress {
+	@apply flex flex-col gap-2 rounded-2xl bg-surface/80 px-4 py-3 shadow-sm ring-1 ring-line backdrop-blur;
+}
+
+@utility progress-track {
+	@apply h-1.5 overflow-hidden rounded-full bg-surface-muted;
+
+	& > span {
+		@apply block h-full rounded-full bg-brand-600 transition-[width] duration-300;
+	}
+}
+
+@utility onboarding-step {
+	@apply mx-auto flex w-full max-w-xl flex-1 flex-col gap-6 py-3 sm:my-2 sm:flex-none sm:rounded-3xl sm:bg-surface sm:p-8 sm:shadow-xl sm:shadow-brand-900/5 sm:ring-1 sm:ring-line;
+	min-height: min(42rem, calc(100dvh - 10.5rem));
+
+	& > h1 {
+		@apply max-w-lg text-[2rem] leading-[1.08] font-bold tracking-[-0.025em] text-balance sm:text-4xl;
+	}
+}
+
+@utility eyebrow {
+	@apply text-sm font-semibold tracking-wide text-brand-700 uppercase dark:text-brand-300;
+}
+
+@utility step-copy {
+	@apply -mt-3 max-w-lg text-base leading-relaxed text-ink-muted;
+}
+
+@utility step-enter {
+	animation: step-enter 180ms ease-out both;
+}
+
+@keyframes step-enter {
+	from {
+		opacity: 0;
+		transform: translateY(0.35rem);
+	}
+	to {
+		opacity: 1;
+		transform: translateY(0);
+	}
+}
+
+@utility step-actions {
+	@apply mt-auto grid grid-cols-[auto_1fr] gap-3 border-t border-line pt-4;
+}
+
+@utility privacy-note {
+	@apply flex items-center gap-2 text-sm text-ink-muted;
+}
+
+@utility primary-context {
+	@apply flex items-center justify-between gap-4 rounded-2xl bg-surface-muted px-4 py-3 text-sm;
+
+	span {
+		@apply text-ink-muted;
+	}
+
+	strong {
+		@apply text-right text-ink;
+	}
+}
+
+@utility picker-search {
+	@apply flex min-h-14 items-center gap-3 rounded-2xl bg-surface px-4 text-ink-muted shadow-sm ring-1 ring-line transition focus-within:text-brand-700 focus-within:ring-2 focus-within:ring-brand-600 dark:focus-within:text-brand-300;
+
+	& > input {
+		@apply min-w-0 flex-1 bg-transparent text-base outline-none placeholder:text-ink-muted;
+	}
+}
+
+@utility picker-label {
+	@apply text-sm font-semibold text-ink;
+}
+
+@utility picker-featured {
+	@apply flex flex-wrap gap-2;
+}
+
+@utility picker-chip {
+	@apply inline-flex min-h-11 items-center gap-1.5 rounded-full border border-line bg-surface px-4 py-2 text-sm font-semibold shadow-sm transition hover:border-brand-600 hover:bg-brand-50 active:scale-[0.98] dark:hover:bg-brand-900/30;
+
+	&[aria-selected="true"] {
+		@apply border-brand-600 bg-brand-50 text-brand-800 ring-1 ring-brand-600 dark:bg-brand-900/40 dark:text-brand-100;
+	}
+}
+
+@utility picker-chip-mark {
+	@apply inline-flex min-w-4 items-center justify-center text-brand-700 dark:text-brand-300;
+}
+
+@utility picker-results {
+	@apply flex max-h-64 flex-col overflow-y-auto rounded-[var(--radius-control)] bg-surface shadow-sm;
+
+	&:empty {
+		display: none;
+	}
+}
+
+@utility picker-option {
+	@apply flex min-h-14 w-full items-center gap-3 border-b border-line px-4 py-3 text-left transition last:border-0 hover:bg-surface-muted focus:bg-surface-muted;
+
+	&[aria-selected="true"] {
+		@apply font-semibold text-brand-700 dark:text-brand-300;
+	}
+}
+
+@utility picker-option-copy {
+	@apply flex min-w-0 flex-1 flex-col gap-0.5;
+}
+
+@utility picker-option-name {
+	@apply truncate text-[0.95rem] font-semibold text-ink;
+}
+
+@utility picker-option-detail {
+	@apply truncate text-sm text-ink-muted;
+}
+
+@utility picker-check {
+	@apply inline-flex size-6 shrink-0 items-center justify-center rounded-full border border-line text-sm text-brand-700 dark:text-brand-300;
+}
+
+@utility picker-browse {
+	@apply inline-flex min-h-11 shrink-0 items-center gap-2 rounded-xl px-2 text-sm font-semibold text-brand-700 transition hover:bg-brand-50 dark:text-brand-300 dark:hover:bg-brand-900/30;
+}
+
+@utility picker-selection {
+	@apply flex flex-wrap gap-2;
+
+	&:empty {
+		display: none;
+	}
+}
+
+@utility selected-item {
+	@apply inline-flex min-h-10 items-center gap-2 rounded-full bg-brand-100 px-3 py-1.5 text-sm font-semibold text-brand-900 dark:bg-brand-900/50 dark:text-brand-100;
+
+	& > button {
+		@apply inline-flex size-7 items-center justify-center rounded-full text-lg;
+	}
+}
+
+@utility picker-sheet {
+	@apply m-0 mt-auto max-h-[88dvh] w-full max-w-none overflow-hidden rounded-t-3xl border-0 bg-surface p-0 text-ink shadow-2xl sm:m-auto sm:max-w-xl sm:rounded-3xl;
+
+	&::backdrop {
+		background: rgb(0 0 0 / 45%);
+		backdrop-filter: blur(2px);
+	}
+}
+
+@utility picker-sheet-inner {
+	@apply flex max-h-[88dvh] flex-col gap-4 overflow-y-auto px-4 pt-2 sm:p-6;
+	padding-bottom: max(1.5rem, env(safe-area-inset-bottom));
+}
+
+@utility picker-sheet-handle {
+	@apply mx-auto h-1.5 w-12 rounded-full bg-line sm:hidden;
+}
+
+@utility picker-sheet-header {
+	@apply flex items-center justify-between gap-4 border-b border-line pb-4;
+
+	h2 {
+		@apply mt-1 text-2xl font-bold tracking-tight;
+	}
+}
+
+@utility picker-close {
+	@apply grid size-11 shrink-0 place-items-center rounded-full bg-surface-muted text-2xl leading-none text-ink transition hover:bg-line;
+}
+
+@utility picker-sheet-results {
+	@apply flex flex-col;
+}
+
+@utility picker-group-title {
+	@apply sticky top-0 z-1 bg-surface/95 px-4 py-3 text-xs font-bold tracking-[0.08em] text-ink-muted uppercase backdrop-blur;
+}
+
+@utility picker-local {
+	@apply mt-2 flex flex-col gap-3 rounded-[var(--radius-card)] bg-surface-muted p-4;
+}
+
+@utility profile-summary {
+	@apply flex flex-col gap-1 rounded-[var(--radius-card)] bg-surface p-5 shadow-sm ring-1 ring-line;
 }
 
 /* Bottom navigation. Unused until there are screens to navigate between, but

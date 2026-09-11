@@ -68,7 +68,35 @@ final class DoctrineWorkplacesTest extends KernelTestCase
         self::assertCount(1, $this->workplaces->searchActive('Hospital', 1));
     }
 
-    private function workplace(string $id, WorkplaceSource $source, string $externalId, string $name, string $municipality, DateTimeImmutable $now): Workplace
+    public function test_a_city_search_ranks_its_hospitals_before_alphabetical_province_matches(): void
+    {
+        $now = new DateTimeImmutable('2026-09-10T12:00:00+00:00');
+        $hospitalIds = [];
+        foreach ([
+            ['019b76da-a800-7000-8000-000000000101', '101', 'Hospital Clínico Universitario Virgen de la Arrixaca'],
+            ['019b76da-a800-7000-8000-000000000102', '102', 'Hospital G. Universitario J.M. Morales Meseguer'],
+        ] as [$id, $externalId, $name]) {
+            $hospitalIds[] = $externalId;
+            $this->workplaces->save($this->workplace($id, WorkplaceSource::MINISTRY_HOSPITALS, $externalId, $name, 'Murcia', $now, 'Murcia'));
+        }
+        $primaryCareIds = [];
+        for ($index = 0; $index < 12; ++$index) {
+            $externalId = 'pc-'.$index;
+            $primaryCareIds[] = $externalId;
+            $this->workplaces->save($this->workplace(sprintf('019b76da-a800-7000-8000-%012d', 200 + $index), WorkplaceSource::MINISTRY_PRIMARY_CARE, $externalId, sprintf('Centro %02d', $index), 'Abanilla', $now, 'Murcia'));
+        }
+        $this->workplaces->deactivateMissingFrom(WorkplaceSource::MINISTRY_HOSPITALS, $hospitalIds, $now);
+        $this->workplaces->deactivateMissingFrom(WorkplaceSource::MINISTRY_PRIMARY_CARE, $primaryCareIds, $now);
+
+        $names = array_map(static fn (Workplace $workplace): string => $workplace->name(), $this->workplaces->searchActive('Murcia', 5));
+
+        self::assertSame([
+            'Hospital Clínico Universitario Virgen de la Arrixaca',
+            'Hospital G. Universitario J.M. Morales Meseguer',
+        ], array_slice($names, 0, 2));
+    }
+
+    private function workplace(string $id, WorkplaceSource $source, string $externalId, string $name, string $municipality, DateTimeImmutable $now, string $province = 'Provincia'): Workplace
     {
         return Workplace::import(
             new WorkplaceId($id),
@@ -78,7 +106,7 @@ final class DoctrineWorkplacesTest extends KernelTestCase
                 $name,
                 WorkplaceSource::MINISTRY_HOSPITALS === $source ? WorkplaceType::HOSPITAL : WorkplaceType::OUT_OF_HOSPITAL_URGENT_CARE,
                 'Comunidad',
-                'Provincia',
+                $province,
                 $municipality,
             ),
             $now,

@@ -22,6 +22,23 @@ Turnin solo usa Google para autenticar. Guardar access o refresh tokens ampliar�
 el impacto de una fuga sin aportar una capacidad actual; se conserva únicamente
 el `sub` y el email observado al vincular.
 
+## 2026-09-11 — Identificadores personales separados y protegidos
+
+El DNI/NIE se usa para impedir cuentas duplicadas, pero Turnin no necesita
+recuperarlo: se persiste únicamente una huella HMAC-SHA-256. El teléfono sí puede
+necesitarse para funciones de cuenta y se cifra con XChaCha20-Poly1305. Son claves
+separadas para no convertir una sola filtración en ambas capacidades. Cambiar
+estos identificadores queda fuera del autoservicio porque hacerlo sin comprobar a
+la persona anularía la protección contra duplicados.
+
+## 2026-09-11 — Onboarding progresivo con borrador servidor
+
+Cada paso guarda un borrador ligado al usuario. No se usa almacenamiento local:
+el flujo debe reanudarse en otro dispositivo y esos datos laborales no deben
+entrar en la caché offline de la PWA. Las unidades de referencia se materializan
+en el centro al seleccionarlas; una unidad escrita por el usuario nace local y
+pendiente, sin fingir que está verificada.
+
 ## Versiones
 
 **PHP 8.5.10**, no 8.4. Todo el toolchain lo soporta: PHPUnit 13, PHPStan 2.2,

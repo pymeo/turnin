@@ -6,5 +6,6 @@ namespace App\Workforce\Domain;
 
 interface WorkerAssignmentWriter
 {
-    public function replacePrimary(WorkerAssignment $assignment, SwapPoolKey $poolKey, string $poolId, string $membershipId): void;
+    /** @param non-empty-list<SwapPoolAccess> $accesses */
+    public function replacePrimary(WorkerAssignment $assignment, array $accesses): void;
 }

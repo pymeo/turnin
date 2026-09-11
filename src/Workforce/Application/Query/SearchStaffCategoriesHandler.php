@@ -17,6 +17,6 @@ final readonly class SearchStaffCategoriesHandler
     {
         $limit = max(1, min(20, $query->limit));
 
-        return array_map(static fn ($category): StaffCategorySearchResult => new StaffCategorySearchResult($category->id(), $category->name(), $category->description(), $category->aliases(), $category->specialtyRequired(), $category->functionalAreaRequired()), $this->categories->search($query->term, $limit));
+        return array_map(static fn ($category): StaffCategorySearchResult => new StaffCategorySearchResult($category->id(), $category->name(), $category->description(), $category->aliases(), $category->specialtyRequired(), $category->functionalAreaRequired(), \in_array($category->code(), ['nurse', 'nursing_assistant', 'orderly', 'doctor'], true)), $this->categories->search($query->term, $limit));
     }
 }

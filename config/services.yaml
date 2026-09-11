@@ -21,6 +21,8 @@ services:
             # reusing the cache pool — see the class docblock.
             string $dsn: '%env(REDIS_URL)%'
             iterable $workplaceCatalogSources: !tagged_iterator turnin.workplace_catalog_source
+            string $piiHmacKey: '%env(PII_HMAC_KEY)%'
+            string $piiEncryptionKey: '%env(PII_ENCRYPTION_KEY)%'
 
     App\:
         resource: '../src/'
@@ -81,9 +83,11 @@ services:
     App\Workforce\Domain\WorkplaceIdGenerator: '@App\Workforce\Infrastructure\Identity\SymfonyWorkplaceIdGenerator'
     App\Workforce\Domain\StaffCategories: '@App\Workforce\Infrastructure\Persistence\Doctrine\DoctrineStaffCategories'
     App\Workforce\Domain\OrganizationalUnits: '@App\Workforce\Infrastructure\Persistence\Doctrine\DoctrineOrganizationalUnits'
+    App\Workforce\Domain\OrganizationalUnitIdGenerator: '@App\Workforce\Infrastructure\Identity\SymfonyOrganizationalUnitIdGenerator'
     App\Workforce\Domain\WorkplaceReader: '@App\Workforce\Infrastructure\Persistence\Doctrine\DoctrineWorkplaces'
     App\Workforce\Domain\WorkerAssignmentIdGenerator: '@App\Workforce\Infrastructure\Identity\SymfonyWorkerAssignmentIdGenerator'
     App\Workforce\Domain\WorkerAssignmentWriter: '@App\Workforce\Infrastructure\Persistence\Doctrine\DoctrineWorkerAssignmentWriter'
+    App\Workforce\Domain\WorkerOnboardingDrafts: '@App\Workforce\Infrastructure\Persistence\Doctrine\DoctrineWorkerOnboardingDrafts'
     App\Workforce\Domain\SwapPoolResolver: ~
     App\Platform\Identity\Domain\Users: '@App\Platform\Identity\Infrastructure\Persistence\Doctrine\DoctrineUsers'
     App\Platform\Identity\Domain\PasswordHasher: '@App\Platform\Identity\Infrastructure\Security\SymfonyPasswordHasher'
@@ -92,8 +96,14 @@ services:
     App\Platform\Identity\Domain\ExternalIdentities: '@App\Platform\Identity\Infrastructure\Persistence\Doctrine\DoctrineExternalIdentities'
     App\Platform\Identity\Domain\ExternalIdentityIdGenerator: '@App\Platform\Identity\Infrastructure\Identity\SymfonyExternalIdentityIdGenerator'
     App\Platform\Identity\Domain\IdentityTransaction: '@App\Platform\Identity\Infrastructure\Persistence\Doctrine\DoctrineIdentityTransaction'
+    App\Platform\Identity\Domain\PersonalProfiles: '@App\Platform\Identity\Infrastructure\Persistence\Doctrine\DoctrinePersonalProfiles'
+    App\Platform\Identity\Domain\UsageIdentities: '@App\Platform\Identity\Infrastructure\Persistence\Doctrine\DoctrineUsageIdentities'
+    App\Platform\Identity\Domain\UsageIdentityIdGenerator: '@App\Platform\Identity\Infrastructure\Identity\SymfonyUsageIdentityIdGenerator'
+    App\Platform\Identity\Domain\PersonalIdentifierFingerprinter: '@App\Platform\Identity\Infrastructure\Security\HmacPersonalIdentifierFingerprinter'
+    App\Platform\Identity\Domain\PersonalDataCipher: '@App\Platform\Identity\Infrastructure\Security\SodiumPersonalDataCipher'
     App\Workforce\Domain\WorkerProfileCompletion: '@App\Platform\Identity\Infrastructure\Workforce\IdentityWorkerProfileCompletion'
     App\Workforce\Domain\AuthenticatedWorker: '@App\Platform\Identity\Infrastructure\Workforce\DatabaseAuthenticatedWorker'
+    App\Workforce\Domain\WorkerOnboardingIdentity: '@App\Platform\Identity\Infrastructure\Workforce\IdentityWorkerOnboardingIdentity'
 
     workforce.ministry.primary_care:
         class: App\Workforce\Infrastructure\Ministry\MinistryWorkplaceCatalog

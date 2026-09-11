@@ -65,9 +65,15 @@ final readonly class DoctrineWorkplaces implements Workplaces, WorkplaceReader
     public function searchActive(string $term, int $limit): array
     {
         $folded = iconv('UTF-8', 'ASCII//TRANSLIT//IGNORE', mb_strtolower(trim($term)));
-        $tokens = preg_split('/\s+/u', false === $folded ? mb_strtolower(trim($term)) : $folded) ?: [];
+        $normalizedTerm = false === $folded ? mb_strtolower(trim($term)) : $folded;
+        $tokens = preg_split('/\s+/u', $normalizedTerm) ?: [];
         $conditions = [];
-        $parameters = ['limit' => $limit];
+        $parameters = [
+            'exact' => $normalizedTerm,
+            'prefix' => addcslashes($normalizedTerm, '%_\\').'%',
+            'contains' => '%'.addcslashes($normalizedTerm, '%_\\').'%',
+            'limit' => $limit,
+        ];
         $types = ['limit' => \Doctrine\DBAL\ParameterType::INTEGER];
 
         foreach ($tokens as $index => $token) {
@@ -76,9 +82,32 @@ final readonly class DoctrineWorkplaces implements Workplaces, WorkplaceReader
             $parameters[$parameter] = '%'.addcslashes($token, '%_\\').'%';
         }
 
+        $sql = sprintf(
+            <<<'SQL'
+                SELECT id
+                  FROM workforce_workplaces
+                 WHERE active = TRUE AND %s
+                 ORDER BY CASE
+                    WHEN translate(lower(name), 'áéíóúüñ', 'aeiouun') = :exact THEN 0
+                    WHEN translate(lower(municipality), 'áéíóúüñ', 'aeiouun') = :exact AND type = 'hospital' THEN 1
+                    WHEN translate(lower(name), 'áéíóúüñ', 'aeiouun') LIKE :prefix ESCAPE '\' THEN 2
+                    WHEN translate(lower(municipality), 'áéíóúüñ', 'aeiouun') = :exact THEN 3
+                    WHEN translate(lower(name), 'áéíóúüñ', 'aeiouun') LIKE :contains ESCAPE '\' THEN 4
+                    WHEN translate(lower(province), 'áéíóúüñ', 'aeiouun') = :exact AND type = 'hospital' THEN 5
+                    WHEN translate(lower(province), 'áéíóúüñ', 'aeiouun') = :exact THEN 6
+                    ELSE 7
+                 END,
+                 CASE WHEN type = 'hospital' THEN 0 ELSE 1 END,
+                 name,
+                 municipality
+                 LIMIT :limit
+                SQL,
+            implode(' AND ', $conditions),
+        );
+
         /** @var list<string> $ids */
         $ids = $this->entityManager->getConnection()->fetchFirstColumn(
-            'SELECT id FROM workforce_workplaces WHERE active = TRUE AND '.implode(' AND ', $conditions).' ORDER BY name, municipality LIMIT :limit',
+            $sql,
             $parameters,
             $types,
         );

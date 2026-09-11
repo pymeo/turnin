@@ -7,7 +7,7 @@ namespace App\Workforce\Application\Query;
 final readonly class OrganizationalUnitSearchResult
 {
     /** @param list<string> $aliases */
-    public function __construct(public string $id, public string $name, public array $aliases, public string $kind, public string $status)
+    public function __construct(public string $id, public string $name, public array $aliases, public string $kind, public string $origin, public string $group, public bool $featured)
     {
     }
 }

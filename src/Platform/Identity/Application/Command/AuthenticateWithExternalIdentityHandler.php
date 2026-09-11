@@ -10,6 +10,8 @@ use App\Platform\Identity\Domain\ExternalIdentities;
 use App\Platform\Identity\Domain\ExternalIdentity;
 use App\Platform\Identity\Domain\ExternalIdentityIdGenerator;
 use App\Platform\Identity\Domain\IdentityTransaction;
+use App\Platform\Identity\Domain\PersonalProfile;
+use App\Platform\Identity\Domain\PersonalProfiles;
 use App\Platform\Identity\Domain\User;
 use App\Platform\Identity\Domain\UserIdGenerator;
 use App\Platform\Identity\Domain\Users;
@@ -17,7 +19,7 @@ use Psr\Clock\ClockInterface;
 
 final readonly class AuthenticateWithExternalIdentityHandler
 {
-    public function __construct(private Users $users, private ExternalIdentities $externalIdentities, private UserIdGenerator $userIds, private ExternalIdentityIdGenerator $externalIdentityIds, private IdentityTransaction $transaction, private ClockInterface $clock)
+    public function __construct(private Users $users, private ExternalIdentities $externalIdentities, private UserIdGenerator $userIds, private ExternalIdentityIdGenerator $externalIdentityIds, private IdentityTransaction $transaction, private PersonalProfiles $profiles, private ClockInterface $clock)
     {
     }
 
@@ -57,6 +59,9 @@ final readonly class AuthenticateWithExternalIdentityHandler
 
             if (null === $identityForUser) {
                 $this->externalIdentities->save(new ExternalIdentity($this->externalIdentityIds->next(), $user->id, $command->provider, $subject, $email, $this->clock->now()));
+            }
+            if (null === $this->profiles->byUserId($user->id) && null !== $command->givenName && null !== $command->familyName && '' !== trim($command->givenName) && '' !== trim($command->familyName)) {
+                $this->profiles->save(PersonalProfile::start($user->id, $command->givenName, $command->familyName, $this->clock->now()));
             }
 
             return $user;

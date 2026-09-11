@@ -25,7 +25,7 @@ final readonly class DoctrineStaffCategories implements StaffCategories
     public function search(string $term, int $limit): array
     {
         $folded = iconv('UTF-8', 'ASCII//TRANSLIT//IGNORE', mb_strtolower(trim($term))) ?: mb_strtolower(trim($term));
-        $rows = $this->connection->fetchAllAssociative("SELECT * FROM workforce_staff_categories WHERE active = TRUE AND translate(lower(name || ' ' || description || ' ' || aliases::text), 'áéíóúüñ', 'aeiouun') LIKE :term ORDER BY name LIMIT :limit", ['term' => '%'.addcslashes($folded, '%_\\').'%', 'limit' => $limit], ['limit' => \Doctrine\DBAL\ParameterType::INTEGER]);
+        $rows = $this->connection->fetchAllAssociative("SELECT * FROM workforce_staff_categories WHERE active = TRUE AND (:empty OR translate(lower(name || ' ' || description || ' ' || aliases::text), 'áéíóúüñ', 'aeiouun') LIKE :term) ORDER BY CASE code WHEN 'nurse' THEN 1 WHEN 'nursing_assistant' THEN 2 WHEN 'orderly' THEN 3 WHEN 'doctor' THEN 4 ELSE 10 END, name LIMIT :limit", ['empty' => '' === $folded, 'term' => '%'.addcslashes($folded, '%_\\').'%', 'limit' => $limit], ['empty' => \Doctrine\DBAL\ParameterType::BOOLEAN, 'limit' => \Doctrine\DBAL\ParameterType::INTEGER]);
 
         return array_map(fn (array $row): StaffCategory => $this->map($row), $rows);
     }

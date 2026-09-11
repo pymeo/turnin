@@ -18,6 +18,6 @@ final readonly class SearchOrganizationalUnitsHandler
     {
         $limit = max(1, min(20, $query->limit));
 
-        return array_map(static fn ($unit): OrganizationalUnitSearchResult => new OrganizationalUnitSearchResult($unit->id(), $unit->name(), $unit->aliases(), $unit->kind()->value, $unit->status()->value), $this->units->search(new WorkplaceId($query->workplaceId), $query->term, $limit));
+        return array_map(static fn ($unit): OrganizationalUnitSearchResult => new OrganizationalUnitSearchResult($unit->selectionId, $unit->name, $unit->aliases, $unit->kind->value, $unit->origin->value, $unit->group->value, $unit->featured), $this->units->discover(new WorkplaceId($query->workplaceId), $query->term, $limit));
     }
 }

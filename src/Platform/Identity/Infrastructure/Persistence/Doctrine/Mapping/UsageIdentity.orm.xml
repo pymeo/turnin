@@ -1,0 +1,16 @@
+<?xml version="1.0" encoding="UTF-8" ?>
+<doctrine-mapping xmlns="http://doctrine-project.org/schemas/orm/doctrine-mapping">
+    <entity name="App\Platform\Identity\Domain\UsageIdentity" table="identity_usage_identities">
+        <id name="id" type="guid" column="id" />
+        <field name="userId" type="identity_user_id" column="user_id" />
+        <field name="identityDocumentFingerprint" column="identity_document_fingerprint" type="string" length="64" />
+        <field name="phoneFingerprint" column="phone_fingerprint" type="string" length="64" />
+        <field name="evidence" type="string" enum-type="App\Platform\Identity\Domain\IdentityEvidence" length="24" />
+        <field name="createdAt" column="created_at" type="datetime_immutable" />
+        <unique-constraints>
+            <unique-constraint name="identity_usage_user_unique" fields="userId" />
+            <unique-constraint name="identity_document_fingerprint_unique" fields="identityDocumentFingerprint" />
+            <unique-constraint name="identity_phone_fingerprint_unique" fields="phoneFingerprint" />
+        </unique-constraints>
+    </entity>
+</doctrine-mapping>
