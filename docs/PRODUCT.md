@@ -25,8 +25,12 @@ modelo tiene que soportarlas sin reescribirse. Por eso el `SwapPool`
 
 * introducir su calendario pintándolo, repitiendo su patrón o dictándolo
   —implementado—; importarlo desde un PDF o una foto, todavía no;
-* pertenecer a un centro y a uno o varios grupos de intercambio compatibles;
-* indicar su disponibilidad;
+* pertenecer a un centro y a uno o varios grupos de intercambio compatibles
+  —implementado—;
+* indicar su disponibilidad para un día y un grupo —implementado; los grados
+  «quiero» / «podría», todavía no—;
+* publicar un turno suyo buscando quien pueda hacerlo, y ver quién se ha
+  ofrecido —implementado—;
 * recibir propuestas —y solo las relevantes;
 * aceptar propuestas;
 * pedir intercambios;

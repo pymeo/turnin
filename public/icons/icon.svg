@@ -1,13 +1,6 @@
-<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 512 512" width="512" height="512" role="img" aria-label="Turnin">
-  <defs>
-    <linearGradient id="g" x1="0" y1="0" x2="1" y2="1">
-      <stop offset="0" stop-color="#14b89b"/>
-      <stop offset="1" stop-color="#0f7666"/>
-    </linearGradient>
-  </defs>
-  <rect width="512" height="512" rx="112" fill="url(#g)"/>
-  <g fill="none" stroke="#ffffff" stroke-width="34" stroke-linecap="round" stroke-linejoin="round">
-    <path d="M150 205 H322 M292 175 L338 205 L292 235"/>
-    <path d="M362 307 H190 M220 277 L174 307 L220 337"/>
-  </g>
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 512 512" role="img" aria-label="TURNIN">
+  <rect width="512" height="512" rx="112" fill="#0F4C5C"/>
+  <path d="M122 229A142 142 0 0 1 369 139" fill="none" stroke="#FFFFFF" stroke-width="43" stroke-linecap="round"/><path d="m354 83 78 30-62 56Z" fill="#FFFFFF"/>
+  <path d="M390 283A142 142 0 0 1 143 373" fill="none" stroke="#14B8A6" stroke-width="43" stroke-linecap="round"/><path d="m158 429-78-30 62-56Z" fill="#14B8A6"/>
+  <path d="M190 210h132M256 210v144" fill="none" stroke="#FFFFFF" stroke-width="43" stroke-linecap="round"/>
 </svg>

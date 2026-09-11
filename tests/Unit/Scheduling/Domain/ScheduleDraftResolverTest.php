@@ -11,10 +11,10 @@ use App\Scheduling\Domain\ScheduleDraft;
 use App\Scheduling\Domain\ScheduleDraftEntry;
 use App\Scheduling\Domain\ScheduleDraftResolver;
 use App\Scheduling\Domain\SegmentProposal;
-use App\Scheduling\Domain\ShiftKind;
 use App\Scheduling\Domain\ShiftSegment;
 use App\Scheduling\Domain\ShiftWindow;
 use App\Scheduling\Domain\WorkDate;
+use App\SharedKernel\Domain\ShiftKind;
 use DateTimeImmutable;
 use PHPUnit\Framework\TestCase;
 

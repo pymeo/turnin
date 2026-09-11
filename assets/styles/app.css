@@ -1,4 +1,5 @@
 @import "tailwindcss";
+@custom-variant dark (&:where(.dark, .dark *));
 
 /* ==========================================================================
    Turnin design system
@@ -14,30 +15,34 @@
 
 /* --- Semantic surfaces ---------------------------------------------------- */
 :root {
-	color-scheme: light dark;
+	color-scheme: light;
 
-	--canvas: #f5f8f7;
-	--surface: #ffffff;
-	--surface-muted: #eaf0ef;
-	--ink: #0c1a18;
-	--ink-muted: #596c69;
-	--line: #dde6e4;
-	--ring: #0f7666;
+	--turnin-petroleum: #0f4c5c;
+	--turnin-teal: #14b8a6;
+	--turnin-teal-dark: #0f766e;
+	--turnin-mint: #7dd3c7;
+	--turnin-petroleum-soft: #eff8f8;
+	--turnin-teal-soft: #f0fdfa;
+	--turnin-background: #f8fafc;
+	--turnin-surface: #ffffff;
+	--turnin-border: #e5e7eb;
+	--turnin-text: #1f2937;
+	--turnin-text-muted: #64748b;
+	--turnin-danger: #dc2626;
+	--turnin-warning: #f59e0b;
+	--turnin-info: #2563eb;
+	--turnin-focus: rgb(20 184 166 / 35%);
+
+	--canvas: var(--turnin-background);
+	--surface: var(--turnin-surface);
+	--surface-muted: var(--turnin-petroleum-soft);
+	--ink: var(--turnin-text);
+	--ink-muted: var(--turnin-text-muted);
+	--line: var(--turnin-border);
+	--ring: var(--turnin-teal);
 	--shift-amber: #d97706; --shift-orange: #ea580c; --shift-teal: #0f766e;
 	--shift-blue: #2563eb; --shift-indigo: #4f46e5; --shift-violet: #7c3aed;
 	--shift-rose: #e11d48; --shift-slate: #475569; --shift-emerald: #059669; --shift-cyan: #0891b2;
-}
-
-@media (prefers-color-scheme: dark) {
-	:root {
-		--canvas: #08110f;
-		--surface: #111c1a;
-		--surface-muted: #172422;
-		--ink: #e9f1ef;
-		--ink-muted: #93a6a2;
-		--line: #21322e;
-		--ring: #34d3b4;
-	}
 }
 
 @theme {
@@ -46,16 +51,16 @@
 		"Helvetica Neue", Arial, sans-serif;
 
 	/* Brand: calm teal. Recognisable without looking like a hospital intranet. */
-	--color-brand-50: #ecfdf9;
-	--color-brand-100: #d1faef;
-	--color-brand-200: #a7f3e0;
-	--color-brand-300: #6ee7cd;
-	--color-brand-400: #34d3b4;
-	--color-brand-500: #14b89b;
-	--color-brand-600: #0d947e;
-	--color-brand-700: #0f7666;
-	--color-brand-800: #115e53;
-	--color-brand-900: #134e46;
+	--color-brand-50: #f0fdfa;
+	--color-brand-100: #ccfbf1;
+	--color-brand-200: #99f6e4;
+	--color-brand-300: #7dd3c7;
+	--color-brand-400: #2dd4bf;
+	--color-brand-500: #14b8a6;
+	--color-brand-600: #0d9488;
+	--color-brand-700: #0f766e;
+	--color-brand-800: #115e59;
+	--color-brand-900: #0f4c5c;
 
 	/* Shift kinds are core vocabulary, so they get first-class colours. */
 	--color-shift-morning: #d97706;
@@ -125,6 +130,32 @@
 	padding-bottom: max(2rem, env(safe-area-inset-bottom));
 }
 
+@utility brand-lockup {
+	@apply block h-auto w-44;
+}
+
+@utility marketing-shell {
+	@apply mx-auto grid min-h-dvh w-full max-w-7xl items-center gap-8 px-5 py-8 md:grid-cols-[minmax(0,1fr)_minmax(24rem,0.9fr)] md:px-10 lg:px-16;
+}
+
+@utility marketing-copy { @apply flex max-w-xl flex-col items-start gap-5; }
+@utility marketing-title { @apply text-4xl font-extrabold leading-[1.05] tracking-[-0.035em] text-balance sm:text-5xl lg:text-6xl; }
+@utility marketing-visual {
+	@apply order-last overflow-hidden rounded-[2rem] border border-line p-4 md:p-8;
+	background: linear-gradient(150deg, var(--turnin-petroleum-soft), var(--turnin-teal-soft));
+	img { @apply h-auto w-full; }
+}
+
+@utility auth-shell {
+	@apply mx-auto grid min-h-dvh w-full max-w-6xl items-center gap-8 px-5 py-6 md:grid-cols-2 md:px-10;
+}
+@utility auth-panel { @apply mx-auto flex w-full max-w-md flex-col gap-6 rounded-3xl bg-surface md:p-8 md:shadow-sm md:ring-1 md:ring-line; }
+@utility auth-visual {
+	@apply hidden h-[min(44rem,85dvh)] flex-col justify-between overflow-hidden rounded-[2rem] p-10 text-white md:flex;
+	background: var(--turnin-petroleum);
+	img { @apply mt-auto w-full; }
+}
+
 /* --- Components -----------------------------------------------------------
    Declared with @utility (not @layer components) so that variants can compose
    the base with @apply — Tailwind v4 only lets you @apply registered utilities.
@@ -137,7 +168,9 @@
 }
 
 @utility btn-primary {
-	@apply btn bg-brand-700 text-white hover:bg-brand-800;
+	@apply btn text-white;
+	background-color: var(--turnin-teal-dark);
+	&:hover { background-color: var(--turnin-petroleum); }
 }
 
 @utility btn-secondary {
@@ -242,7 +275,7 @@
 }
 
 @utility session-mark {
-	@apply grid size-9 place-items-center rounded-xl bg-brand-700 text-sm font-black text-white shadow-sm;
+	@apply size-10 shrink-0;
 }
 
 @utility onboarding-progress {
@@ -853,6 +886,185 @@
 @utility transcript {
 	@apply min-h-24 w-full rounded-[var(--radius-control)] border border-line bg-surface p-3 text-base text-ink;
 }
+
+/* --- Exchange ---------------------------------------------------------------
+   The cards on "Cambios". A shift somebody needs covered is read in the same
+   order it is spoken: the day first, then which shift, then who.
+   -------------------------------------------------------------------------- */
+@utility swap-card {
+	@apply flex flex-col gap-2 rounded-[var(--radius-card)] border border-line bg-surface p-4;
+}
+
+@utility swap-card-date {
+	@apply text-xs font-bold tracking-[0.08em] text-ink-muted uppercase;
+}
+
+@utility swap-card-body {
+	@apply flex items-center gap-3;
+}
+
+@utility swap-card-mark {
+	@apply grid size-11 shrink-0 place-items-center rounded-xl text-sm font-black;
+}
+
+@utility swap-card-done {
+	@apply text-sm font-semibold;
+	color: var(--color-positive);
+}
+
+/* The badge on a calendar cell whose shift is published. Deliberately a corner
+   dot and not a colour change: the tone already says which shift it is, and
+   overwriting it to say "looking for cover" would lose that. */
+@utility calendar-cell-published {
+	@apply absolute top-1 right-1 block size-1.5 rounded-full;
+	background-color: var(--ring);
+}
+
+@utility day-exchange {
+	@apply flex flex-col gap-2 rounded-[var(--radius-control)] border border-line p-3;
+}
+
+@utility day-exchange-status {
+	@apply flex items-center gap-2 text-sm font-semibold;
+}
+
+@utility candidate-row {
+	@apply flex items-center gap-2 text-sm;
+}
+
+/* Changes is an action dashboard. The wide layout uses two compact columns;
+   the phone keeps the decisions in one thumb-friendly reading order. */
+@utility changes-shell {
+	@apply mx-auto flex w-full max-w-5xl flex-col gap-6 px-4 sm:px-6;
+	padding-top: max(1rem, env(safe-area-inset-top));
+	padding-bottom: max(2.5rem, env(safe-area-inset-bottom));
+}
+
+@utility changes-heading {
+	@apply flex flex-col gap-1;
+
+	h1 { @apply text-3xl font-bold tracking-tight; }
+	p { @apply text-ink-muted; }
+}
+
+@utility changes-section-title { @apply text-xl font-bold tracking-tight; }
+
+@utility changes-actions {
+	@apply grid gap-3 md:grid-cols-2;
+}
+
+@utility changes-action {
+	@apply grid w-full grid-cols-[auto_1fr_auto] items-center gap-3 overflow-hidden rounded-[var(--radius-card)] border border-line bg-surface p-4 text-left shadow-sm transition hover:border-brand-600 hover:shadow-md active:scale-[0.99];
+	min-height: 6.5rem;
+
+	strong { @apply block text-lg; }
+	small { @apply mt-1 block text-sm leading-snug text-ink-muted; }
+}
+
+@utility changes-action-primary {
+	@apply border-brand-600/40;
+	background: linear-gradient(135deg, color-mix(in srgb, var(--surface) 70%, var(--color-brand-100)), var(--surface));
+}
+
+@utility changes-action-icon {
+	@apply grid size-11 place-items-center rounded-xl text-xl font-bold;
+	background-color: var(--turnin-teal);
+	color: var(--turnin-petroleum);
+	box-shadow: inset 0 0 0 1px rgb(15 76 92 / 15%);
+}
+
+@utility changes-summary {
+	@apply grid gap-4 rounded-[var(--radius-card)] border border-line bg-surface p-4 sm:grid-cols-[1fr_auto] sm:items-center;
+
+	h2 { @apply mt-1 text-lg font-semibold leading-snug; }
+	p:not(.changes-kicker) { @apply mt-1 text-sm text-ink-muted; }
+}
+
+@utility changes-kicker { @apply text-xs font-bold tracking-[0.08em] text-brand-700 uppercase dark:text-brand-300; }
+
+@utility flow-panel { @apply flex flex-col gap-4; }
+@utility flow-list { @apply flex flex-col gap-2; }
+@utility changes-flow {
+	background:
+		linear-gradient(180deg, color-mix(in srgb, var(--color-brand-50) 70%, var(--surface)) 0, var(--surface) 9rem);
+	@media (prefers-color-scheme: dark) {
+		background:
+			linear-gradient(180deg, color-mix(in srgb, var(--color-brand-900) 45%, var(--surface)) 0, var(--surface) 9rem);
+	}
+}
+@utility flow-month { @apply mt-2 text-xs font-bold tracking-[0.12em] text-brand-700 uppercase first:mt-0 dark:text-brand-300; }
+
+@utility shift-choice {
+	@apply relative grid min-h-22 w-full grid-cols-[3.75rem_1fr_auto] items-center gap-3 overflow-hidden rounded-[var(--radius-card)] border border-line bg-surface p-2.5 pr-3 text-left shadow-sm transition hover:border-brand-600 hover:shadow-md active:scale-[0.99];
+	&::before { @apply absolute inset-y-0 left-0 w-1; content: ''; background: var(--shift-accent, var(--color-brand-600)); }
+	&[data-kind="morning"] { --shift-accent: var(--color-shift-morning); }
+	&[data-kind="evening"] { --shift-accent: var(--color-shift-evening); }
+	&[data-kind="night"] { --shift-accent: var(--color-shift-night); }
+}
+@utility shift-choice-date {
+	@apply flex min-h-16 flex-col items-center justify-center rounded-xl bg-brand-50 text-center text-brand-800 dark:bg-brand-900/40 dark:text-brand-100;
+	strong { @apply text-2xl leading-none; }
+	small { @apply text-[0.65rem] font-bold leading-tight tracking-wider uppercase; }
+}
+@utility shift-choice-copy {
+	@apply flex min-w-0 flex-col;
+	strong { @apply text-base; }
+	small { @apply text-sm text-ink-muted; }
+	.shift-choice-place { @apply mt-1 truncate text-xs; }
+}
+@utility shift-choice-open { @apply text-right text-xs font-semibold text-positive; }
+@utility shift-choice-arrow { @apply text-xl text-ink-muted; }
+
+@utility flow-recap { @apply flex flex-col gap-1 rounded-[var(--radius-card)] bg-surface-muted p-4; }
+@utility flow-recap-heading { @apply mt-3 text-xs font-bold tracking-wide text-ink-muted uppercase first:mt-0; }
+@utility success-mark { @apply mx-auto grid size-16 place-items-center rounded-full bg-brand-100 text-3xl font-bold text-brand-800 dark:bg-brand-900/50 dark:text-brand-100; }
+
+@utility availability-calendar { @apply flex flex-col gap-3; }
+@utility availability-grid { @apply grid grid-cols-7 gap-1; }
+@utility availability-day {
+	@apply grid aspect-square min-h-11 place-items-center rounded-xl border border-transparent bg-surface text-sm font-semibold transition hover:border-brand-600;
+
+	&[aria-selected="true"] { @apply ring-2 ring-offset-1; background-color: var(--turnin-teal); color: var(--turnin-petroleum); --tw-ring-color: var(--turnin-teal-dark); --tw-ring-offset-color: var(--surface); }
+	&:disabled { @apply cursor-not-allowed opacity-35; }
+	&.is-working { @apply border-line bg-surface-muted line-through; }
+}
+@utility selection-count { @apply text-center text-sm font-semibold text-ink-muted; }
+
+@utility kind-grid { @apply grid grid-cols-2 gap-2; }
+@utility kind-choice {
+	@apply relative flex min-h-24 flex-col justify-center overflow-hidden rounded-[var(--radius-control)] border bg-surface p-3 text-left transition;
+	border-color: color-mix(in srgb, var(--kind-accent, var(--color-brand-600)) 28%, var(--line));
+	background: linear-gradient(145deg, color-mix(in srgb, var(--kind-accent, var(--color-brand-600)) 7%, var(--surface)), var(--surface) 62%);
+	&::before { @apply absolute inset-y-0 left-0 w-1; content: ''; background: var(--kind-accent, var(--color-brand-600)); }
+	&[data-kind="morning"] { --kind-accent: var(--color-shift-morning); }
+	&[data-kind="evening"] { --kind-accent: var(--color-shift-evening); }
+	&[data-kind="night"] { --kind-accent: var(--color-shift-night); }
+	&[data-kind="any"] { --kind-accent: var(--color-brand-600); }
+	strong { @apply text-base; }
+	small { @apply text-sm text-ink-muted; }
+	& > span { @apply absolute top-2 right-2 grid size-6 place-items-center rounded-full border border-line text-sm text-transparent; }
+	&[aria-pressed="true"] { @apply ring-2 ring-offset-1; border-color: var(--kind-accent); --tw-ring-color: var(--kind-accent); --tw-ring-offset-color: var(--surface); background: color-mix(in srgb, var(--kind-accent) 14%, var(--surface)); }
+	&[aria-pressed="true"] > span { @apply text-white; border-color: var(--kind-accent); background: var(--kind-accent); }
+}
+@utility kind-choice-any { @apply col-span-2; }
+
+@utility place-list { @apply flex flex-col gap-4; }
+@utility place-group {
+	@apply flex flex-col gap-2 rounded-[var(--radius-control)] border border-line p-3;
+	legend { @apply px-1 text-sm font-bold; }
+}
+@utility place-choice { @apply flex min-h-11 items-center gap-3 rounded-xl px-2 text-sm hover:bg-surface-muted; input { @apply size-5 accent-brand-700; } }
+
+@utility activity-section { @apply flex flex-col gap-3; }
+@utility activity-card {
+	@apply flex flex-col gap-2 rounded-[var(--radius-card)] border border-line bg-surface p-4;
+	h2, h3 { @apply text-lg font-semibold; }
+	p { @apply text-sm; }
+}
+@utility activity-status { @apply rounded-xl bg-surface-muted p-3; strong { @apply text-brand-700 dark:text-brand-300; } }
+@utility activity-actions { @apply grid grid-cols-2 gap-2; }
+@utility available-grid { @apply grid gap-3 md:grid-cols-2; }
+@utility btn-danger-link { @apply mt-3 min-h-11 w-full rounded-xl px-3 text-sm font-semibold text-red-700 hover:bg-red-50 dark:text-red-300 dark:hover:bg-red-950/40; }
 
 /* --- Shift preset management ---------------------------------------------- */
 @utility preset-row {

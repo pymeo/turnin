@@ -1,0 +1,72 @@
+{% extends 'base.html.twig' %}
+
+{% block title %}Turnin — Cambios{% endblock %}
+{% block description %}Di qué turno quieres librar o cuándo puedes trabajar.{% endblock %}
+
+{% block body %}
+<main class="changes-shell" data-controller="changes"
+      data-changes-csrf-value="{{ csrfToken }}"
+      data-changes-upcoming-value="{{ setup.upcomingShifts|json_encode|e('html_attr') }}"
+      data-changes-working-dates-value="{{ setup.workingDates|json_encode|e('html_attr') }}"
+      data-changes-groups-value="{{ groups|json_encode|e('html_attr') }}"
+      data-changes-availability-value="{{ myAvailability|json_encode|e('html_attr') }}"
+      data-changes-from-value="{{ setup.calendarFrom }}"
+      data-changes-to-value="{{ setup.calendarTo }}">
+    {% include 'identity/_authenticated_header.html.twig' %}
+
+    <header class="changes-heading">
+        <a class="text-sm text-ink-muted no-underline" href="{{ path('identity_app') }}">‹ Inicio</a>
+        <h1>Cambios</h1>
+        <p>Organiza tus turnos con tus compañeros.</p>
+    </header>
+
+    <section class="flex flex-col gap-3" aria-labelledby="needs-title">
+        <h2 id="needs-title" class="changes-section-title">¿Qué necesitas?</h2>
+        <div class="changes-actions">
+            <button class="changes-action changes-action-primary" type="button" data-action="changes#startRelease">
+                <span class="changes-action-icon" aria-hidden="true">↗</span>
+                <span><strong>Quiero librar un turno</strong><small>Elige uno de tus próximos turnos.</small></span>
+                <span aria-hidden="true">›</span>
+            </button>
+            <button class="changes-action" type="button" data-action="changes#startAvailability">
+                <span class="changes-action-icon" aria-hidden="true">＋</span>
+                <span><strong>Puedo trabajar</strong><small>Indica los días y turnos que te vienen bien.</small></span>
+                <span aria-hidden="true">›</span>
+            </button>
+        </div>
+    </section>
+
+    <section class="changes-summary" aria-labelledby="matches-title">
+        <div>
+            <p class="changes-kicker">Turnos disponibles para ti</p>
+            <h2 id="matches-title">
+                {% set matching = openRequests|filter(request => request.alreadyAvailable)|length %}
+                {% if matching > 0 %}
+                    Hay {{ matching }} {{ matching == 1 ? 'turno que encaja' : 'turnos que encajan' }} con tu disponibilidad
+                {% else %}
+                    Ahora mismo no hay turnos compatibles disponibles
+                {% endif %}
+            </h2>
+            {% if matching == 0 %}<p>Cuando aparezca alguno que encaje contigo lo verás aquí.</p>{% endif %}
+        </div>
+        {% if openRequests|length > 0 %}<a class="btn-secondary" href="{{ path('swap_changes_available') }}">Ver turnos</a>{% endif %}
+    </section>
+
+    <section class="changes-summary" aria-labelledby="activity-title">
+        <div>
+            <p class="changes-kicker">Tu actividad</p>
+            <h2 id="activity-title">
+                {{ myRequests|length }} {{ myRequests|length == 1 ? 'turno buscando' : 'turnos buscando' }}
+                <span aria-hidden="true">·</span>
+                {{ myAvailability|length }} {{ myAvailability|length == 1 ? 'día disponible' : 'días disponibles' }}
+            </h2>
+            {% if myRequests is empty and myAvailability is empty %}<p>Aquí aparecerá lo que quieras cambiar.</p>{% endif %}
+        </div>
+        <a class="btn-secondary" href="{{ path('swap_changes_mine') }}">Ver mi actividad</a>
+    </section>
+
+    <p class="field-error hidden" data-changes-target="error" role="alert"></p>
+
+    {% include 'swap/_flows.html.twig' %}
+</main>
+{% endblock %}

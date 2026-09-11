@@ -88,6 +88,18 @@ services:
         tags:
             - { name: 'messenger.message_handler', bus: 'command.bus' }
 
+    turnin.swap_query_handlers:
+        namespace: App\Swap\Application\Query\
+        resource: '../src/Swap/Application/Query/*Handler.php'
+        tags:
+            - { name: 'messenger.message_handler', bus: 'query.bus' }
+
+    turnin.swap_command_handlers:
+        namespace: App\Swap\Application\Command\
+        resource: '../src/Swap/Application/Command/*Handler.php'
+        tags:
+            - { name: 'messenger.message_handler', bus: 'command.bus' }
+
     turnin.identity_command_handlers:
         namespace: App\Platform\Identity\Application\Command\
         resource: '../src/Platform/Identity/Application/Command/*Handler.php'
@@ -132,6 +144,18 @@ services:
     # Declared by Scheduling, implemented by Workforce, which owns the data.
     App\Scheduling\Domain\AssignedWorkers: '@App\Workforce\Infrastructure\Scheduling\WorkforceAssignedWorkers'
     App\Scheduling\Domain\AuthenticatedWorkers: '@App\Platform\Identity\Infrastructure\Scheduling\IdentityAuthenticatedWorkers'
+
+    # --- Swap ---------------------------------------------------------------
+    # Three ports declared by Swap and implemented by whoever owns the data:
+    # the pools by Workforce, the calendar by Scheduling, the people by Identity.
+    # Swap never reads another context's tables. See docs/CONTEXT_MAP.md.
+    App\Swap\Domain\SwapRequests: '@App\Swap\Infrastructure\Persistence\Doctrine\DoctrineSwapRequests'
+    App\Swap\Domain\Availabilities: '@App\Swap\Infrastructure\Persistence\Doctrine\DoctrineAvailabilities'
+    App\Swap\Domain\SwapIdGenerator: '@App\Swap\Infrastructure\Identity\SymfonySwapIdGenerator'
+    App\Swap\Domain\SwapGroups: '@App\Workforce\Infrastructure\Swap\WorkforceSwapGroups'
+    App\Swap\Domain\RosteredDays: '@App\Scheduling\Infrastructure\Swap\SchedulingRosteredDays'
+    App\Swap\Domain\AuthenticatedWorkers: '@App\Platform\Identity\Infrastructure\Swap\IdentitySwapWorkers'
+    App\Swap\Domain\WorkerDisplayNames: '@App\Platform\Identity\Infrastructure\Swap\IdentitySwapWorkers'
     App\Scheduling\Domain\CalendarInsightSource: '@App\Scheduling\Domain\RestStreakInsights'
     App\Scheduling\Application\ExternalCalendar\CalendarTokenCipher: '@App\Scheduling\Infrastructure\ExternalCalendar\SodiumCalendarTokenCipher'
     App\Scheduling\Application\ExternalCalendar\ExternalCalendarConnections: '@App\Scheduling\Infrastructure\Persistence\Doctrine\DoctrineExternalCalendars'

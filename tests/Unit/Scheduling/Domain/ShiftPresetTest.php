@@ -4,10 +4,10 @@ declare(strict_types=1);
 
 namespace App\Tests\Unit\Scheduling\Domain;
 
-use App\Scheduling\Domain\ShiftKind;
 use App\Scheduling\Domain\ShiftPreset;
 use App\Scheduling\Domain\ShiftPresetResolver;
 use App\Scheduling\Domain\ShiftWindow;
+use App\SharedKernel\Domain\ShiftKind;
 use DateTimeImmutable;
 use InvalidArgumentException;
 use PHPUnit\Framework\TestCase;

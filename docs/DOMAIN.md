@@ -8,7 +8,9 @@ actualizarlo.
 > `Workforce.Workplace`, la base del contexto laboral (`StaffCategory`,
 > `OrganizationalUnit`, `WorkerAssignment` y `SwapPool`) y el calendario personal
 > (`Scheduling`: `RosterDay`, `ShiftPreset`, `RosterPattern`) están
-> implementados. Availability, swap y matching siguen siendo trabajo posterior.
+> implementados, y también la primera vuelta de `Swap`: publicar un turno que se
+> quiere soltar y declararse disponible para trabajar un día. Propuestas,
+> aceptación y matching siguen siendo trabajo posterior.
 
 ## Vocabulario
 
@@ -35,7 +37,8 @@ actualizarlo.
 | **ShiftKind** | Mañana, tarde, noche… La franja, no las horas exactas. |
 | **WorkDate** | El *día laboral* al que se imputa un turno. No es un timestamp. |
 | **Availability** | Cuándo alguien quiere o puede trabajar, con grados. |
-| **SwapRequest** | La intención de alguien: «quiero librar el sábado 19». |
+| **SwapRequest** | «Tengo este turno y busco quien pueda hacerlo». Una sola intención, y no cambia el cuadrante. |
+| **Availability** | Declaración explícita: «el 21 puedo trabajar en este grupo». Nunca se deduce del calendario. |
 | **SwapProposal** | Una solución concreta que el motor propone a las personas implicadas. |
 | **SwapAgreement** | Una propuesta aceptada por todos y, si hace falta, aprobada. |
 | **ShiftDebt** | «Marta hizo mi turno y le debo uno». Nominal, sin precio. |
@@ -143,6 +146,61 @@ La voz produce texto en el navegador; Turnin recibe la transcripción y nada má
 mañana», «1-4 mañana», «uno y dos mañana», los aliases de cada preset y las
 rotaciones dictadas («mi patrón es mañana mañana tarde tarde…»). Lo que no
 entiende lo devuelve como fragmento no reconocido; nunca lo adivina.
+
+## `Swap` — publicar un turno y ofrecerse, implementado
+
+La primera vuelta del producto: descubrir posibilidades. Todavía no ejecuta
+ningún cambio.
+
+```
+Pedro   18 sep · Noche  →  «quiero quitarme este turno»
+María   18 sep          →  «puedo trabajar»
+Turnin  →  María ve el turno de Pedro.  Pedro ve que María podría hacerlo.
+```
+
+### La frontera es el pool, no el centro
+
+Solo se ven solicitudes y disponibilidades de un `SwapPool` en el que se tiene
+membership activa. Mismo hospital y distinto pool es invisible, y hay tests que
+lo comprueban desde el dominio hasta el navegador.
+
+`Swap` no recalcula esa frontera: la pregunta a Workforce por un puerto
+(`SwapGroups`). `SwapPoolResolver` sigue siendo el único sitio donde se decide
+qué hace comparables a dos personas.
+
+### `SwapRequest`
+
+Referencia el `RosterDay` por identidad; no copia el turno. Invariantes:
+
+* el día es futuro y pertenece a una asignación activa del propio trabajador;
+* ese día está en estado `WORKING` y tiene al menos un `ShiftSegment`;
+* el pool es alcanzable desde esa asignación;
+* solo una solicitud `OPEN` por asignación y día —constraint parcial en
+  PostgreSQL, no solo comprobación de aplicación.
+
+Estados: `OPEN` y `CANCELLED`. Retirar no borra la fila.
+
+**Publicar no modifica el cuadrante.** El turno sigue siendo de quien lo
+publicó hasta que exista un acuerdo, y los acuerdos son la fase siguiente.
+
+### `Availability`
+
+«Puedo trabajar este día, en este grupo». Explícita siempre:
+
+* un día `UNKNOWN` **sí** puede ofrecerse —la propia acción es el dato— y
+  declararlo **no** crea un día libre en el calendario;
+* un día `REST` puede ofrecerse;
+* un día `WORKING` no: ya se trabaja.
+
+Una fila por trabajador, pool y día, con índice único, de modo que ofrecerse dos
+veces es una declaración y no dos. Retirar pone `active = false`.
+
+### Candidatos
+
+Quien publica ve quién se ha ofrecido ese día en ese pool, y nadie más lo ve.
+Sin descansos legales, sin solapes, sin ranking: eso es el matcher, y el matcher
+necesita antes los datos que esta fase produce. Ver
+[ADR 10](adr/0010-swap-requests-and-availability.md).
 
 ## SwapPool: el concepto que hay que entender
 

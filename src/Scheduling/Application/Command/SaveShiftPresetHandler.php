@@ -7,10 +7,10 @@ namespace App\Scheduling\Application\Command;
 use App\Scheduling\Application\RosterWorkspace;
 use App\Scheduling\Domain\RosterIdGenerator;
 use App\Scheduling\Domain\ShiftColor;
-use App\Scheduling\Domain\ShiftKind;
 use App\Scheduling\Domain\ShiftPreset;
 use App\Scheduling\Domain\ShiftPresets;
 use App\Scheduling\Domain\ShiftWindow;
+use App\SharedKernel\Domain\ShiftKind;
 use InvalidArgumentException;
 use Psr\Clock\ClockInterface;
 

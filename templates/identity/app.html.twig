@@ -27,8 +27,9 @@
     </section>
 
     <nav class="flex flex-col gap-3">
-        <button class="btn-primary btn-block" type="button" disabled>Buscar un cambio <span class="text-xs opacity-70">Próximamente</span></button>
-        <button class="btn-secondary btn-block" type="button" disabled>Ofrecer un turno <span class="text-xs opacity-70">Próximamente</span></button>
+        <a class="btn-primary btn-block" href="{{ path('swap_changes', {flow: 'release'}) }}">Quiero librar un turno</a>
+        <a class="btn-secondary btn-block" href="{{ path('swap_changes', {flow: 'availability'}) }}">Puedo trabajar</a>
+        <a class="btn-ghost btn-block" href="{{ path('swap_changes') }}">Ver cambios</a>
         <a class="btn-ghost btn-block" href="{{ path('workforce_assignments') }}">Mis lugares de trabajo</a>
     </nav>
 </main>

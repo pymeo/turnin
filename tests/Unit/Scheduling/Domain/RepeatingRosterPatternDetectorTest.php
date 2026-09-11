@@ -7,10 +7,10 @@ namespace App\Tests\Unit\Scheduling\Domain;
 use App\Scheduling\Domain\RepeatingRosterPatternDetector;
 use App\Scheduling\Domain\RosterDay;
 use App\Scheduling\Domain\RosterSource;
-use App\Scheduling\Domain\ShiftKind;
 use App\Scheduling\Domain\ShiftSegment;
 use App\Scheduling\Domain\ShiftWindow;
 use App\Scheduling\Domain\WorkDate;
+use App\SharedKernel\Domain\ShiftKind;
 use DateTimeImmutable;
 use PHPUnit\Framework\TestCase;
 

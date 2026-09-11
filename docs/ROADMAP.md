@@ -19,6 +19,10 @@ con tests: media funcionalidad sin pantalla no es media funcionalidad, es deuda.
 * **3. Perfil profesional + onboarding.** Flujo móvil reanudable para nombre,
   identidad, centro, categoría y destinos; crea memberships y permite actualizar
   la asignación laboral existente.
+* **6/7a. Primera vuelta de intercambios.** `Swap` con `SwapRequest` y
+  `Availability`: publicar un turno que se quiere soltar, declararse disponible
+  y ver quién podría cubrir cada turno. Todo acotado por `SwapPool`, y nada
+  toca el cuadrante. Ver [ADR 10](adr/0010-swap-requests-and-availability.md).
 * **5. Calendario personal.** `Scheduling` con `RosterDay`, `ShiftSegment`,
   `ShiftPreset` y `RosterPattern`. Tres entradas —pintar, patrón y voz/texto—
   que convergen en un `ScheduleDraft`, con preview obligatorio y política de
@@ -26,15 +30,16 @@ con tests: media funcionalidad sin pantalla no es media funcionalidad, es deuda.
 
 ## Siguiente
 
-Los números son los de la slice, no el orden de la lista: la 5 ya está hecha.
+Los números son los de la slice, no el orden de la lista: 5, 6 y la primera
+mitad de 7 ya están hechas.
 
 4. **SwapPool y Membership.** El concepto del que depende todo el matching
    (→ [DOMAIN.md](DOMAIN.md#swappool-el-concepto-que-hay-que-entender)).
-6. **Availability.** «Quiero mañanas», «podría el finde».
-7. **Solicitar un cambio simple.** El primer `SwapRequest`: un turno concreto por
-   otro turno concreto, dirigido a una persona concreta.
-8. **Recibir y aceptar una propuesta.** Cierra el primer ciclo completo. **Aquí
-   Turnin empieza a servir para algo.**
+7b. **Propuesta y aceptación.** `SwapProposal` sobre una `SwapRequest` y una
+   `Availability` que ya se conocen: quién confirma, en qué orden, qué pasa si
+   dos aceptan a la vez.
+8. **`SwapAgreement` y aplicar el cambio al calendario.** Cierra el primer ciclo
+   completo. **Aquí Turnin empieza a servir para algo.**
 9. **DirectMatcher.** Turnin propone, en vez de esperar a que el usuario elija.
 10. **Notificaciones.** Push. Sin esto, el matching no llega a tiempo.
 11. **Pro / Subscription.** Stripe. No antes: no hay nada que cobrar hasta que
@@ -85,6 +90,32 @@ Problemas reales, no una lista de deseos.
   con reglas contradictorias, no antes.
 * **REGCESS privado.** Es una fuente futura posible para clínicas y otros centros
   privados; el catálogo inicial se limita deliberadamente a sanidad pública/SNS.
+
+## Slice completada: primera vuelta de intercambios
+
+`/app/changes` muestra lo que los compañeros del propio grupo necesitan cubrir,
+lo que uno ha publicado y los días en los que se ha ofrecido. El calendario gana
+las dos acciones que alimentan esa pantalla: «Quiero quitarme este turno» sobre
+un día trabajado y «Puedo trabajar este día» sobre uno libre o sin indicar.
+
+**Implementado**
+
+* disponibilidad explícita básica, por trabajador, grupo y día;
+* publicación de un turno propio que se quiere soltar;
+* descubrimiento acotado por `SwapPool`, nunca por centro;
+* candidatos disponibles por fecha y pool, visibles solo para quien publica;
+* retirada de ambas declaraciones, sin borrar el histórico.
+
+**Pendiente**
+
+* `SwapProposal` y aceptación;
+* `SwapAgreement`;
+* modificación de calendarios al cerrarse un cambio;
+* matching automático, ranking, puentes y cadenas;
+* grados de disponibilidad, `ShiftDebt`, aprobación de supervisión.
+
+Esta pantalla de consulta es un andamio deliberado para validar la red y
+producir los datos que consumirá el matcher. El producto final no es un tablón.
 
 ## Slice completada: calendario personal
 

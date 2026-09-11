@@ -92,6 +92,9 @@ final readonly class CalendarController
             'selectedAssignment' => $selected,
             'combined' => $combined,
             'csrfToken' => $this->csrf->getToken(RosterRequest::CSRF_TOKEN_ID)->getValue(),
+            // The day sheet hosts Swap's block, and Swap guards its own
+            // mutations with its own token.
+            'swapCsrfToken' => $this->csrf->getToken('changes')->getValue(),
         ]));
     }
 

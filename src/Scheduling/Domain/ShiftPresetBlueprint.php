@@ -4,6 +4,8 @@ declare(strict_types=1);
 
 namespace App\Scheduling\Domain;
 
+use App\SharedKernel\Domain\ShiftKind;
+
 final readonly class ShiftPresetBlueprint
 {
     /** @param list<string> $aliases */

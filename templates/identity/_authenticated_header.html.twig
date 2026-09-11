@@ -1,5 +1,5 @@
 <header class="session-header" aria-label="Sesión">
-    <a href="{{ path('identity_app') }}" class="session-brand"><span class="session-mark" aria-hidden="true">T</span><span>Turnin</span></a>
+    <a href="{{ path('identity_app') }}" class="session-brand" aria-label="TURNIN, inicio"><img class="session-mark" src="/brand/turnin-mark.svg" alt=""><img src="/brand/turnin-wordmark.svg" alt="TURNIN" width="91" height="24"></a>
     <form method="post" action="{{ path('identity_logout') }}">
         <input type="hidden" name="_csrf_token" value="{{ csrf_token('logout') }}">
         <button class="btn-ghost" type="submit">Salir</button>

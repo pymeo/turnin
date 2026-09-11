@@ -13,11 +13,14 @@ Workforce
 
 Scheduling
 └── RosterDay + ShiftPreset + RosterPattern                     [IMPLEMENTADO]
+
+Swap
+└── SwapRequest + Availability                                  [IMPLEMENTADO]
 ```
 
-Swap, Matching, Notification, Billing y Coverage siguen siendo el destino, no el
-presente. De `Scheduling` existe el calendario personal; `Availability` todavía
-no.
+Matching, Notification, Billing y Coverage siguen siendo el destino, no el
+presente. De `Swap` existen la publicación de un turno y la disponibilidad
+explícita; `SwapProposal`, `SwapAgreement` y `ShiftDebt` todavía no.
 
 **Un contexto se crea cuando se implementa.** Crear veinte directorios vacíos con
 sus tres capas cada uno no es diseño, es ruido: nadie sabe cuáles están vivos, el
@@ -139,6 +142,9 @@ porque los datos de `Identity` tienen un régimen de privacidad más estricto.
 | Identity → Workforce | *Shared kernel* mínimo: solo el `UserId` | Workforce no necesita saber nada más de una persona |
 | Identity → Scheduling | Puerto `AuthenticatedWorkers`, declarado por Scheduling | Quién ha iniciado sesión lo sabe Identity; Scheduling solo necesita el id |
 | Workforce → Scheduling | Puerto `AssignedWorkers`, declarado por Scheduling | El calendario cuelga de la asignación y de su zona horaria, que son datos de Workforce |
+| Workforce → Swap | Puerto `SwapGroups`, declarado por Swap | La frontera de compatibilidad es el `SwapPool`, y Workforce es quien lo resuelve |
+| Scheduling → Swap | Puerto `RosteredDays`, declarado por Swap | Swap necesita saber si un día se trabaja; el calendario sigue siendo de Scheduling |
+| Identity → Swap | Puertos `AuthenticatedWorkers` y `WorkerDisplayNames` | Quién ha iniciado sesión y cómo se llama alguien en una tarjeta: nada más sale de Identity |
 | Workforce → Scheduling / Swap | *Customer–supplier* | Ambos preguntan a `SwapPool` si un cambio es admisible |
 | Swap → Matching | *Customer–supplier*, invocación explícita | `Swap` pide candidatos; `Matching` no conoce a `Swap` |
 | Swap → Notification | *Publisher–subscriber* (eventos) | Notificar no puede bloquear ni fallar un acuerdo |
@@ -215,6 +221,24 @@ escribe `Europe/Madrid`.
 
 Cuando exista intercambio aprobado, aplicarlo al calendario será construir un
 `ScheduleDraft` con `RosterSource::SWAP` y pasarlo por el escritor que ya existe.
+
+## Swap: la primera vuelta de intercambios implementada
+
+`Swap` contiene `SwapRequest` y `Availability`. No toca ninguna clase de otro
+contexto: declara cuatro puertos y los implementan quienes poseen el dato.
+
+```php
+// App\Swap\Domain
+interface SwapGroups          // lo implementa Workforce
+interface RosteredDays        // lo implementa Scheduling
+interface AuthenticatedWorkers, WorkerDisplayNames   // los implementa Identity
+```
+
+Es el contexto que más va a cambiar en las fases siguientes —propuestas,
+acuerdos, matching— y por eso es el que menos arrastra: no depende de nadie.
+
+`Swap` tiene su propio `WorkDate`, con el mismo significado que el de
+Scheduling y deliberadamente sin compartir la clase.
 
 ### Asignación laboral y personal volante
 

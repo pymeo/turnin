@@ -4,6 +4,7 @@ declare(strict_types=1);
 
 namespace App\Scheduling\Domain;
 
+use App\SharedKernel\Domain\ShiftKind;
 use DateTimeZone;
 use InvalidArgumentException;
 

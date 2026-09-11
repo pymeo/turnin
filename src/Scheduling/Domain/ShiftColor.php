@@ -4,6 +4,8 @@ declare(strict_types=1);
 
 namespace App\Scheduling\Domain;
 
+use App\SharedKernel\Domain\ShiftKind;
+
 /** A stable presentation token. It never participates in shift compatibility. */
 enum ShiftColor: string
 {

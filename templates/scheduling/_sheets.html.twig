@@ -49,7 +49,7 @@
 {# ── Un día ───────────────────────────────────────────────────────────────
    Quick selection, never a form. An unknown day offers the palette straight
    away; a known day offers the three things you might want to change. #}
-<dialog class="sheet" data-controller="bottom-sheet" data-calendar-target="daySheet" aria-labelledby="day-sheet-title">
+<dialog class="sheet" data-controller="bottom-sheet day-exchange" data-calendar-target="daySheet" data-day-exchange-csrf-value="{{ swapCsrfToken }}" aria-labelledby="day-sheet-title">
     <div class="sheet-inner">
         <span class="sheet-handle" aria-hidden="true"></span>
         <div class="sheet-header">
@@ -78,6 +78,27 @@
             <div class="grid grid-cols-2 gap-2"><label class="field"><span class="field-label">Tipo</span><select class="input" data-calendar-target="manualKind"><option value="other">Otro</option><option value="morning">Día</option><option value="night">Noche</option><option value="on_call">Guardia</option></select></label><label class="field"><span class="field-label">Color</span><select class="input" data-calendar-target="manualColor">{% for key in ['amber','orange','teal','blue','indigo','violet','rose','slate','emerald','cyan'] %}<option value="{{ key }}">● {{ key }}</option>{% endfor %}</select></label></div>
             <button type="button" class="btn-primary btn-block" data-action="calendar#saveManual">Guardar solo este día</button>
         </div>
+        {# Swap lives in its own context, so the day sheet only hosts the block:
+           what a day allows is decided on the server, never here. #}
+        <div class="day-exchange hidden flex-col" data-day-exchange-target="panel">
+            <p class="day-exchange-status" data-day-exchange-target="status" aria-live="polite"></p>
+            <div class="hidden flex-col gap-1" data-day-exchange-target="candidates"></div>
+            <div class="hidden flex-col gap-1" data-day-exchange-target="groups"></div>
+            <button type="button" class="btn-primary btn-block hidden" data-day-exchange-target="publish" data-action="day-exchange#publish">
+                Quiero librar este turno
+            </button>
+            <button type="button" class="btn-primary btn-block hidden" data-day-exchange-target="offer" data-action="day-exchange#offerAvailability">
+                Puedo trabajar este día
+            </button>
+            <button type="button" class="btn-ghost btn-block hidden" data-day-exchange-target="withdrawRequest" data-action="day-exchange#withdrawRequest">
+                Retirar de cambios
+            </button>
+            <button type="button" class="btn-ghost btn-block hidden" data-day-exchange-target="withdrawAvailability" data-action="day-exchange#withdrawMyAvailability">
+                Retirar disponibilidad
+            </button>
+            <p class="field-error hidden" data-day-exchange-target="error" role="alert"></p>
+        </div>
+
         <button type="button" class="btn-ghost btn-block" data-action="calendar#clearDay" data-calendar-target="daySheetClear">
             Eliminar información del día
         </button>

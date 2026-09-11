@@ -1,0 +1,87 @@
+<dialog class="sheet" data-controller="bottom-sheet" data-changes-target="sheet" aria-labelledby="changes-sheet-title">
+    <div class="sheet-inner changes-flow">
+        <span class="sheet-handle" aria-hidden="true"></span>
+        <div class="sheet-header">
+            <div>
+                <p class="eyebrow" data-changes-target="stepLabel"></p>
+                <h2 id="changes-sheet-title" data-changes-target="title"></h2>
+            </div>
+            <button class="picker-close" type="button" data-action="bottom-sheet#close" aria-label="Cerrar">×</button>
+        </div>
+
+        <section class="flow-panel" data-changes-target="releasePick">
+            <div class="flow-list" data-changes-target="shiftList"></div>
+            <div class="empty-state hidden" data-changes-target="noShifts">
+                <strong>No tienes próximos turnos que puedas publicar.</strong>
+                <span>Los turnos que ya buscan compañero aparecen marcados en esta lista.</span>
+            </div>
+        </section>
+
+        <section class="flow-panel hidden" data-changes-target="releaseConfirm">
+            <p class="text-sm text-ink-muted">Quieres librar</p>
+            <div class="flow-recap" data-changes-target="releaseRecap"></div>
+            <p class="privacy-note"><svg aria-hidden="true" viewBox="0 0 24 24" width="20" height="20"><path d="M12 3 5 6v5c0 4.7 2.8 8.3 7 10 4.2-1.7 7-5.3 7-10V6l-7-3Z" fill="none" stroke="currentColor" stroke-width="2"/><path d="m9 12 2 2 4-4" fill="none" stroke="currentColor" stroke-width="2"/></svg> Turnin enseñará este turno únicamente a compañeros compatibles.</p>
+            <div class="sheet-actions">
+                <button class="btn-primary btn-block" type="button" data-action="changes#confirmRelease">Buscar compañero</button>
+                <button class="btn-ghost btn-block" type="button" data-action="changes#backToShifts">Cancelar</button>
+            </div>
+        </section>
+
+        <section class="flow-panel hidden" data-changes-target="availabilityDates">
+            <div class="availability-calendar">
+                <div class="calendar-header">
+                    <button class="calendar-nav-button" type="button" data-action="changes#previousMonth" aria-label="Mes anterior">‹</button>
+                    <h3 data-changes-target="monthTitle"></h3>
+                    <button class="calendar-nav-button" type="button" data-action="changes#nextMonth" aria-label="Mes siguiente">›</button>
+                </div>
+                <div class="calendar-weekdays" aria-hidden="true"><span>L</span><span>M</span><span>X</span><span>J</span><span>V</span><span>S</span><span>D</span></div>
+                <div class="availability-grid" data-changes-target="dateGrid" role="grid" aria-label="Días disponibles"></div>
+            </div>
+            <p class="selection-count" data-changes-target="dateCount" aria-live="polite">Ningún día seleccionado</p>
+            <button class="btn-primary btn-block" type="button" data-action="changes#continueToKinds" data-changes-target="datesContinue" disabled>Continuar</button>
+        </section>
+
+        <section class="flow-panel hidden" data-changes-target="availabilityKinds">
+            <div class="kind-grid" role="group" aria-label="Turnos que podrías hacer">
+                <button class="kind-choice" type="button" data-kind="morning" aria-pressed="false" data-action="changes#toggleKind"><strong>Mañana</strong><small>08:00 aprox.</small><span>✓</span></button>
+                <button class="kind-choice" type="button" data-kind="evening" aria-pressed="false" data-action="changes#toggleKind"><strong>Tarde</strong><small>15:00 aprox.</small><span>✓</span></button>
+                <button class="kind-choice" type="button" data-kind="night" aria-pressed="false" data-action="changes#toggleKind"><strong>Noche</strong><small>22:00 aprox.</small><span>✓</span></button>
+                <button class="kind-choice kind-choice-any" type="button" data-kind="any" aria-pressed="false" data-action="changes#toggleKind"><strong>Cualquier turno</strong><small>Mañana, tarde o noche</small><span>✓</span></button>
+            </div>
+            <div class="sheet-actions">
+                <button class="btn-primary btn-block" type="button" data-action="changes#continueToPlaces" data-changes-target="kindsContinue" disabled>Continuar</button>
+                <button class="btn-ghost btn-block" type="button" data-action="changes#backToDates">Atrás</button>
+            </div>
+        </section>
+
+        <section class="flow-panel hidden" data-changes-target="availabilityPlaces">
+            <div class="place-list" data-changes-target="placeList"></div>
+            <div class="sheet-actions">
+                <button class="btn-primary btn-block" type="button" data-action="changes#continueToSummary" data-changes-target="placesContinue">Continuar</button>
+                <button class="btn-ghost btn-block" type="button" data-action="changes#backToKinds">Atrás</button>
+            </div>
+        </section>
+
+        <section class="flow-panel hidden" data-changes-target="availabilitySummary">
+            <div class="flow-recap" data-changes-target="availabilityRecap"></div>
+            <p class="text-sm text-ink-muted">Podrás cambiarlo cuando quieras.</p>
+            <div class="sheet-actions">
+                <button class="btn-primary btn-block" type="button" data-action="changes#saveAvailability">Guardar disponibilidad</button>
+                <button class="btn-ghost btn-block" type="button" data-action="changes#backFromSummary">Atrás</button>
+                <button class="btn-danger-link hidden" type="button" data-action="changes#deleteAvailabilityDay" data-changes-target="deleteDay"></button>
+            </div>
+        </section>
+
+        <section class="flow-panel hidden text-center" data-changes-target="success">
+            <span class="success-mark" aria-hidden="true">✓</span>
+            <h3 class="text-xl font-bold" data-changes-target="successTitle"></h3>
+            <p class="text-ink-muted" data-changes-target="successCopy"></p>
+            <div class="sheet-actions mt-3">
+                <a class="btn-primary btn-block hidden" href="{{ path('swap_changes_available') }}" data-changes-target="successAvailable">Ver turnos disponibles</a>
+                <button class="btn-secondary btn-block" type="button" data-action="changes#finish">Volver a Cambios</button>
+            </div>
+        </section>
+
+        <p class="field-error hidden" data-changes-target="flowError" role="alert"></p>
+    </div>
+</dialog>

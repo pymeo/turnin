@@ -4,6 +4,8 @@ declare(strict_types=1);
 
 namespace App\Scheduling\Domain;
 
+use App\SharedKernel\Domain\ShiftKind;
+
 /**
  * A segment a draft would create, before anything is written. Carries the
  * values already resolved from the preset so the preview shows exactly what

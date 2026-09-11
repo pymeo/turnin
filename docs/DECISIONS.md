@@ -16,6 +16,8 @@ con el motivo al lado.
 | [6](adr/0006-identity-capabilities-and-auth-flow.md) | Identidad única y capacidades separadas |
 | [7](adr/0007-external-identities.md) | Proveedores externos como credenciales |
 | [8](adr/0008-roster-and-calendar-model.md) | Calendario personal: RosterDay, snapshots y un único escritor |
+| [9](adr/0009-multiple-worker-assignments-and-exact-shift-intervals.md) | Varias asignaciones y horarios reales |
+| [10](adr/0010-swap-requests-and-availability.md) | Publicar un turno y declararse disponible |
 
 ## 2026-09-10 — No persistir tokens de Google
 

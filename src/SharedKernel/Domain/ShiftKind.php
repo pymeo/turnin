@@ -2,12 +2,13 @@
 
 declare(strict_types=1);
 
-namespace App\Scheduling\Domain;
+namespace App\SharedKernel\Domain;
 
 /**
- * The band a shift belongs to — not its exact hours. Two hospitals can start
- * the morning at 07:00 and 08:00 and both mean "mañana", which is why matching
- * will reason about the kind and display the snapshot times.
+ * The semantic band of a shift, shared by Scheduling and Swap.
+ *
+ * Hours are deliberately not identity: two centres may start a morning at
+ * different times and still mean the same kind of shift.
  */
 enum ShiftKind: string
 {
@@ -32,7 +33,6 @@ enum ShiftKind: string
         };
     }
 
-    /** The CSS token family this kind paints with. Never a literal colour. */
     public function tone(): string
     {
         return match ($this) {
@@ -41,5 +41,11 @@ enum ShiftKind: string
             self::NIGHT, self::LONG_NIGHT => 'night',
             self::ON_CALL, self::OTHER => 'oncall',
         };
+    }
+
+    /** @return non-empty-list<self> The simple choices supported by availability today. */
+    public static function basic(): array
+    {
+        return [self::MORNING, self::EVENING, self::NIGHT];
     }
 }

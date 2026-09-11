@@ -1,0 +1,50 @@
+{% extends 'base.html.twig' %}
+
+{% block title %}Turnin — Mi actividad{% endblock %}
+
+{% block body %}
+<main class="changes-shell" data-controller="changes" data-changes-csrf-value="{{ csrfToken }}">
+    {% include 'identity/_authenticated_header.html.twig' %}
+    <header class="changes-heading">
+        <a class="text-sm text-ink-muted no-underline" href="{{ path('swap_changes') }}">‹ Cambios</a>
+        <h1>Mi actividad</h1>
+        <p>Lo que quieres librar y los días en los que puedes trabajar.</p>
+    </header>
+
+    <section class="activity-section" aria-labelledby="release-title">
+        <h2 id="release-title" class="changes-section-title">Quiero librar</h2>
+        {% for request in myRequests %}
+            <article class="activity-card" data-request-id="{{ request.requestId }}">
+                <p class="swap-card-date">{{ request.dateHeadline }}</p>
+                <div><h3>{{ request.shiftLabel }}</h3><p>{{ request.hours }}</p><p><strong>{{ request.workplaceName }}</strong><br><span class="text-ink-muted">{{ request.groupLabel }}</span></p></div>
+                <p class="activity-status">
+                    {% if request.candidateCount > 0 %}<strong>{{ request.candidateCount }} {{ request.candidateCount == 1 ? 'persona disponible' : 'personas disponibles' }}</strong>{% else %}Buscando compañero · 0 personas disponibles{% endif %}
+                </p>
+                <div class="activity-actions">
+                    <a class="btn-secondary" href="{{ path('scheduling_calendar', {month: request.date|slice(0, 7)}) }}">Ver</a>
+                    <button class="btn-ghost" type="button" data-action="changes#cancelRequest" data-request-id="{{ request.requestId }}">Dejar de buscar</button>
+                </div>
+            </article>
+        {% else %}
+            <div class="empty-state"><span>No estás buscando cambio para ningún turno.</span><a class="btn-primary" href="{{ path('swap_changes', {flow: 'release'}) }}">Quiero librar un turno</a></div>
+        {% endfor %}
+    </section>
+
+    <section class="activity-section" aria-labelledby="availability-title">
+        <h2 id="availability-title" class="changes-section-title">Puedo trabajar</h2>
+        {% for day in myAvailability %}
+            <article class="activity-card" data-availability-date="{{ day.date }}">
+                <p class="swap-card-date">{{ day.dateHeadline }}</p>
+                <h3>{{ day.shiftLabels|join(' · ') }}</h3>
+                {% for place in day.places %}
+                    <p><strong>{{ place.workplaceName }}</strong><br><span class="text-ink-muted">{{ place.destinations|join(' · ') }}</span></p>
+                {% endfor %}
+                <a class="btn-secondary self-start" href="{{ path('swap_changes', {edit: day.date}) }}">Editar</a>
+            </article>
+        {% else %}
+            <div class="empty-state"><strong>¿Te vendría bien trabajar algún día?</strong><span>Indica cuándo puedes y te enseñaremos turnos compatibles.</span><a class="btn-primary" href="{{ path('swap_changes', {flow: 'availability'}) }}">Añadir disponibilidad</a></div>
+        {% endfor %}
+    </section>
+    <p class="field-error hidden" data-changes-target="error" role="alert"></p>
+</main>
+{% endblock %}

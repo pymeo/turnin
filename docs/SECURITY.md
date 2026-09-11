@@ -150,6 +150,25 @@ maneja Turnin después de los identificadores personales:
 * el calendario **no entra en la caché offline** de la PWA. Ver
   [§ Datos offline](#datos-offline).
 
+## Intercambios: qué se ve y quién lo ve
+
+Publicar un turno lo hace visible a un grupo, así que quién forma ese grupo es
+una decisión de seguridad y no de producto:
+
+* la frontera es el `SwapPool`, nunca el centro. Mismo hospital y distinto pool
+  no se ven, y hay tests de dominio, HTTP y navegador que lo comprueban;
+* ningún `swapPoolId`, `assignmentId` o id de solicitud que llegue del navegador
+  se usa sin volver a resolverlo contra la sesión en `SwapWorkspace`. Un id
+  ajeno no resuelve, así que no hay camino que lo cargue en una mutación;
+* una tarjeta lleva **solo el nombre de pila** de quien publica. El email, el
+  teléfono, el DNI y los apellidos se quedan donde los dejó § Identificadores
+  personales: el puerto `WorkerDisplayNames` no puede devolver otra cosa;
+* quién se ha ofrecido para un turno lo ve **únicamente quien lo publicó**. Un
+  compañero ve el turno; la cola de interesados es privada;
+* las mutaciones van por `POST` con token CSRF propio (`X-CSRF-TOKEN`), y las
+  respuestas de acceso denegado son todas iguales: decir «esa solicitud es de
+  otro pool» confirmaría que existe y de qué centro viene.
+
 ## `/health`
 
 Es público y sin autenticar, porque lo consultan Docker y el balanceador antes de

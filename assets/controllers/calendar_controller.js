@@ -20,6 +20,8 @@ export default class extends Controller {
 		this.element.addEventListener('calendar:changed', (event) => this.changed(event));
 		this.element.addEventListener('paint:mode', (event) => this.paintModeChanged(event));
 		this.element.addEventListener('pattern:ready', () => closeSheet(this.patternSheetTarget));
+		// Publishing or withdrawing a shift changes the badges, not the roster.
+		this.element.addEventListener('exchange:changed', () => this.markExchange());
 		// Delegated once on the root: the grid element itself is replaced on
 		// every month change, and a listener bound to it would go with it.
 		this.element.addEventListener('click', (event) => this.dayClicked(event));
@@ -27,6 +29,7 @@ export default class extends Controller {
 		// button: only offer the direct one where the browser can honour it.
 		if (!this.speechAvailable()) this.voiceChoiceTarget.classList.add('hidden');
 		this.refreshDetection();
+		this.markExchange();
 	}
 
 	previous() {
@@ -52,6 +55,7 @@ export default class extends Controller {
 			this.summaryTarget.outerHTML = payload.summary;
 			this.dispatch('monthLoaded', { detail: { month: payload.month }, prefix: 'calendar' });
 			this.refreshDetection();
+			this.markExchange();
 		} catch (error) {
 			this.report(error);
 		}
@@ -77,6 +81,10 @@ export default class extends Controller {
 			? 'Aún no has indicado tu turno.'
 			: described.charAt(0).toLocaleUpperCase('es') + described.slice(1));
 		this.daySheetClearTarget.classList.toggle('hidden', unknown);
+		// Swap decides what this day allows; the calendar only says which day.
+		document.dispatchEvent(new CustomEvent('exchange:day', {
+			detail: { date: this.selectedDate, assignmentId: this.hasAssignmentValue ? this.assignmentValue : '' },
+		}));
 		openSheet(this.daySheetTarget);
 	}
 
@@ -201,6 +209,32 @@ export default class extends Controller {
 			detail: { slots: this.detected.slots, from: this.detected.repeatsFrom },
 		}));
 		openSheet(this.patternSheetTarget);
+	}
+
+	/**
+	 * A dot in the corner of a cell whose shift is published, and one for a day
+	 * already offered. Deliberately additive: the cell's colour still says which
+	 * shift it is, which is the thing somebody is scanning the month for.
+	 */
+	async markExchange() {
+		if (!this.hasAssignmentValue || !this.assignmentValue) return;
+		for (const mark of this.element.querySelectorAll('.calendar-cell-published')) mark.remove();
+		try {
+			const url = `/app/changes/mes?month=${encodeURIComponent(this.monthValue)}&assignment=${encodeURIComponent(this.assignmentValue)}`;
+			const payload = await getJson(url);
+			const marks = payload.result;
+			if (!marks) return;
+			for (const date of [...marks.publishedDates, ...marks.availableDates]) {
+				const cell = this.element.querySelector(`[data-day="${date}"]`);
+				if (!cell || cell.querySelector('.calendar-cell-published')) continue;
+				const dot = document.createElement('span');
+				dot.className = 'calendar-cell-published';
+				cell.append(dot);
+			}
+		} catch {
+			// Badges are decoration on top of the month. A calendar that fails
+			// to render because a second context is down is a worse calendar.
+		}
 	}
 
 	shiftMonth(offset) {

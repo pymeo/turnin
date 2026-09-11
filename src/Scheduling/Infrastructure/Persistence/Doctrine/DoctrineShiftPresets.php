@@ -5,10 +5,10 @@ declare(strict_types=1);
 namespace App\Scheduling\Infrastructure\Persistence\Doctrine;
 
 use App\Scheduling\Domain\ShiftColor;
-use App\Scheduling\Domain\ShiftKind;
 use App\Scheduling\Domain\ShiftPreset;
 use App\Scheduling\Domain\ShiftPresets;
 use App\Scheduling\Domain\ShiftWindow;
+use App\SharedKernel\Domain\ShiftKind;
 use DateTimeImmutable;
 use Doctrine\DBAL\Connection;
 

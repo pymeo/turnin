@@ -1,82 +1,25 @@
 {% extends 'base.html.twig' %}
 
-{% block title %}Turnin — tus turnos, tu tiempo{% endblock %}
+{% block title %}TURNIN — Cambia turnos. Sigue avanzando.{% endblock %}
 
 {% block body %}
-<main class="page flex flex-col gap-10" data-controller="install">
-    <header class="flex flex-col items-start gap-4">
-        <img src="/icons/icon.svg" alt="" width="56" height="56" class="rounded-[1rem]">
-
-        <div class="flex flex-col gap-2">
-            <h1 class="text-4xl font-bold tracking-tight">Turnin</h1>
-            <p class="text-xl font-medium text-ink-muted">Tus turnos. Tu tiempo.</p>
+<main class="marketing-shell" data-controller="install">
+    <section class="marketing-copy">
+        <img class="brand-lockup" src="/brand/turnin-logo.svg" alt="TURNIN" width="230" height="64">
+        <p class="eyebrow">Más flexibilidad para quienes siempre están ahí</p>
+        <h1 class="marketing-title">Tus turnos deberían adaptarse a tu vida.</h1>
+        <p class="max-w-lg text-lg leading-relaxed text-ink-muted">Encuentra compañeros compatibles y organiza tus turnos de una forma mucho más sencilla.</p>
+        <div class="grid w-full gap-3 sm:w-auto sm:grid-cols-2">
+            <a href="{{ path('identity_register') }}" class="btn-primary">Empezar</a>
+            <a href="{{ path('identity_login') }}" class="btn-secondary">Iniciar sesión</a>
+            <button type="button" class="btn-secondary sm:col-span-2" data-install-target="button" data-action="install#install" hidden>Instalar TURNIN</button>
         </div>
-
-        <p class="text-lg text-balance">
-            Encuentra cambios compatibles sin perseguir a todo el grupo.
-        </p>
-    </header>
-
-    {#
-       A concrete example beats an abstract description: this is the whole
-       product in two cards. It is illustrative, not live data.
-    #}
-    <section aria-labelledby="ejemplo" class="flex flex-col gap-3">
-        <h2 id="ejemplo" class="card-title">Un cambio, así de simple</h2>
-
-        <div class="card flex flex-col gap-1">
-            <span class="text-xs font-semibold tracking-wide text-ink-muted uppercase">Tú das</span>
-            <div class="flex items-center justify-between gap-3">
-                <span class="text-lg font-semibold">Sáb 19</span>
-                <span class="chip-night">Noche</span>
-            </div>
-        </div>
-
-        <div class="flex justify-center" aria-hidden="true">
-            <span class="text-2xl text-ink-muted">↕</span>
-        </div>
-
-        <div class="card flex flex-col gap-1">
-            <span class="text-xs font-semibold tracking-wide text-ink-muted uppercase">Tú recibes</span>
-            <div class="flex items-center justify-between gap-3">
-                <span class="text-lg font-semibold">Mar 22</span>
-                <span class="chip-morning">Mañana</span>
-            </div>
-        </div>
-    </section>
-
-    <section class="flex flex-col gap-3">
-        <a href="{{ path('identity_register') }}" class="btn-primary btn-block">Crear cuenta</a>
-        <a href="{{ path('identity_login') }}" class="btn-secondary btn-block">Iniciar sesión</a>
-
-        {# Revealed by the install controller only when the browser offers it. #}
-        <button type="button"
-                class="btn-secondary btn-block"
-                data-install-target="button"
-                data-action="install#install"
-                hidden>
-            Instalar la app
-        </button>
-    </section>
-
-    <section id="como-funciona" class="flex flex-col gap-3">
-        <h2 class="card-title">Cómo va a funcionar</h2>
-        <ol class="flex flex-col gap-3">
-            <li class="card">
-                <p class="font-semibold">1. Tu calendario</p>
-                <p class="text-ink-muted">Introduces tus turnos y con quién puedes cambiarlos.</p>
-            </li>
-            <li class="card">
-                <p class="font-semibold">2. Dices qué necesitas</p>
-                <p class="text-ink-muted">«Quiero librar el sábado 19», y poco más.</p>
-            </li>
-            <li class="card">
-                <p class="font-semibold">3. Turnin busca por ti</p>
-                <p class="text-ink-muted">Cruza calendarios y disponibilidad, y te propone lo que encaja.</p>
-            </li>
+        <ol class="mt-3 grid gap-3 sm:grid-cols-3" aria-label="Cómo funciona">
+            <li class="card"><strong>1. Tu turno</strong><p class="mt-1 text-sm text-ink-muted">Dices cuál quieres librar.</p></li>
+            <li class="card"><strong>2. Tu equipo</strong><p class="mt-1 text-sm text-ink-muted">Turnin busca a alguien compatible.</p></li>
+            <li class="card"><strong>3. Más libertad</strong><p class="mt-1 text-sm text-ink-muted">Ves posibilidades sin perseguir al grupo.</p></li>
         </ol>
-
-        <p class="alert-info">Empieza definiendo tu centro y tu grupo de trabajo. Los cambios y aprobaciones llegarán después.</p>
     </section>
+    <figure class="marketing-visual"><img src="/brand/turnin-workers.svg" alt="Profesionales de sanidad, policía, emergencias y servicios unidos como equipo" width="920" height="380"><figcaption class="mt-2 text-center font-semibold text-[var(--turnin-petroleum)]">Profesionales que hacen que todo funcione.</figcaption></figure>
 </main>
 {% endblock %}

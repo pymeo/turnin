@@ -59,6 +59,7 @@ Hoy existen físicamente tres módulos bajo `Platform` y un contexto de producto
 | `Platform\Identity` | Cuenta, contraseña, OAuth, sesión y perfil personal protegido.        |
 | `Workforce`        | Catálogo, asignación, pools y onboarding laboral reanudable.            |
 | `Scheduling`       | El calendario personal: días, turnos, patrones y su entrada por voz.    |
+| `Swap`             | Qué quiere hacer alguien con sus turnos y cuándo puede trabajar.        |
 
 No hay más porque no hay más producto todavía. El mapa de contextos previsto está
 en [CONTEXT_MAP.md](CONTEXT_MAP.md); se crean cuando se implementan, no antes.

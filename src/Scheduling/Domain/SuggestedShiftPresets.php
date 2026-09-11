@@ -4,6 +4,8 @@ declare(strict_types=1);
 
 namespace App\Scheduling\Domain;
 
+use App\SharedKernel\Domain\ShiftKind;
+
 /**
  * What we put in front of somebody opening the calendar for the first time.
  *

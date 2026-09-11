@@ -1,0 +1,33 @@
+{% extends 'base.html.twig' %}
+
+{% block title %}Turnin — Turnos disponibles{% endblock %}
+
+{% block body %}
+<main class="changes-shell" data-controller="changes" data-changes-csrf-value="{{ csrfToken }}">
+    {% include 'identity/_authenticated_header.html.twig' %}
+    <header class="changes-heading">
+        <a class="text-sm text-ink-muted no-underline" href="{{ path('swap_changes') }}">‹ Cambios</a>
+        <h1>Turnos disponibles para ti</h1>
+        <p>Solo ves turnos de compañeros compatibles contigo.</p>
+    </header>
+    <section class="available-grid" aria-label="Turnos disponibles">
+        {% for request in openRequests %}
+            <article class="activity-card" data-request-id="{{ request.requestId }}">
+                <p class="swap-card-date">{{ request.dateHeadline }}</p>
+                <h2>{{ request.shiftLabel }}</h2>
+                <p>{{ request.hours }}{% if request.endsNextDay %} <small>(+1 día)</small>{% endif %}</p>
+                <p><strong>{{ request.groupLabel }}</strong><br><span class="text-ink-muted">{{ request.workplaceName }}</span></p>
+                <p>{{ request.authorName }} quiere librar este turno.</p>
+                {% if request.alreadyAvailable %}
+                    <p class="swap-card-done">✓ Encaja con tu disponibilidad</p>
+                {% else %}
+                    <button class="btn-primary btn-block" type="button" data-action="changes#offer" data-request-id="{{ request.requestId }}">Puedo hacerlo</button>
+                {% endif %}
+            </article>
+        {% else %}
+            <div class="empty-state"><strong>Ahora mismo no hay turnos compatibles disponibles.</strong><span>Cuando aparezca alguno que encaje contigo lo verás aquí.</span></div>
+        {% endfor %}
+    </section>
+    <p class="field-error hidden" data-changes-target="error" role="alert"></p>
+</main>
+{% endblock %}

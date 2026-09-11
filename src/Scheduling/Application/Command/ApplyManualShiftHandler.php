@@ -10,9 +10,9 @@ use App\Scheduling\Domain\ScheduleDraft;
 use App\Scheduling\Domain\ScheduleDraftEntry;
 use App\Scheduling\Domain\SegmentProposal;
 use App\Scheduling\Domain\ShiftColor;
-use App\Scheduling\Domain\ShiftKind;
 use App\Scheduling\Domain\ShiftWindow;
 use App\Scheduling\Domain\WorkDate;
+use App\SharedKernel\Domain\ShiftKind;
 use InvalidArgumentException;
 
 final readonly class ApplyManualShiftHandler

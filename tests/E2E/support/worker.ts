@@ -1,4 +1,4 @@
-import { test as base, type Page, type TestInfo } from '@playwright/test';
+import { expect, test as base, type Page, type TestInfo } from '@playwright/test';
 import fs from 'node:fs';
 import path from 'node:path';
 
@@ -16,7 +16,18 @@ function identityDocument(seed: number): string {
  * creates. Doing it through the interface is the only way the test proves the
  * two slices actually fit together.
  */
-export async function onboardWorker(page: Page, testInfo: TestInfo, label: string): Promise<void> {
+/**
+ * @param group when two workers must land in the *same* swap pool, both the
+ *              category and the destination have to be pinned: the pool key is
+ *              built from centre + category + destination, and the search
+ *              rankings that decide "the first result" drift with usage.
+ */
+export async function onboardWorker(
+	page: Page,
+	testInfo: TestInfo,
+	label: string,
+	group?: { category: string; destination: string; additionalDestinations?: string[] },
+): Promise<void> {
 	const offset = PROJECTS.indexOf(testInfo.project.name) + 1;
 	const seed = (Date.now() + offset * 7919 + label.length * 104_729) % 100_000_000;
 	const email = `${label}-${testInfo.project.name}-${seed}@example.test`;
@@ -47,19 +58,35 @@ export async function onboardWorker(page: Page, testInfo: TestInfo, label: strin
 	await workplaceStep.getByRole('button', { name: 'Continuar' }).click();
 
 	const categoryStep = page.locator('[data-step="category"]');
-	await categoryStep.getByRole('combobox').fill('TCAE');
-	await categoryStep.locator('[role="option"]').first().click();
+	await categoryStep.getByRole('combobox').fill(group?.category ?? 'TCAE');
+	const categoryOption = group
+		? categoryStep.locator('[role="option"]').filter({ hasText: group.category }).first()
+		: categoryStep.locator('[role="option"]').first();
+	await categoryOption.click();
 	await categoryStep.getByRole('button', { name: 'Continuar' }).click();
 
 	// Whichever unit this centre suggests first: the calendar does not care
 	// which destination the worker has, only that they have one.
+	// Whichever unit this centre suggests first, unless the caller needs two
+	// workers in the *same* swap pool — the suggestion order depends on how many
+	// people already chose each unit, so it cannot be relied on for that.
 	const destinationStep = page.locator('[data-step="destination"]');
-	await destinationStep.locator('[role="option"]').first().click();
+	if (group) {
+		await destinationStep.getByRole('combobox').fill(group.destination);
+		await destinationStep.locator('[role="option"]').filter({ hasText: group.destination }).first().click();
+	} else {
+		await destinationStep.locator('[role="option"]').first().click();
+	}
 	await destinationStep.getByRole('button', { name: 'Continuar' }).click();
 
 	// The label of this button depends on whether anything was picked
 	// ("Omitir por ahora" / "Continuar"), so it is addressed by its target.
 	const additionalStep = page.locator('[data-step="additional"]');
+	for (const destination of group?.additionalDestinations ?? []) {
+		await additionalStep.getByRole('combobox').fill(destination);
+		await additionalStep.locator('[role="option"]').filter({ hasText: destination }).first().click();
+		await expect(additionalStep.locator('.selected-item').filter({ hasText: destination })).toBeVisible();
+	}
 	await additionalStep.locator('[data-onboarding-target="additionalButton"]').click();
 
 	await page.locator('[data-step="summary"]').getByRole('button', { name: 'Entrar en Turnin' }).click();

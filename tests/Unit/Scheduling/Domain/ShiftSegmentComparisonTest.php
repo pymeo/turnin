@@ -5,9 +5,9 @@ declare(strict_types=1);
 namespace App\Tests\Unit\Scheduling\Domain;
 
 use App\Scheduling\Domain\ShiftColor;
-use App\Scheduling\Domain\ShiftKind;
 use App\Scheduling\Domain\ShiftSegment;
 use App\Scheduling\Domain\ShiftWindow;
+use App\SharedKernel\Domain\ShiftKind;
 use PHPUnit\Framework\TestCase;
 
 /**

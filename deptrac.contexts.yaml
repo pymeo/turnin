@@ -34,6 +34,16 @@ parameters:
               - type: classNameRegex
                 value: '#^App\\Scheduling\\#'
 
+        - name: Swap
+          collectors:
+              - type: classNameRegex
+                value: '#^App\\Swap\\#'
+
+        - name: SharedKernel
+          collectors:
+              - type: classNameRegex
+                value: '#^App\\SharedKernel\\#'
+
         # The kernel: framework glue that belongs to no context. Narrow on
         # purpose — see the note about uncovered tokens above.
         - name: AppRoot
@@ -53,8 +63,10 @@ parameters:
     ruleset:
         PlatformSystem:
             - Vendor
+            - SharedKernel
         PlatformWeb:
             - Vendor
+            - SharedKernel
         # Workforce implements a port Scheduling declares (AssignedWorkers), which
         # is the customer-supplier direction docs/CONTEXT_MAP.md describes: the
         # consumer states what it needs, the owner of the data provides it. The
@@ -62,8 +74,24 @@ parameters:
         Workforce:
             - Vendor
             - Scheduling
+            - Swap
+            - SharedKernel
 
+        # Scheduling implements Swap's RosteredDays port for the same reason:
+        # Swap states what it needs about a calendar, Scheduling provides it and
+        # keeps its aggregates to itself.
         Scheduling:
+            - Vendor
+            - Swap
+            - SharedKernel
+
+        # Swap depends on nobody. Pools, calendars and people all arrive through
+        # ports it declares, which is what lets it be the context that changes
+        # most in the next slices.
+        Swap:
+            - Vendor
+            - SharedKernel
+        SharedKernel:
             - Vendor
         AppRoot:
             - Vendor
