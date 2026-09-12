@@ -45,6 +45,33 @@ final class GoogleOAuthFlowTest extends WebTestCase
         self::assertSelectorTextContains('[role="alert"]', 'No hemos podido iniciar sesión con Google');
     }
 
+    /**
+     * Cloudflare terminates TLS and reaches this machine over plain HTTP, so the
+     * public scheme only survives if the proxy hop is trusted end to end. If it
+     * is not, Symfony builds an http:// callback, Google rejects it as an
+     * unregistered redirect URI and the whole login breaks in production only.
+     */
+    public function test_the_public_https_origin_survives_the_reverse_proxy_hop(): void
+    {
+        $client = static::createClient();
+        $client->request('GET', 'http://dev.turnin.es/auth/google', server: ['HTTP_X_FORWARDED_PROTO' => 'https']);
+
+        self::assertResponseRedirects();
+        $location = (string) $client->getResponse()->headers->get('Location');
+        parse_str((string) parse_url($location, \PHP_URL_QUERY), $parameters);
+        self::assertSame('https://dev.turnin.es/auth/google/callback', $parameters['redirect_uri'] ?? null);
+    }
+
+    public function test_callback_without_a_code_is_rejected_without_contacting_google(): void
+    {
+        $client = static::createClient();
+        $client->request('GET', 'https://dev.turnin.es/auth/google/callback');
+
+        self::assertResponseRedirects('/login');
+        $client->followRedirect();
+        self::assertSelectorTextContains('[role="alert"]', 'No hemos podido iniciar sesión con Google');
+    }
+
     public function test_login_and_registration_offer_one_shared_google_entry_point(): void
     {
         $client = static::createClient();

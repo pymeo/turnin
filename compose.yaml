@@ -15,8 +15,8 @@ services:
             APP_DEBUG: ${APP_DEBUG:-1}
             # PHP-FPM is only reachable through Caddy, so trusting the immediate
             # proxy is what lets Symfony recover the original scheme and host.
+            # Which headers are trusted is fixed in config/packages/framework.yaml.
             SYMFONY_TRUSTED_PROXIES: REMOTE_ADDR
-            SYMFONY_TRUSTED_HEADERS: x-forwarded-for,x-forwarded-proto,x-forwarded-port
             XDEBUG_MODE: ${XDEBUG_MODE:-off}
         extra_hosts:
             - "host.docker.internal:host-gateway"

@@ -1,4 +1,18 @@
-<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 245 64" role="img" aria-label="TURNIN">
-  <g transform="translate(0)"><circle cx="32" cy="32" r="30" fill="#0F4C5C"/><path d="M16.5 28.5A16.7 16.7 0 0 1 43.8 18" fill="none" stroke="#FFF" stroke-width="5" stroke-linecap="round"/><path d="m42 12.5 8.5 3.2-6.7 6.1Z" fill="#FFF"/><path d="M47.5 35.5A16.7 16.7 0 0 1 20.2 46" fill="none" stroke="#14B8A6" stroke-width="5" stroke-linecap="round"/><path d="m22 51.5-8.5-3.2 6.7-6.1Z" fill="#14B8A6"/><path d="M24 25.5h16M32 25.5v17" fill="none" stroke="#FFF" stroke-width="5" stroke-linecap="round"/></g>
-  <text x="76" y="43" fill="#0F4C5C" font-family="Inter,ui-sans-serif,system-ui,sans-serif" font-size="38" font-weight="800" letter-spacing="-1">TURN</text><text x="194" y="43" fill="#14B8A6" font-family="Inter,ui-sans-serif,system-ui,sans-serif" font-size="38" font-weight="800" letter-spacing="-1">IN</text>
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 232 68" role="img" aria-label="TURNIN">
+  <title>TURNIN</title>
+  <defs>
+    <linearGradient id="logo-up" x1="7" y1="31" x2="58" y2="14" gradientUnits="userSpaceOnUse"><stop stop-color="#0F4C5C"/><stop offset=".5" stop-color="#087C83"/><stop offset=".78" stop-color="#14B8A6"/><stop offset="1" stop-color="#20D1BB"/></linearGradient>
+    <linearGradient id="logo-down" x1="57" y1="37" x2="7" y2="53" gradientUnits="userSpaceOnUse"><stop stop-color="#0F4C5C"/><stop offset=".48" stop-color="#14B8A6"/><stop offset="1" stop-color="#20D1BB"/></linearGradient>
+    <linearGradient id="logo-t" x1="25" y1="22" x2="41" y2="48" gradientUnits="userSpaceOnUse"><stop stop-color="#216B7B"/><stop offset="1" stop-color="#0F4C5C"/></linearGradient>
+    <linearGradient id="logo-in" x1="176" y1="0" x2="228" y2="0" gradientUnits="userSpaceOnUse"><stop stop-color="#109F96"/><stop offset="1" stop-color="#1CCDB8"/></linearGradient>
+  </defs>
+  <g transform="translate(1 2)">
+    <path d="M10.7 24.7A23.5 23.5 0 0 1 50.2 18" fill="none" stroke="url(#logo-up)" stroke-width="7.2" stroke-linecap="round"/>
+    <path d="m47.4 8.8 11.2 7.8-12 6.2Z" fill="url(#logo-up)"/>
+    <path d="M53.3 41.3A23.5 23.5 0 0 1 13.8 48" fill="none" stroke="url(#logo-down)" stroke-width="7.2" stroke-linecap="round"/>
+    <path d="m16.6 57.2-11.2-7.8 12-6.2Z" fill="url(#logo-down)"/>
+    <path d="M23.8 29h16.4M32 29v14.6" fill="none" stroke="url(#logo-t)" stroke-width="6.6" stroke-linecap="round"/>
+  </g>
+  <text x="76" y="46" fill="#0F4C5C" font-family="Inter,ui-sans-serif,system-ui,sans-serif" font-size="39" font-weight="800" letter-spacing="-.9">TURN</text>
+  <text x="176" y="46" fill="url(#logo-in)" font-family="Inter,ui-sans-serif,system-ui,sans-serif" font-size="39" font-weight="800" letter-spacing="-.9">IN</text>
 </svg>

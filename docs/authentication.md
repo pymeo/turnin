@@ -47,8 +47,18 @@ GOOGLE_OAUTH_CLIENT_ID=...
 GOOGLE_OAUTH_CLIENT_SECRET=...
 ```
 
-Producción los inyecta desde el gestor de secretos del despliegue. `DEFAULT_URI`
-debe ser el origen HTTPS público. Caddy y Symfony confían únicamente en proxies
+No hace falta `GOOGLE_REDIRECT_URI`: la URL del callback la genera el router de
+Symfony desde `identity_google_callback` y el origen HTTPS reconocido tras el
+proxy. Un string repetido es justo lo que se desincroniza del cliente de Google.
+
+Para probar el login de verdad hace falta que `dev.turnin.es` resuelva a esta
+máquina —`make tunnel-up`, ver
+[DEVELOPMENT.md](DEVELOPMENT.md#desarrollo-remoto-con-devturnines)—. Con el túnel
+apagado, `/auth/google` sigue redirigiendo a Google, pero Google no puede volver.
+
+Producción los inyecta desde el gestor de secretos del despliegue. `DEFAULT_URI` (en `.env.dev`,
+`https://dev.turnin.es`) debe ser el origen HTTPS público: es lo que usan los
+comandos de consola, donde no hay petición de la que deducir el host. Caddy y Symfony confían únicamente en proxies
 privados para interpretar `X-Forwarded-Proto`.
 
 En Google Cloud Console, el OAuth Client de tipo **Web application** debe tener

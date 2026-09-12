@@ -17,8 +17,8 @@ final class HomePageTest extends WebTestCase
         $crawler = $client->request('GET', '/');
 
         self::assertResponseIsSuccessful();
-        self::assertSelectorTextContains('h1', 'Turnin');
-        self::assertSelectorTextContains('body', 'Tus turnos. Tu tiempo.');
+        self::assertSelectorTextContains('h1', 'Tus turnos deberían adaptarse a tu vida.');
+        self::assertSelectorTextContains('body', 'Encuentra compañeros compatibles');
     }
 
     public function test_it_offers_registration_and_login_actions(): void
@@ -26,9 +26,23 @@ final class HomePageTest extends WebTestCase
         $client = static::createClient();
         $crawler = $client->request('GET', '/');
 
-        self::assertCount(1, $crawler->filter('a.btn-primary[href="/register"]'));
-        self::assertSelectorTextContains('a.btn-primary', 'Crear cuenta');
+        self::assertCount(1, $crawler->filter('a[href="/register"]'));
+        self::assertSelectorTextContains('a[href="/register"]', 'Empezar');
         self::assertCount(1, $crawler->filter('a.btn-secondary[href="/login"]'));
+    }
+
+    /**
+     * Google is the primary way into Turnin, so the call to action has to reach
+     * the OAuth entry point itself — not an anchor, and not a screen that merely
+     * links to it.
+     */
+    public function test_the_primary_call_to_action_starts_google_sign_in(): void
+    {
+        $client = static::createClient();
+        $crawler = $client->request('GET', '/');
+
+        self::assertCount(1, $crawler->filter('a.btn-primary[href="/auth/google"]'));
+        self::assertSelectorTextContains('a[href="/auth/google"]', 'Continuar con Google');
     }
 
     /**
@@ -54,6 +68,6 @@ final class HomePageTest extends WebTestCase
         $client = static::createClient();
         $client->request('GET', '/');
 
-        self::assertSelectorTextContains('body', 'Empieza definiendo tu centro');
+        self::assertSelectorTextContains('body', 'Turnin busca a alguien compatible.');
     }
 }

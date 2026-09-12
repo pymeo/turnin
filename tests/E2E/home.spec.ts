@@ -11,17 +11,17 @@ test.describe('home', () => {
 		const response = await page.goto('/');
 
 		expect(response?.status()).toBe(200);
-		await expect(page.getByRole('heading', { level: 1 })).toHaveText('Turnin');
-		await expect(page.getByText('Tus turnos. Tu tiempo.')).toBeVisible();
+		await expect(page.getByRole('heading', { level: 1 })).toHaveText('Tus turnos deberían adaptarse a tu vida.');
+		await expect(page.getByText('Encuentra compañeros compatibles y organiza tus turnos de una forma mucho más sencilla.')).toBeVisible();
 	});
 
-	test('shows the swap example that explains the product', async ({ page }) => {
+	test('shows the three steps that explain the product', async ({ page }) => {
 		await page.goto('/');
 
-		await expect(page.getByText('Tú das')).toBeVisible();
-		await expect(page.getByText('Tú recibes')).toBeVisible();
-		await expect(page.getByText('Noche')).toBeVisible();
-		await expect(page.getByText('Mañana')).toBeVisible();
+		await expect(page.getByText('1. Tu turno')).toBeVisible();
+		await expect(page.getByText('2. Tu equipo')).toBeVisible();
+		await expect(page.getByText('3. Más libertad')).toBeVisible();
+		await expect(page.getByText('Turnin busca a alguien compatible.')).toBeVisible();
 	});
 
 	test('never scrolls sideways', async ({ page }) => {
@@ -39,7 +39,7 @@ test.describe('home', () => {
 	test('puts the primary action in reach of one thumb', async ({ page }) => {
 		await page.goto('/');
 
-		const cta = page.getByRole('link', { name: 'Crear cuenta' });
+		const cta = page.getByRole('link', { name: 'Continuar con Google' });
 		await expect(cta).toBeVisible();
 
 		const box = await cta.boundingBox();
@@ -52,11 +52,11 @@ test.describe('home', () => {
 	test('actually loaded Tailwind rather than falling back to unstyled HTML', async ({ page }) => {
 		await page.goto('/');
 
-		const cta = page.getByRole('link', { name: 'Crear cuenta' });
+		const cta = page.getByRole('link', { name: 'Continuar con Google' });
 
-		// An unstyled <a> is transparent; the brand button is not.
-		const background = await cta.evaluate((el) => getComputedStyle(el).backgroundColor);
-		expect(background).not.toBe('rgba(0, 0, 0, 0)');
+		// The principal action carries the concentrated brand gradient.
+		const background = await cta.evaluate((el) => getComputedStyle(el).backgroundImage);
+		expect(background).toContain('linear-gradient');
 
 		// And the design tokens compiled, not just some stylesheet.
 		const brand = await page.evaluate(() =>
@@ -68,7 +68,7 @@ test.describe('home', () => {
 	test('the call to action leads to registration', async ({ page }) => {
 		await page.goto('/');
 
-		await page.getByRole('link', { name: 'Crear cuenta' }).click();
+		await page.getByRole('link', { name: 'Empezar' }).click();
 		await expect(page).toHaveURL(/\/register$/);
 	});
 

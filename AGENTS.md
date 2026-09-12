@@ -137,8 +137,10 @@ parte que le sirve al que venga después.
 Está documentado como futuro, no como pendiente inmediato: Stripe y
 suscripciones, el motor de matching completo, cambios encadenados, push, emails,
 chat, backoffice, IA, OCR, pagos entre trabajadores y Coverage B2B. El catálogo
-oficial de centros ya está implementado; Identity y Google OAuth son la siguiente
-slice y ya no están prohibidos para próximas iteraciones.
+oficial de centros ya está implementado, y también Identity con login por Google:
+`/auth/google`, callback, sesión y logout funcionan de extremo a extremo contra
+`https://dev.turnin.es` (→ [authentication.md](docs/authentication.md) y
+[DEVELOPMENT.md](docs/DEVELOPMENT.md#desarrollo-remoto-con-devturnines)).
 
 Y nunca, en ninguna iteración: **convertir los favores entre trabajadores en
 dinero, tokens negociables o moneda interna.** Ver

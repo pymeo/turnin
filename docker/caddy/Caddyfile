@@ -1,14 +1,36 @@
 {
 	# Development runs on plain HTTP behind localhost; TLS is terminated by the
-	# platform in production (see Caddyfile.prod).
+	# platform in production (see Caddyfile.prod), and by Cloudflare when the
+	# origin is published through the tunnel (see docs/DEVELOPMENT.md).
 	auto_https off
 	admin off
+	servers {
+		# Same rule as Caddyfile.prod. Without this Caddy overwrites the incoming
+		# X-Forwarded-Proto with the scheme it received (http), Symfony builds
+		# http:// URLs and the Google callback stops matching the registered
+		# redirect URI. The listener is bound to 127.0.0.1 on the host, so the only
+		# peers that can reach it are the Docker bridge gateway and, through it,
+		# cloudflared — never the Internet.
+		trusted_proxies static private_ranges
+	}
 }
 
 :80 {
 	root * /var/www/app/public
 
 	encode zstd gzip
+
+	# The profiler is a development tool, and dev.turnin.es is on the public
+	# Internet. Its configuration panel renders $_SERVER — which in development
+	# holds the real Google client secret from .env.local — and every panel
+	# replays sessions, queries and request bodies. So it stays fully available
+	# on localhost, where docs/DEVELOPMENT.md says it is, and does not exist at
+	# all for anything arriving through the tunnel.
+	@public_debug_tools {
+		host dev.turnin.es
+		path /_profiler /_profiler/* /_wdt /_wdt/*
+	}
+	respond @public_debug_tools 404
 
 	# The service worker must be able to claim the whole origin. Serving it from
 	# / with a no-cache header is what lets a deploy actually replace it.

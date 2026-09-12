@@ -93,7 +93,7 @@ final readonly class DeclareAvailabilityHandler
             $kinds[] = $kind;
         }
 
-        /** @var non-empty-list<ShiftKind> $kinds */
+        /* @var non-empty-list<ShiftKind> $kinds */
         return $kinds;
     }
 

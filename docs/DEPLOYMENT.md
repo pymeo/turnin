@@ -2,6 +2,10 @@
 
 > Turnin todavía no está desplegado en ningún sitio. Este documento describe lo
 > que la imagen y la configuración ya soportan, no una infraestructura existente.
+>
+> `dev.turnin.es` **no es un despliegue**: es la máquina de desarrollo publicada
+> por un Cloudflare Tunnel, y se apaga con ella. Está en
+> [DEVELOPMENT.md](DEVELOPMENT.md#desarrollo-remoto-con-devturnines).
 
 ## La imagen
 
@@ -104,6 +108,14 @@ Confía en `X-Forwarded-*` **solo del salto inmediato privado**
 (`trusted_proxies static private_ranges`), y Symfony hace lo propio con
 `SYMFONY_TRUSTED_PROXIES`. Confiar en cualquier `X-Forwarded-For` permitiría
 falsificar la IP de origen y saltarse el rate limiting.
+
+**Qué cabeceras** se creen no es una variable de entorno: está fijado en
+[`config/packages/framework.yaml`](../config/packages/framework.yaml)
+(`x-forwarded-for`, `x-forwarded-proto`, `x-forwarded-port`; `x-forwarded-host`
+deliberadamente no). Ahí y no solo en `SYMFONY_TRUSTED_HEADERS` porque esa
+variable la lee el componente Runtime desde `public/index.php`, que los tests
+funcionales no ejecutan; como configuración, el contrato se puede probar. El
+entorno sigue decidiendo **en quién** confiar, vía `SYMFONY_TRUSTED_PROXIES`.
 
 ## Copias de seguridad
 

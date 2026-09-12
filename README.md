@@ -28,9 +28,11 @@ make setup
 Y ya está en <http://localhost:8080>.
 
 Para probar Google en desarrollo, crea `.env.local` con
-`GOOGLE_OAUTH_CLIENT_ID` y `GOOGLE_OAUTH_CLIENT_SECRET`, y registra
-`https://dev.turnin.es/auth/google/callback` en Google Cloud. La configuración
-completa está en [docs/authentication.md](docs/authentication.md).
+`GOOGLE_OAUTH_CLIENT_ID` y `GOOGLE_OAUTH_CLIENT_SECRET`, registra
+`https://dev.turnin.es/auth/google/callback` en Google Cloud y publica el entorno
+con `make tunnel-up`: el callback tiene que ser HTTPS y resolver desde fuera, así
+que `localhost` no vale. La configuración completa está en
+[docs/authentication.md](docs/authentication.md).
 
 `make setup` construye las imágenes, levanta los servicios, instala dependencias,
 crea la base de datos, aplica migraciones y compila los assets. Es idempotente.
@@ -48,6 +50,22 @@ crea la base de datos, aplica migraciones y compila los assets. Es idempotente.
 | Aplicación | <http://localhost:8080> |
 | Salud | <http://localhost:8080/health> |
 | Profiler | <http://localhost:8080/_profiler/latest> |
+| Desarrollo público | <https://dev.turnin.es> |
+
+`dev.turnin.es` es **esta misma máquina** publicada por un Cloudflare Tunnel, no
+un servidor. Sirve para probar en el móvil y para el login real con Google, que
+exige un `redirect_uri` HTTPS:
+
+```bash
+make up
+make tunnel-up      # publica https://dev.turnin.es
+make tunnel-status  # comprueba /health por dentro y por fuera
+make tunnel-down
+```
+
+Con el ordenador o el túnel apagados, `dev.turnin.es` deja de responder: es lo
+esperado. El procedimiento completo está en
+[DEVELOPMENT.md](docs/DEVELOPMENT.md#desarrollo-remoto-con-devturnines).
 
 ## Comandos
 
@@ -70,6 +88,10 @@ make qa                      # todo lo anterior. Si esto falla, no se mergea.
 
 make graph                   # reconstruye el grafo de Graft
 make graph-map               # orientación rápida del repositorio
+
+make tunnel-up               # publica el entorno local en https://dev.turnin.es
+make tunnel-status           # estado del túnel y health público
+make tunnel-down             # deja de publicarlo
 ```
 
 ## Migraciones

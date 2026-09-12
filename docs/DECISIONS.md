@@ -240,3 +240,65 @@ letra.
 
 Si la clave no se reconoce, el preset cae en el tono habitual de su
 `ShiftKind`, no en gris: un turno de mañana que aparece en gris parece un fallo.
+
+## 2026-09-12 — `dev.turnin.es` por Cloudflare Tunnel, no por puertos abiertos
+
+Google OAuth exige un `redirect_uri` HTTPS registrado de antemano, y una PWA no
+se prueba de verdad en `localhost`. Hacía falta un dominio público estable
+apuntando a la máquina de desarrollo.
+
+* **Named Tunnel, no `trycloudflare.com`.** Las URLs efímeras cambian en cada
+  arranque, y cada cambio obliga a reeditar el cliente OAuth en Google Cloud. Lo
+  mismo valdrá luego para Stripe.
+* **Túnel propio `turnin-dev`, sin reutilizar `pymeo-dev`.** Existe un
+  `pymeo-dev` en la cuenta de Cloudflare, pero sin conexiones y sin credenciales
+  en esta máquina: no se sirve desde aquí, así que no había nada que reutilizar y
+  sí un riesgo de pisarle las reglas. Su configuración queda intacta.
+* **`~/.cloudflared/turnin-dev.yml`, no `config.yml`.** Un fichero por túnel: el
+  global es el que se sobrescribe sin darse cuenta cuando aparece un segundo.
+* **`cloudflared` como proceso del host, no como quinto servicio de Compose.**
+  Consume el mismo `127.0.0.1:8080` que ya expone Caddy, y
+  [DEVELOPMENT.md](DEVELOPMENT.md) fija cuatro servicios como techo. Un contenedor
+  más solo habría añadido una red que atravesar.
+* **Nada de registro `A` a la IP doméstica.** El túnel abre una conexión saliente;
+  no hay puerto que abrir en el router y apagarlo cierra la máquina otra vez.
+
+## 2026-09-12 — El contrato de proxy inverso es configuración, no solo entorno
+
+`framework.trusted_proxies` y `trusted_headers` estaban únicamente en
+`SYMFONY_TRUSTED_PROXIES`/`SYMFONY_TRUSTED_HEADERS` del contenedor. Esas variables
+las aplica el componente Runtime desde `public/index.php`, que los tests
+funcionales no ejecutan: el contrato existía en producción y era invisible para la
+suite.
+
+Ahora `config/packages/framework.yaml` declara **qué cabeceras** se creen, y el
+entorno sigue decidiendo **en quién** confiar. Con eso,
+`GoogleOAuthFlowTest::test_the_public_https_origin_survives_the_reverse_proxy_hop`
+puede fijar lo que de verdad importa: que tras el salto de Cloudflare el
+`redirect_uri` sale como `https://dev.turnin.es/auth/google/callback`. Sin esa
+prueba, romperlo se nota solo fuera de local, y como un error de Google.
+
+`x-forwarded-host` queda fuera a propósito: el `Host` original llega intacto por
+el túnel, así que no hay nada que recuperar y hay una cabecera menos en la que
+confiar.
+
+`phpunit.dist.xml` fija `SYMFONY_TRUSTED_PROXIES=127.0.0.1` con `force="true"`
+porque el contenedor exporta `REMOTE_ADDR`, valor que Symfony resuelve desde
+`$_SERVER['REMOTE_ADDR']` al arrancar —algo que en CLI no existe, dejando la lista
+de proxies vacía—. Y como `<env>` y no `<server>`: `$_ENV` gana sobre `$_SERVER`
+al resolver una variable de entorno.
+
+## 2026-09-12 — El profiler no existe en el dominio público
+
+`dev.turnin.es` está en Internet y su panel de configuración renderiza `$_SERVER`,
+donde en desarrollo vive el secreto real del cliente OAuth. El Caddyfile de
+desarrollo responde `404` a `/_profiler*` y `/_wdt*` cuando el `Host` es
+`dev.turnin.es`.
+
+Se filtra por `Host` y no por IP de origen porque todo el tráfico —local y del
+túnel— entra por el mismo `127.0.0.1:8080` y llega a Caddy desde la misma
+pasarela de Docker. El nombre es lo único que distingue una petición pública de
+una local, y es exactamente la distinción que interesa.
+
+Por `localhost` el profiler sigue disponible tal y como documenta
+[DEVELOPMENT.md](DEVELOPMENT.md).

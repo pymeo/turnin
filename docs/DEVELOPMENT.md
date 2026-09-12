@@ -58,6 +58,112 @@ make qa                     # todo lo anterior
 make graph / graph-check / graph-map / graph-viz
 ```
 
+## Desarrollo remoto con dev.turnin.es
+
+`http://localhost:8080` no sirve para probar en el móvil ni para hablar con
+Google: OAuth exige un `redirect_uri` HTTPS registrado de antemano. Turnin
+publica por eso el entorno local en un dominio estable:
+
+```text
+Móvil / Internet → https://dev.turnin.es → Cloudflare DNS → Cloudflare Tunnel
+    → tu máquina → Caddy → PHP-FPM
+```
+
+El día a día son dos órdenes:
+
+```bash
+make up          # PostgreSQL, Redis, PHP y Caddy
+make tunnel-up   # publica https://dev.turnin.es
+```
+
+y al terminar:
+
+```bash
+make tunnel-down
+make down
+```
+
+`make tunnel-status` dice si el túnel está vivo y comprueba `/health` por dentro
+y por fuera. Es idempotente: `make tunnel-up` dos veces no arranca dos procesos.
+
+**Mientras el túnel o el ordenador estén apagados, `dev.turnin.es` no responde.**
+No es un servidor: es esta máquina. Cloudflare devuelve entonces un error 1033 o
+502, que significa exactamente eso y no que algo esté roto.
+
+### No hay ningún puerto abierto
+
+`cloudflared` abre una conexión **saliente** hacia Cloudflare y sirve por ella el
+mismo `127.0.0.1:8080` que ya usa `curl` en local. El router no tiene ni una regla
+nueva, y Caddy sigue sin escuchar en `0.0.0.0`.
+
+### Preparar la máquina una sola vez
+
+Ya está hecho en el equipo de desarrollo. Para reproducirlo en otro:
+
+```bash
+# 1. cloudflared en el PATH (binario oficial)
+curl -fsSL -o ~/.local/bin/cloudflared \
+    https://github.com/cloudflare/cloudflared/releases/latest/download/cloudflared-linux-amd64
+chmod +x ~/.local/bin/cloudflared
+
+# 2. autorizar la zona turnin.es en el navegador
+cloudflared tunnel login
+
+# 3. crear el túnel y su ruta DNS
+cloudflared tunnel create turnin-dev
+cloudflared tunnel route dns turnin-dev dev.turnin.es
+```
+
+`cloudflared tunnel create` escribe las credenciales en
+`~/.cloudflared/<UUID>.json` y `login` deja el certificado en
+`~/.cloudflared/cert.pem`. **Ninguno de los dos entra jamás en el repositorio**
+(ver [SECURITY.md](SECURITY.md#secretos)).
+
+Falta el fichero que enlaza túnel y destino, `~/.cloudflared/turnin-dev.yml`, que
+es lo que leen los objetivos de `make`:
+
+```yaml
+tunnel: <UUID del túnel>
+credentials-file: /home/<usuario>/.cloudflared/<UUID>.json
+
+ingress:
+  - hostname: dev.turnin.es
+    service: http://localhost:8080
+  - service: http_status:404
+```
+
+Va fuera de `~/.cloudflared/config.yml` a propósito: así no puede pisar las reglas
+de otro túnel de la misma máquina.
+
+### El esquema público tiene que sobrevivir al salto
+
+Cloudflare termina TLS y llega a Caddy por HTTP plano. Si nadie propaga el
+esquema original, Symfony construye URLs `http://` y Google rechaza el callback
+por no coincidir con el `redirect_uri` registrado.
+
+Lo resuelven dos piezas, y hacen falta las dos:
+
+* [`docker/caddy/Caddyfile`](../docker/caddy/Caddyfile) — `trusted_proxies static
+  private_ranges`. Sin esto Caddy sobrescribe el `X-Forwarded-Proto` entrante con
+  el esquema con el que recibió la petición, que es `http`.
+* [`config/packages/framework.yaml`](../config/packages/framework.yaml) —
+  `trusted_proxies` y `trusted_headers`. Está en configuración, y no solo en la
+  variable `SYMFONY_TRUSTED_PROXIES`, porque esa la lee el componente Runtime
+  desde `public/index.php` y los tests funcionales no pasan por ahí. Como
+  configuración, el contrato se puede probar: lo hace
+  `GoogleOAuthFlowTest::test_the_public_https_origin_survives_the_reverse_proxy_hop`.
+
+`X-Forwarded-Host` **no** está entre las cabeceras de confianza: el `Host`
+original llega intacto por el túnel, así que no hay nada que recuperar y hay una
+cabecera menos en la que confiar.
+
+### El profiler no existe en el dominio público
+
+`dev.turnin.es` está en Internet y el panel de configuración del profiler
+renderiza `$_SERVER`, donde en desarrollo vive el secreto real de Google. El
+Caddyfile responde `404` a `/_profiler*` y `/_wdt*` cuando el `Host` es
+`dev.turnin.es`. Por `localhost` siguen funcionando igual que siempre.
+
 ## Variables de entorno
 
 `.env` está versionado y contiene **solo cableado de infraestructura, nunca

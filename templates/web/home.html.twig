@@ -10,7 +10,12 @@
         <h1 class="marketing-title">Tus turnos deberían adaptarse a tu vida.</h1>
         <p class="max-w-lg text-lg leading-relaxed text-ink-muted">Encuentra compañeros compatibles y organiza tus turnos de una forma mucho más sencilla.</p>
         <div class="grid w-full gap-3 sm:w-auto sm:grid-cols-2">
-            <a href="{{ path('identity_register') }}" class="btn-primary">Empezar</a>
+            {# Google is the primary way in, so the landing offers it directly
+               instead of making people find it one screen deeper. Same partial
+               as /login and /register: one entry point, one URL to register in
+               Google Cloud. #}
+            <div class="sm:col-span-2">{% include 'identity/_google_button.html.twig' %}</div>
+            <a href="{{ path('identity_register') }}" class="btn-secondary">Empezar</a>
             <a href="{{ path('identity_login') }}" class="btn-secondary">Iniciar sesión</a>
             <button type="button" class="btn-secondary sm:col-span-2" data-install-target="button" data-action="install#install" hidden>Instalar TURNIN</button>
         </div>

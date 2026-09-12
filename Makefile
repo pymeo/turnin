@@ -16,13 +16,25 @@ HOST_GID := $(shell id -g)
 HTTP_PORT := $(shell awk -F= '$$1 == "HTTP_PORT" { print $$2 }' .env 2>/dev/null)
 HTTP_PORT := $(if $(HTTP_PORT),$(HTTP_PORT),8080)
 
+# Cloudflare Tunnel. The binary and the credentials both live outside the repo,
+# under ~/.cloudflared — nothing secret is named here, only paths.
+CLOUDFLARED := $(shell command -v cloudflared 2>/dev/null || printf '%s/.local/bin/cloudflared' "$(HOME)")
+TUNNEL_NAME := turnin-dev
+TUNNEL_HOST := dev.turnin.es
+TUNNEL_CONFIG := $(HOME)/.cloudflared/turnin-dev.yml
+TUNNEL_PID := var/tunnel.pid
+TUNNEL_LOG := var/tunnel.log
+# Cierto si el pid guardado corresponde a un cloudflared vivo.
+TUNNEL_IS_UP = test -f $(TUNNEL_PID) && kill -0 "$$(cat $(TUNNEL_PID))" 2>/dev/null
+
 .DEFAULT_GOAL := help
 
 .PHONY: help setup up down restart shell logs ps \
 	migrate migration db-reset \
 	test test-unit test-integration test-functional test-architecture test-e2e \
 	lint lint-fix static-analysis architecture audit qa \
-	assets graph graph-check graph-map graph-viz
+	assets graph graph-check graph-map graph-viz \
+	tunnel-up tunnel-status tunnel-down
 
 help: ## Muestra los comandos disponibles
 	@awk 'BEGIN {FS = ":.*## "; printf "Turnin — uso: make <comando>\n\n"} \
@@ -144,6 +156,67 @@ qa: up ## Puerta de calidad completa: assets + composer validate + lint + PHPSta
 	$(MAKE) architecture
 	$(MAKE) test
 	@printf '\n✅ make qa OK\n'
+
+## Túnel de desarrollo público (dev.turnin.es)
+# Cloudflare termina TLS y habla con este equipo por una conexión SALIENTE, así
+# que no hay ningún puerto abierto en el router: el túnel consume el mismo
+# 127.0.0.1:$(HTTP_PORT) que sirve Caddy. Ver docs/DEVELOPMENT.md.
+tunnel-up: ## Publica la aplicación local en https://dev.turnin.es
+	@command -v $(CLOUDFLARED) >/dev/null 2>&1 || { \
+		printf 'cloudflared no está instalado. Ver docs/DEVELOPMENT.md § Desarrollo remoto.\n'; exit 1; }
+	@test -f $(TUNNEL_CONFIG) || { \
+		printf 'Falta %s. Ver docs/DEVELOPMENT.md § Desarrollo remoto.\n' '$(TUNNEL_CONFIG)'; exit 1; }
+	@if $(TUNNEL_IS_UP); then \
+		printf 'El túnel ya está arriba.\n'; \
+	else \
+		mkdir -p var; \
+		: >$(TUNNEL_LOG); \
+		nohup $(CLOUDFLARED) tunnel --config $(TUNNEL_CONFIG) run >>$(TUNNEL_LOG) 2>&1 & \
+		echo $$! >$(TUNNEL_PID); \
+		printf 'Conectando'; \
+		for i in $$(seq 1 30); do \
+			if grep -q 'Registered tunnel connection' $(TUNNEL_LOG) 2>/dev/null; then break; fi; \
+			printf '.'; sleep 1; \
+		done; \
+		printf '\n'; \
+	fi
+	@$(MAKE) --no-print-directory tunnel-status
+
+tunnel-status: ## Estado del túnel y comprobación de https://dev.turnin.es/health
+	@if $(TUNNEL_IS_UP); then \
+		printf 'túnel   %s  activo (pid %s)\n' '$(TUNNEL_NAME)' "$$(cat $(TUNNEL_PID))"; \
+	else \
+		printf 'túnel   %s  parado\n' '$(TUNNEL_NAME)'; \
+	fi
+	@printf 'local   http://localhost:$(HTTP_PORT)/health  →  %s\n' \
+		"$$(curl -s -o /dev/null -w '%{http_code}' http://localhost:$(HTTP_PORT)/health)"
+	@# Si el resolver de esta máquina no llega al dominio, la comprobación se
+	@# repite contra la IP que publica Cloudflare. Así el estado que se imprime es
+	@# el del túnel y no el de una caché DNS local.
+	@status=$$(curl -s -o /dev/null -w '%{http_code}' --max-time 15 https://$(TUNNEL_HOST)/health 2>/dev/null); \
+	if [ "$$status" != "000" ]; then \
+		printf 'público https://$(TUNNEL_HOST)/health  →  %s\n' "$$status"; \
+	else \
+		ip=$$(curl -s --max-time 10 -H 'accept: application/dns-json' \
+			'https://cloudflare-dns.com/dns-query?name=$(TUNNEL_HOST)&type=A' \
+			| tr ',' '\n' | sed -n 's/.*"data":"\([0-9.]*\)".*/\1/p' | head -1); \
+		if [ -z "$$ip" ]; then \
+			printf 'público https://$(TUNNEL_HOST)/health  →  el dominio no resuelve en el DNS público\n'; \
+		else \
+			printf 'público https://$(TUNNEL_HOST)/health  →  %s (vía Cloudflare %s)\n' \
+				"$$(curl -s -o /dev/null -w '%{http_code}' --max-time 15 \
+					--resolve '$(TUNNEL_HOST):443:'"$$ip" https://$(TUNNEL_HOST)/health 2>/dev/null)" "$$ip"; \
+			printf '        No resuelve desde esta máquina: es la caché DNS local, no el túnel.\n'; \
+		fi; \
+	fi
+
+tunnel-down: ## Detiene el túnel (dev.turnin.es deja de estar disponible)
+	@if $(TUNNEL_IS_UP); then \
+		kill "$$(cat $(TUNNEL_PID))" && rm -f $(TUNNEL_PID); \
+		printf 'túnel %s detenido.\n' '$(TUNNEL_NAME)'; \
+	else \
+		rm -f $(TUNNEL_PID); printf 'El túnel no estaba corriendo.\n'; \
+	fi
 
 ## Graft (grafo de contexto para agentes)
 graph: ## Reconstruye el grafo del repositorio

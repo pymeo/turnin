@@ -16,6 +16,9 @@ con tests: media funcionalidad sin pantalla no es media funcionalidad, es deuda.
   `SwapPool`.
 * **2. Identity + Google OAuth.** Registro, login, sesión, CSRF, rate limiting,
   credenciales externas sin tokens persistidos y perfil personal protegido.
+  Cerrada de extremo a extremo el 2026-09-12: el entorno local se publica en
+  `https://dev.turnin.es` por Cloudflare Tunnel y el login real con Google
+  funciona desde el móvil (→ [DEVELOPMENT.md](DEVELOPMENT.md#desarrollo-remoto-con-devturnines)).
 * **3. Perfil profesional + onboarding.** Flujo móvil reanudable para nombre,
   identidad, centro, categoría y destinos; crea memberships y permite actualizar
   la asignación laboral existente.
@@ -59,7 +62,7 @@ Problemas reales, no una lista de deseos.
 
 | Qué | Por qué no está hecho | Cuándo toca |
 | --- | --- | --- |
-| Sin `Content-Security-Policy` | Escrita antes de saber qué carga la app, acabaría en `unsafe-inline` | Con la primera pantalla autenticada (slice 1) |
+| Sin `Content-Security-Policy` | **Vencida.** La pantalla autenticada ya existe y el origen está ahora en Internet (`dev.turnin.es`). Ya se sabe qué carga la app: ninguna plantilla tiene `<script>` ni `style=` en línea, y el flujo OAuth es redirect de servidor —sin SDK de Google en el navegador—, así que la política puede ser estricta. El único inline es el `importmap` de AssetMapper, que necesita nonce | La próxima iteración; no se metió en la del entorno público para no arriesgar el flujo que había que demostrar |
 | Sin transporte asíncrono | Redis está levantado, pero nada es lo bastante lento aún | Slice 9 o 10 |
 | Sin copias de seguridad | No hay datos | Antes del primer usuario real |
 | Perfiles de supervisor aún sin alta administrativa | La identidad ya soporta la capacidad, pero no se auto-concede permisos | Slice responsable |

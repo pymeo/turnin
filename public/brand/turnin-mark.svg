@@ -5,7 +5,8 @@
          so the pair reads as one continuous circular movement. -->
     <linearGradient id="tm-up" x1="8" y1="30" x2="56" y2="16" gradientUnits="userSpaceOnUse">
       <stop offset="0" stop-color="#0F4C5C"/>
-      <stop offset=".52" stop-color="#087C83"/>
+      <stop offset=".48" stop-color="#087C83"/>
+      <stop offset=".76" stop-color="#14B8A6"/>
       <stop offset="1" stop-color="#20D1BB"/>
     </linearGradient>
     <linearGradient id="tm-down" x1="56" y1="34" x2="8" y2="48" gradientUnits="userSpaceOnUse">

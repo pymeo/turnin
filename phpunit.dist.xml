@@ -19,6 +19,15 @@
         <ini name="error_reporting" value="-1" />
         <server name="APP_ENV" value="test" force="true" />
         <server name="SHELL_VERBOSITY" value="-1" />
+        <!--
+            The suite simulates the Caddy hop from loopback, so the reverse-proxy
+            contract in config/packages/framework.yaml is exercised for real.
+            force="true" because the app container exports
+            SYMFONY_TRUSTED_PROXIES=REMOTE_ADDR, and REMOTE_ADDR resolves from
+            $_SERVER at boot — which CLI does not have, leaving no trusted proxy
+            at all. A fixed address keeps the suite identical here and in CI.
+        -->
+        <env name="SYMFONY_TRUSTED_PROXIES" value="127.0.0.1" force="true" />
     </php>
 
     <!--

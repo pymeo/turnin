@@ -2,6 +2,20 @@
 framework:
     secret: '%env(APP_SECRET)%'
 
+    # Topology: Cloudflare (terminates TLS) → cloudflared → Caddy → PHP-FPM.
+    # Only the immediate hop is trusted, which is the one Caddy opens to FPM; the
+    # rules that decide whether Caddy itself may believe an inbound
+    # X-Forwarded-* live in docker/caddy/Caddyfile.
+    #
+    # This belongs here and not only in SYMFONY_TRUSTED_PROXIES: that variable is
+    # read by the Runtime component in public/index.php, which functional tests
+    # never execute. Kept as configuration, the proxy contract is testable.
+    # X-Forwarded-Host is deliberately absent — the Host header arrives intact
+    # through the tunnel, so there is nothing to recover and one less header to
+    # trust.
+    trusted_proxies: '%env(default::SYMFONY_TRUSTED_PROXIES)%'
+    trusted_headers: ['x-forwarded-for', 'x-forwarded-proto', 'x-forwarded-port']
+
     # Authentication uses a server-side session. The cookie policy keeps the
     # PWA safe by default and enables Secure automatically in HTTPS production.
     session:

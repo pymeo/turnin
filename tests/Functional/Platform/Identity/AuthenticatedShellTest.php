@@ -38,6 +38,14 @@ final class AuthenticatedShellTest extends WebTestCase
         self::assertNotSame('', $page->filter('form[action="/logout"] input[name="_csrf_token"]')->attr('value'));
     }
 
+    public function test_the_lobby_is_unreachable_without_a_session(): void
+    {
+        $client = static::createClient();
+        $client->request('GET', '/app');
+
+        self::assertResponseRedirects('http://localhost/login');
+    }
+
     public function test_logout_invalidates_the_turnin_session(): void
     {
         $client = $this->authenticatedClient(true, false);

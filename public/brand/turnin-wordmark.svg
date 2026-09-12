@@ -1,4 +1,6 @@
-<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 152 40" role="img" aria-label="TURNIN">
-  <text x="1" y="30" fill="#0F4C5C" font-family="Inter,ui-sans-serif,system-ui,sans-serif" font-size="29" font-weight="800" letter-spacing="-.8">TURN</text>
-  <text x="91" y="30" fill="#14B8A6" font-family="Inter,ui-sans-serif,system-ui,sans-serif" font-size="29" font-weight="800" letter-spacing="-.8">IN</text>
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 142 40" role="img" aria-label="TURNIN">
+  <title>TURNIN</title>
+  <defs><linearGradient id="wordmark-in" x1="80" y1="0" x2="140" y2="0" gradientUnits="userSpaceOnUse"><stop stop-color="#109F96"/><stop offset="1" stop-color="#1CCDB8"/></linearGradient></defs>
+  <text x="1" y="31" fill="#0F4C5C" font-family="Inter,ui-sans-serif,system-ui,sans-serif" font-size="30" font-weight="800" letter-spacing="-.65">TURN</text>
+  <text x="80" y="31" fill="url(#wordmark-in)" font-family="Inter,ui-sans-serif,system-ui,sans-serif" font-size="30" font-weight="800" letter-spacing="-.65">IN</text>
 </svg>

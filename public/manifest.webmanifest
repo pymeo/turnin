@@ -9,7 +9,7 @@
     "scope": "/",
     "display": "standalone",
     "orientation": "portrait",
-    "background_color": "#F8FAFC",
+    "background_color": "#FFFFFF",
     "theme_color": "#0F4C5C",
     "categories": ["productivity", "medical", "lifestyle"],
     "icons": [

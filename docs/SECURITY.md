@@ -204,12 +204,43 @@ Falta una **Content-Security-Policy**. No está puesta porque una CSP escrita an
 de saber qué carga la aplicación acaba en `unsafe-inline` y no protege de nada.
 Entra con la primera pantalla autenticada. Anotado en [ROADMAP.md](ROADMAP.md).
 
+## El origen de desarrollo público
+
+`dev.turnin.es` expone el entorno de desarrollo de una máquina concreta a
+Internet mediante un Cloudflare Tunnel
+(→ [DEVELOPMENT.md](DEVELOPMENT.md#desarrollo-remoto-con-devturnines)). Existe
+porque Google OAuth exige un `redirect_uri` HTTPS resoluble desde fuera, y porque
+una PWA no se prueba de verdad en un `localhost`.
+
+Lo que eso cambia, y cómo está contenido:
+
+* **No hay puertos abiertos.** `cloudflared` abre una conexión *saliente*. Caddy
+  sigue publicado en `127.0.0.1:8080` y no en `0.0.0.0`. El router no tiene
+  ninguna regla nueva, así que apagar el túnel devuelve la máquina a estar
+  cerrada.
+* **El profiler no existe en el dominio público.** Su panel de configuración
+  renderiza `$_SERVER`, donde en desarrollo está el secreto real de Google.
+  El Caddyfile responde `404` a `/_profiler*` y `/_wdt*` cuando el `Host` es
+  `dev.turnin.es`; por `localhost` siguen disponibles.
+* **`X-Forwarded-*` solo se cree del salto privado.** Caddy confía en
+  `private_ranges` —lo único que puede alcanzar un listener atado a loopback— y
+  Symfony solo en el proxy inmediato. `X-Forwarded-Host` no está entre las
+  cabeceras de confianza.
+* **Sigue siendo un entorno de desarrollo.** `APP_DEBUG` está activo, así que una
+  excepción muestra traza. No es sitio para datos reales de nadie, y el dominio
+  responde `X-Robots-Tag: noindex`.
+
+Las credenciales del túnel (`cert.pem` y el JSON del túnel) viven en
+`~/.cloudflared/`, nunca en el repositorio.
+
 ## Secretos
 
 * `.env` está versionado y **no contiene secretos**: solo cableado.
 * `APP_SECRET` está vacío ahí. Dev y test tienen valores propios y marcados como
   tales; producción lo inyecta desde el entorno o falla al arrancar.
 * `.gitignore` cubre `.env.local`, `*.pem`, `*.key` y `*secret*.txt`.
+* Las credenciales OAuth reales de desarrollo están en `.env.local`, ignorado por
+  git. `.env` solo lleva marcadores `replace-with-…`.
 * `compose.prod.yaml` usa `${VAR:?mensaje}`: si falta un secreto, el despliegue se
   detiene en lugar de arrancar con un valor por defecto.
 
@@ -225,7 +256,9 @@ arrancar: eso es un paso deliberado del despliegue
 Google usa Authorization Code + OIDC con `state`; no se desactiva su validación.
 Solo se solicitan `openid email profile`, el enlace por email exige
 `email_verified`, y no se persisten access/refresh tokens. El callback genera su
-URL desde el origen HTTPS reconocido tras el proxy. El destino posterior solo
+URL desde el origen HTTPS reconocido tras el proxy —contrato probado en
+`GoogleOAuthFlowTest`, porque si se rompe Google deja de aceptar el
+`redirect_uri` y solo se nota fuera de local. El destino posterior solo
 acepta paths internos para evitar open redirects. Logout invalida la sesión de
 Turnin y no toca la sesión global de Google.
 # Credenciales de calendarios externos

@@ -20,8 +20,8 @@ services:
             PII_ENCRYPTION_KEY: ${PII_ENCRYPTION_KEY:?PII_ENCRYPTION_KEY must be provided}
             DATABASE_URL: ${DATABASE_URL:?DATABASE_URL must be provided}
             REDIS_URL: ${REDIS_URL:?REDIS_URL must be provided}
+            # Which headers are trusted is fixed in config/packages/framework.yaml.
             SYMFONY_TRUSTED_PROXIES: ${SYMFONY_TRUSTED_PROXIES:-private_ranges}
-            SYMFONY_TRUSTED_HEADERS: x-forwarded-for,x-forwarded-proto,x-forwarded-port
         restart: unless-stopped
         read_only: true
         tmpfs:
