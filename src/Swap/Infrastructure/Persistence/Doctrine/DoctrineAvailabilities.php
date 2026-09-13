@@ -86,7 +86,7 @@ final readonly class DoctrineAvailabilities implements Availabilities
     public function activeInPoolOnDate(string $swapPoolId, WorkDate $date, ShiftKind $shiftKind, string $excludingWorkerId): array
     {
         $rows = $this->connection->fetchAllAssociative(
-            'SELECT * FROM swap_availabilities WHERE swap_pool_id = :pool AND work_date = :date AND shift_kind = :kind AND active = TRUE AND worker_id <> :worker ORDER BY created_at',
+            'SELECT DISTINCT ON (worker_id) * FROM swap_availabilities WHERE swap_pool_id = :pool AND work_date = :date AND active = TRUE AND worker_id <> :worker ORDER BY worker_id, (shift_kind = :kind) DESC, created_at',
             ['pool' => $swapPoolId, 'date' => (string) $date, 'kind' => $shiftKind->value, 'worker' => $excludingWorkerId],
         );
 

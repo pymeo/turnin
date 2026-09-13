@@ -20,4 +20,24 @@ final readonly class ShiftBalance
     {
         return new self(-$this->minutes);
     }
+
+    /** The headline number: "+17 h", "−3 h 30 min", "Mismas horas". */
+    public function label(): string
+    {
+        if (0 === $this->minutes) {
+            return 'Mismas horas';
+        }
+
+        return ($this->minutes > 0 ? '+' : '−').ShiftDuration::label($this->minutes);
+    }
+
+    /** The same fact as a sentence, for the people who read that instead. */
+    public function hint(): string
+    {
+        return match (true) {
+            $this->minutes > 0 => 'Trabajarías '.ShiftDuration::label($this->minutes).' más',
+            $this->minutes < 0 => 'Trabajarías '.ShiftDuration::label($this->minutes).' menos',
+            default => 'Das y recibes las mismas horas',
+        };
+    }
 }

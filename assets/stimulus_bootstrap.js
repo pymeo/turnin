@@ -10,6 +10,7 @@ import PatternBuilderController from './controllers/pattern_builder_controller.j
 import ScheduleDraftController from './controllers/schedule_draft_controller.js';
 import SearchablePickerController from './controllers/searchable_picker_controller.js';
 import ShiftPresetsController from './controllers/shift_presets_controller.js';
+import SwapComposerController from './controllers/swap_composer_controller.js';
 import VoiceScheduleController from './controllers/voice_schedule_controller.js';
 import WorkerAssignmentsController from './controllers/worker_assignments_controller.js';
 
@@ -26,4 +27,5 @@ app.register('schedule-draft', ScheduleDraftController);
 app.register('pattern-builder', PatternBuilderController);
 app.register('voice-schedule', VoiceScheduleController);
 app.register('shift-presets', ShiftPresetsController);
+app.register('swap-composer', SwapComposerController);
 app.register('worker-assignments', WorkerAssignmentsController);

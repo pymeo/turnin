@@ -22,11 +22,13 @@ use App\Swap\Application\Query\GetMyAvailability;
 use App\Swap\Application\Query\GetMySwapRequests;
 use App\Swap\Application\Query\GetOfferContext;
 use App\Swap\Application\Query\GetOpenSwapRequests;
+use App\Swap\Application\Query\GetSwapComposerCalendar;
 use App\Swap\Application\Query\GetSwapGroups;
 use App\Swap\Application\Query\GetSwapProposalBoard;
 use App\Swap\Application\Query\MonthExchangeMarksView;
 use App\Swap\Application\Query\OfferContext;
 use App\Swap\Application\Query\OpenSwapRequestView;
+use App\Swap\Application\Query\SwapComposerCalendarView;
 use App\Swap\Application\SwapAccessDenied;
 use InvalidArgumentException;
 use Symfony\Component\HttpFoundation\JsonResponse;
@@ -141,10 +143,44 @@ final readonly class ChangesController
         });
     }
 
+    /**
+     * "Me interesa": choose which of my own shifts to ask for in return.
+     *
+     * The whole screen is one read model, so the week being shown and the shift
+     * already chosen travel in the query string and the page works with nothing
+     * but a browser.
+     */
     #[Route('/app/changes/{requestId}/intercambio', name: 'swap_proposal_new_exchange', methods: ['GET'])]
-    public function newExchange(string $requestId): Response
+    public function newExchange(Request $request, string $requestId): Response
     {
-        return $this->proposalComposer($requestId, 'exchange');
+        $workerId = $this->session->workerId();
+        if (null === $workerId) {
+            return new RedirectResponse('/login');
+        }
+
+        try {
+            $calendar = $this->session->handled($this->queryBus, new GetSwapComposerCalendar(
+                $workerId,
+                $requestId,
+                $request->query->getInt('semana'),
+                $request->query->getString('turno') ?: null,
+            ));
+        } catch (Throwable $exception) {
+            $cause = SwapSession::rootCause($exception);
+            if ($cause instanceof SwapAccessDenied || $cause instanceof InvalidArgumentException) {
+                return new Response('Este turno ya no está disponible.', Response::HTTP_NOT_FOUND);
+            }
+
+            throw $exception;
+        }
+        if (!$calendar instanceof SwapComposerCalendarView) {
+            return new Response('Este turno ya no está disponible.', Response::HTTP_NOT_FOUND);
+        }
+
+        return new Response($this->twig->render('swap/exchange_composer.html.twig', [
+            'calendar' => $calendar,
+            'csrfToken' => $this->session->token(),
+        ]));
     }
 
     #[Route('/app/changes/{requestId}/cobertura', name: 'swap_proposal_new_coverage', methods: ['GET'])]
@@ -343,6 +379,7 @@ final readonly class ChangesController
         return new JsonResponse(['ok' => true, 'result' => $view instanceof DayExchangeView ? $view : null]);
     }
 
+    /** Coverage has nothing to choose: it only confirms which shift is taken. */
     private function proposalComposer(string $requestId, string $kind): Response
     {
         $workerId = $this->session->workerId();
@@ -360,12 +397,7 @@ final readonly class ChangesController
         if (null === $target) {
             return new Response('Este turno ya no está disponible.', Response::HTTP_NOT_FOUND);
         }
-        $setup = $this->session->handled($this->queryBus, new GetChangesSetup($workerId));
-        $shifts = [];
-        if ($setup instanceof ChangesSetupView) {
-            $shifts = $setup->upcomingShifts;
-        }
 
-        return new Response($this->twig->render('swap/proposal_composer.html.twig', ['request' => $target, 'kind' => $kind, 'shifts' => $shifts, 'csrfToken' => $this->session->token()]));
+        return new Response($this->twig->render('swap/proposal_composer.html.twig', ['request' => $target, 'kind' => $kind, 'csrfToken' => $this->session->token()]));
     }
 }

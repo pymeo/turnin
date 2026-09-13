@@ -1,0 +1,69 @@
+{# Four weeks of somebody's own rota, rest days included.
+
+   A blank cell would read as "libre", and "libre" and "todavía no lo he
+   rellenado" are different answers — so every day says which of the three it is
+   in text, not only in colour.
+
+   Parameters
+     weeks           list<SwapComposerWeekView>
+     interactive     bool   offerable days become buttons (default false)
+     selectedKey     string assignmentId|date currently chosen (default '')
+     highlightDate   string a day to mark as the shift being taken (default '')
+     highlightLabel  string what to write in that cell (default '')
+     highlightDetail string the duration of that shift (default '')
+
+   Nothing here knows about proposals, so "Encuéntrame un puente" can render the
+   same calendar by passing interactive = false. #}
+{% set interactive = interactive|default(false) %}
+{% set selectedKey = selectedKey|default('') %}
+{% set highlightDate = highlightDate|default('') %}
+<div class="shift-calendar">
+    <div class="shift-calendar-weekdays" aria-hidden="true"><span>L</span><span>M</span><span>X</span><span>J</span><span>V</span><span>S</span><span>D</span></div>
+    {% for week in weeks %}
+        <div class="shift-calendar-week" aria-label="Semana del {{ week.label }}">
+            {% for day in week.days %}
+                {% set firstShift = day.shifts|first %}
+                {% set isHighlight = highlightDate == day.date %}
+                {% set state = isHighlight ? 'incoming' : (day.shifts|length ? 'working' : (day.isRestDay ? 'rest' : 'unknown')) %}
+                {% set offerable = interactive and day.isSelectable and not isHighlight %}
+                {% set blocked = (day.shifts|length and not day.isSelectable and not isHighlight) ? firstShift.blockedReason : '' %}
+                {% set tag = interactive and (offerable or blocked) ? 'button' : 'div' %}
+                <{{ tag }}{% if tag == 'button' %} type="button" data-action="swap-composer#pick"{% endif %}
+                        class="shift-day"
+                        data-swap-composer-target="cell"
+                        data-date="{{ day.date }}"
+                        data-state="{{ state }}"
+                        {% if day.shifts|length and not isHighlight %}data-tone="{{ firstShift.tone }}"{% endif %}
+                        data-state-label="{{ isHighlight ? 'Cubrirías este turno' : day.stateLabel }}"
+                        data-headline="{{ day.dateCompact }}"
+                        data-selectable="{{ offerable ? 'true' : 'false' }}"
+                        data-shift-count="{{ day.shifts|length }}"
+                        {% if day.selectableKey and offerable %}data-shift-key="{{ day.selectableKey }}"{% endif %}
+                        {% if blocked %}data-blocked="{{ blocked }}"{% endif %}
+                        {% if day.opportunity %}data-opportunity="{{ day.opportunity.summaryLabel }} · {{ day.opportunity.restRangeLabel }}"{% endif %}
+                        data-today="{{ day.isToday ? 'true' : 'false' }}"
+                        data-past="{{ day.isPast ? 'true' : 'false' }}"
+                        {% if offerable %}aria-pressed="{{ selectedKey == day.selectableKey ? 'true' : 'false' }}"{% endif %}
+                        aria-label="{{ isHighlight ? day.ariaLabel ~ '. Este es el turno que cubrirías' : day.ariaLabel }}">
+                    <span class="shift-day-number">{{ day.dayNumber }}</span>
+                    <span class="shift-day-weekday" aria-hidden="true">{{ day.weekday }}</span>
+                    {% if isHighlight %}
+                        <span class="shift-day-token">{{ highlightLabel }}</span>
+                        {% if highlightDetail %}<span class="shift-day-sub">{{ highlightDetail }}</span>{% endif %}
+                    {% elseif day.shifts|length > 1 %}
+                        <span class="shift-day-token">{{ day.shifts|length }} turnos</span>
+                    {% elseif day.shifts|length %}
+                        <span class="shift-day-token">{{ firstShift.durationLabel }}</span>
+                        <span class="shift-day-sub">{{ firstShift.hours }}</span>
+                    {% elseif day.isRestDay %}
+                        <span class="shift-day-token">Libre</span>
+                    {% else %}
+                        <span class="shift-day-token">Sin datos</span>
+                    {% endif %}
+                    {% if day.opportunity %}<span class="shift-day-badge">★<b>{{ day.opportunity.resultingRestDays }}</b><i>días</i></span>{% endif %}
+                    {% if blocked %}<span class="shift-day-lock" aria-hidden="true">✕</span>{% endif %}
+                </{{ tag }}>
+            {% endfor %}
+        </div>
+    {% endfor %}
+</div>

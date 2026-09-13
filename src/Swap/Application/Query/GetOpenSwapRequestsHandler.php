@@ -88,7 +88,7 @@ final readonly class GetOpenSwapRequestsHandler
                 $group->label(),
                 $group->workplaceName,
                 $names[$request->workerId()] ?? 'Un compañero',
-                isset($mine[$request->swapPoolId().'|'.$request->workDate().'|'.$request->shiftKind()->value]),
+                isset($mine[$request->swapPoolId().'|'.$request->workDate()]),
             );
         }
 
@@ -105,8 +105,8 @@ final readonly class GetOpenSwapRequestsHandler
         $offered = [];
         foreach ($this->availabilities->activePoolsOnDates($workerId, $this->datesOf($open)) as $date => $poolIds) {
             foreach ($poolIds as $poolId) {
-                [$workDate, $kind] = explode('|', $date, 2);
-                $offered[$poolId.'|'.$workDate.'|'.$kind] = true;
+                [$workDate] = explode('|', $date, 2);
+                $offered[$poolId.'|'.$workDate] = true;
             }
         }
 

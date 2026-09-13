@@ -58,11 +58,7 @@ final readonly class RosteredDay
 
     public function durationLabel(): string
     {
-        $minutes = $this->durationMinutes();
-        $hours = intdiv($minutes, 60);
-        $remainder = $minutes % 60;
-
-        return 0 === $remainder ? $hours.' h' : \sprintf('%d h %02d min', $hours, $remainder);
+        return ShiftDuration::label($this->durationMinutes());
     }
 
     /** The key both sides of the port agree on for a lookup. */

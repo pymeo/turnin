@@ -38,7 +38,7 @@ final readonly class RestBlockOpportunityFinder
             if ($joinsBlocks) {
                 $reasons[] = 'une dos bloques de descanso';
             }
-            $opportunities[] = new RestBlockOpportunity($day, $current, $resulting, (string) $date->plusDays(-$left), (string) $date->plusDays($right), $gained, $resulting * 10 + $gained * 5 + ($joinsBlocks ? 20 : 0), $reasons);
+            $opportunities[] = new RestBlockOpportunity($day, $current, $resulting, (string) $date->plusDays(-$left), (string) $date->plusDays($right), $gained, $resulting * OpportunityScoreWeights::RESULTING_REST_DAY + $gained * OpportunityScoreWeights::GAINED_REST_DAY + ($joinsBlocks ? OpportunityScoreWeights::JOINS_REST_BLOCKS : 0), $reasons);
         }
         usort($opportunities, static fn (RestBlockOpportunity $a, RestBlockOpportunity $b): int => $b->score <=> $a->score);
 

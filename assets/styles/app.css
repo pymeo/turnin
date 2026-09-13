@@ -1220,3 +1220,330 @@
 		@apply text-lg;
 	}
 }
+
+/* --- Choosing what to ask for in return -------------------------------------
+   The screen that replaced a vertical list of near-identical cards. The whole
+   point of it is peripheral vision: which days around a shift are worked, which
+   are free, and what giving one away would buy. So the calendar is the primary
+   view, a rest day is never an empty cell, and nothing depends on colour alone —
+   every state carries its word, and the opportunity carries a star.
+
+   The layout is one grid with two shapes: a single column on a phone, and on a
+   wide screen a calendar beside a column that holds the shift being taken and
+   the running summary.
+   -------------------------------------------------------------------------- */
+@utility composer-shell {
+	@apply mx-auto flex w-full max-w-6xl flex-col gap-5 px-4 sm:px-6;
+	padding-top: max(1rem, env(safe-area-inset-top));
+	/* Room for the fixed bottom navigation on a phone. */
+	padding-bottom: calc(6.5rem + env(safe-area-inset-bottom));
+
+	@media (width >= 48rem) {
+		padding-bottom: calc(3rem + env(safe-area-inset-bottom));
+	}
+}
+
+@utility composer-grid {
+	@apply grid gap-5;
+	grid-template-columns: minmax(0, 1fr);
+
+	@media (width >= 64rem) {
+		grid-template-columns: minmax(0, 1fr) 21rem;
+		grid-template-areas:
+			"head  take"
+			"reco  summary"
+			"views summary"
+			"board summary";
+		align-items: start;
+	}
+}
+
+@utility composer-head {
+	@apply flex flex-col gap-1;
+
+	h1 { @apply text-2xl font-bold tracking-tight sm:text-3xl; }
+	p:not(.changes-kicker) { @apply text-sm text-ink-muted sm:text-base; }
+
+	@media (width >= 64rem) { grid-area: head; }
+}
+
+/* The one thing on this page that is already decided. */
+@utility composer-take {
+	@apply flex flex-col gap-1 rounded-[var(--radius-card)] border border-line bg-surface p-4;
+	border-left: 0.35rem solid var(--turnin-teal);
+	box-shadow: 0 4px 18px rgb(15 76 92 / 4.5%);
+
+	@media (width >= 64rem) { grid-area: take; }
+}
+
+@utility composer-take-duration {
+	@apply text-lg font-black tracking-wide text-brand-700 uppercase dark:text-brand-300;
+
+	small { @apply block text-xs font-semibold tracking-normal text-ink-muted normal-case; }
+}
+
+@utility composer-take-place { @apply text-sm text-ink-muted; }
+
+@utility composer-reco {
+	@apply flex flex-col gap-3;
+
+	@media (width >= 64rem) { grid-area: reco; }
+}
+
+@utility reco-card {
+	@apply flex flex-col gap-1.5 rounded-[var(--radius-card)] border p-4;
+	border-color: color-mix(in srgb, var(--color-brand-600) 35%, var(--line));
+	background: linear-gradient(160deg, color-mix(in srgb, var(--color-brand-100) 55%, var(--surface)), var(--surface) 60%);
+
+	@media (prefers-color-scheme: dark) {
+		background: linear-gradient(160deg, color-mix(in srgb, var(--color-brand-900) 45%, var(--surface)), var(--surface) 60%);
+	}
+}
+
+@utility reco-kicker { @apply text-xs font-black tracking-[0.12em] text-brand-800 uppercase dark:text-brand-200; }
+@utility reco-lead { @apply text-sm text-ink-muted; }
+
+@utility reco-gain {
+	@apply mt-1 flex flex-col rounded-xl px-3 py-2;
+	background: color-mix(in srgb, var(--color-brand-600) 14%, var(--surface));
+
+	strong { @apply text-base font-black tracking-tight; }
+	span { @apply text-sm font-semibold text-ink-muted; }
+}
+
+/* The same stretch of calendar before and after, so the gain is seen. */
+@utility reco-timeline {
+	@apply mt-1 flex flex-col gap-1 overflow-x-auto;
+}
+
+@utility reco-timeline-row { @apply flex flex-wrap items-stretch gap-1; }
+
+@utility reco-timeline-label {
+	@apply flex w-full shrink-0 items-center text-[0.6rem] font-black tracking-[0.1em] text-ink-muted uppercase;
+
+	@media (width >= 40rem) { @apply w-14; }
+}
+
+@utility reco-timeline-cell {
+	@apply flex min-w-[2.4rem] flex-1 flex-col items-center justify-center rounded-lg border border-transparent px-0.5 py-1 text-center;
+
+	@media (width >= 40rem) { @apply min-w-[3.25rem] px-1; }
+
+	b { @apply text-[0.62rem] leading-tight font-bold; }
+	i { @apply text-[0.58rem] leading-tight font-semibold not-italic; }
+
+	&[data-state="working"] { background-color: color-mix(in srgb, var(--color-shift-morning) 18%, var(--surface)); color: color-mix(in srgb, var(--color-shift-morning) 80%, var(--ink)); }
+	&[data-state="rest"] { background-color: color-mix(in srgb, var(--shift-rest) 16%, var(--surface)); color: color-mix(in srgb, var(--shift-rest) 80%, var(--ink)); }
+	&[data-state="unknown"] { @apply border-dashed text-ink-muted; border-color: var(--line); }
+	&[data-freed="true"] { @apply ring-2; --tw-ring-color: var(--turnin-teal); }
+}
+
+@utility reco-timeline-bar {
+	@apply rounded-lg px-2 py-1 text-center text-[0.68rem] font-black tracking-wide uppercase;
+	background: color-mix(in srgb, var(--turnin-teal) 18%, var(--surface));
+	color: color-mix(in srgb, var(--turnin-teal-dark) 85%, var(--ink));
+}
+
+/* Calendar or list. Hidden until the controller connects, because with no
+   JavaScript the list is the only view and a dead toggle is worse than none. */
+@utility composer-views {
+	@apply inline-flex gap-1 self-start rounded-full border border-line bg-surface-muted p-1;
+
+	@media (width >= 64rem) { grid-area: views; }
+}
+
+@utility composer-view-tab {
+	@apply rounded-full px-4 text-sm font-semibold text-ink-muted transition;
+	min-height: 2.25rem;
+
+	&[aria-pressed="true"] {
+		@apply bg-surface text-brand-700 shadow-sm dark:text-brand-200;
+	}
+}
+
+@utility composer-board {
+	@apply flex flex-col gap-3;
+
+	@media (width >= 64rem) { grid-area: board; }
+}
+
+@utility composer-panel { @apply flex flex-col gap-3; }
+
+@utility composer-summary {
+	@apply flex flex-col gap-3 rounded-[var(--radius-card)] border border-line bg-surface p-4;
+	box-shadow: 0 4px 18px rgb(15 76 92 / 4.5%);
+
+	@media (width >= 64rem) {
+		grid-area: summary;
+		position: sticky;
+		top: 1rem;
+	}
+}
+
+@utility composer-balance {
+	@apply flex flex-col gap-1;
+
+	& > div { @apply flex items-baseline justify-between gap-3 text-sm; }
+	dt { @apply text-ink-muted; }
+	dd { @apply font-bold; }
+}
+
+@utility composer-balance-diff {
+	@apply mt-1 rounded-xl px-3 py-2;
+	background: var(--surface-muted);
+
+	dt { @apply text-xs font-black tracking-[0.1em] uppercase; }
+	dd { @apply text-lg font-black; }
+}
+
+@utility composer-selected { @apply text-sm font-semibold; }
+
+@utility composer-bridge {
+	@apply rounded-xl px-3 py-2 text-sm font-bold;
+	background: color-mix(in srgb, var(--turnin-teal) 16%, var(--surface));
+	color: color-mix(in srgb, var(--turnin-teal-dark) 85%, var(--ink));
+}
+
+/* --- The calendar itself, reusable on any screen that shows a rota ---------- */
+@utility shift-calendar { @apply flex flex-col gap-1; }
+
+@utility shift-calendar-header {
+	@apply flex items-center justify-between gap-2;
+
+	h2 { @apply text-base font-bold tracking-tight sm:text-lg; }
+}
+
+@utility shift-calendar-weekdays {
+	@apply grid grid-cols-7 gap-1 px-0.5 text-center text-[0.62rem] font-bold tracking-[0.06em] text-ink-muted uppercase;
+}
+
+@utility shift-calendar-week { @apply grid grid-cols-7 gap-1; }
+
+@utility shift-day {
+	@apply relative flex flex-col items-center justify-center gap-0.5 overflow-hidden rounded-xl
+		border border-line bg-surface px-0.5 py-1 text-center transition;
+	min-height: 4.4rem;
+
+	@media (width >= 40rem) { min-height: 5rem; }
+
+	/* Colour is a second signal, never the only one: the token below says the
+	   same thing in words. */
+	&[data-state="working"] { background-color: color-mix(in srgb, var(--color-shift-oncall) 12%, var(--surface)); }
+	&[data-state="working"][data-tone="morning"] { background-color: color-mix(in srgb, var(--color-shift-morning) 15%, var(--surface)); }
+	&[data-state="working"][data-tone="evening"] { background-color: color-mix(in srgb, var(--color-shift-evening) 15%, var(--surface)); }
+	&[data-state="working"][data-tone="night"] { background-color: color-mix(in srgb, var(--color-shift-night) 16%, var(--surface)); }
+	&[data-state="rest"] { background-color: color-mix(in srgb, var(--shift-rest) 13%, var(--surface)); }
+	&[data-state="unknown"] { @apply border-dashed bg-surface text-ink-muted; }
+	&[data-state="incoming"] {
+		background: color-mix(in srgb, var(--turnin-teal) 24%, var(--surface));
+		border-color: var(--turnin-teal-dark);
+		border-style: dashed;
+	}
+
+	&[data-past="true"] { @apply opacity-45; }
+	&[data-today="true"] { box-shadow: inset 0 0 0 2px var(--ring); }
+	&[data-blocked] { @apply opacity-70; }
+
+	&[aria-pressed="true"] {
+		@apply ring-2 ring-offset-1;
+		--tw-ring-color: var(--turnin-teal-dark);
+		--tw-ring-offset-color: var(--canvas);
+	}
+
+	&:is(button) { @apply cursor-pointer hover:border-brand-600 active:scale-[0.98]; }
+	&:focus-visible { @apply z-1; }
+}
+
+@utility shift-day-number { @apply text-[0.85rem] leading-none font-bold; }
+@utility shift-day-weekday { @apply text-[0.52rem] leading-none font-bold tracking-wide text-ink-muted uppercase; }
+
+@utility shift-day-token {
+	@apply max-w-full text-[0.56rem] leading-[1.15] font-black tracking-wide uppercase;
+
+	@media (width >= 40rem) { @apply text-[0.68rem]; }
+}
+
+/* The hours only fit once the cell is wide enough to read them. */
+@utility shift-day-sub {
+	@apply hidden max-w-full truncate text-[0.6rem] leading-tight text-ink-muted;
+
+	@media (width >= 40rem) { @apply block; }
+}
+
+@utility shift-day-badge {
+	@apply absolute top-0.5 right-0.5 flex items-center gap-px rounded-full px-1 text-[0.55rem] leading-none font-black;
+	background: var(--turnin-teal);
+	color: var(--turnin-petroleum);
+
+	i { @apply hidden not-italic; }
+
+	@media (width >= 40rem) {
+		i { @apply inline; }
+	}
+}
+
+@utility shift-day-lock { @apply absolute bottom-0.5 right-1 text-[0.6rem] font-black text-ink-muted; }
+
+@utility composer-legend {
+	@apply flex flex-wrap items-center gap-x-4 gap-y-1 text-xs text-ink-muted;
+
+	li { @apply flex items-center gap-1.5; }
+}
+
+@utility legend-mark {
+	@apply grid size-3.5 place-items-center rounded-sm border border-line text-[0.6rem] leading-none;
+
+	&[data-state="working"] { background-color: color-mix(in srgb, var(--color-shift-morning) 45%, var(--surface)); }
+	&[data-state="rest"] { background-color: color-mix(in srgb, var(--shift-rest) 35%, var(--surface)); }
+	&[data-state="incoming"] { background: color-mix(in srgb, var(--turnin-teal) 45%, var(--surface)); border-style: dashed; }
+	&[data-state="opportunity"] { @apply border-0 bg-transparent text-[0.8rem]; color: var(--turnin-teal-dark); }
+}
+
+/* --- The list alternative, and the shared bits of both views ---------------- */
+@utility composer-list { @apply flex flex-col gap-3; }
+
+@utility trade-option-blocked {
+	@apply flex flex-col gap-1 rounded-2xl border border-dashed border-line bg-surface-muted p-4 opacity-80;
+}
+
+@utility composer-blocked-reason { @apply text-sm font-semibold text-ink-muted; }
+
+@utility composer-opportunity {
+	@apply rounded-xl px-2 py-1 text-sm font-bold;
+	background: color-mix(in srgb, var(--turnin-teal) 16%, var(--surface));
+	color: color-mix(in srgb, var(--turnin-teal-dark) 85%, var(--ink));
+}
+
+/* --- The day sheet ---------------------------------------------------------- */
+@utility composer-sheet-body { @apply flex flex-col gap-3; }
+
+@utility composer-sheet-context {
+	@apply flex gap-1;
+}
+
+@utility composer-sheet-context-day {
+	@apply flex min-w-0 flex-1 flex-col items-center justify-center gap-0.5 rounded-lg border border-transparent px-1 py-1.5 text-center;
+
+	b { @apply text-[0.62rem] leading-tight font-bold; }
+	i { @apply text-[0.58rem] leading-tight font-semibold not-italic; }
+
+	&[data-state="working"] { background-color: color-mix(in srgb, var(--color-shift-morning) 16%, var(--surface)); }
+	&[data-state="rest"] { background-color: color-mix(in srgb, var(--shift-rest) 14%, var(--surface)); }
+	&[data-state="incoming"] { background: color-mix(in srgb, var(--turnin-teal) 22%, var(--surface)); }
+	&[data-state="unknown"] { @apply border-dashed text-ink-muted; border-color: var(--line); }
+	&[data-current="true"] { @apply ring-2; --tw-ring-color: var(--turnin-teal-dark); }
+}
+
+@utility composer-sheet-shift {
+	@apply flex flex-col gap-1 rounded-[var(--radius-control)] border border-line p-3;
+}
+
+@utility composer-sheet-kind { @apply text-base font-semibold; }
+@utility composer-sheet-empty { @apply text-sm text-ink-muted; }
+
+@utility composer-extra {
+	@apply flex flex-col gap-3 rounded-[var(--radius-card)] border border-line p-4;
+
+	& > summary { @apply cursor-pointer font-semibold text-brand-700 dark:text-brand-300; }
+	&[open] > summary { @apply mb-1; }
+}

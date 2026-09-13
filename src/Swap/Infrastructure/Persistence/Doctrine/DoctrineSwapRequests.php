@@ -132,12 +132,11 @@ final readonly class DoctrineSwapRequests implements SwapRequests
         // partial index on swap_availabilities covers.
         $rows = $this->connection->fetchAllAssociative(
             <<<'SQL'
-                SELECT r.id, COUNT(a.id) AS candidates
+                SELECT r.id, COUNT(DISTINCT a.worker_id) AS candidates
                   FROM swap_requests r
                   LEFT JOIN swap_availabilities a
                          ON a.swap_pool_id = r.swap_pool_id
                         AND a.work_date = r.work_date
-                        AND a.shift_kind = r.shift_kind
                         AND a.active = TRUE
                         AND a.worker_id <> r.worker_id
                  WHERE r.id IN (:ids)

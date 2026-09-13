@@ -1,0 +1,57 @@
+{# The list alternative to the calendar, and the only place the radios live.
+
+   Both views drive this same group of inputs, so choosing from the calendar and
+   choosing from the list post exactly the same value to exactly the same
+   command. A shift that cannot be offered stays on the list with its reason
+   rather than disappearing.
+
+   Parameters: shifts, selectedKey, authorName #}
+<div class="composer-list">
+    {% for shift in shifts %}
+        {% if shift.selectable %}
+            <label class="trade-option"
+                   data-swap-composer-target="option"
+                   data-date="{{ shift.date }}"
+                   data-shift-key="{{ shift.key }}"
+                   data-headline="{{ shift.dateHeadline }}"
+                   data-shift-label="{{ shift.shiftLabel }}"
+                   data-hours="{{ shift.hours }}"
+                   data-duration="{{ shift.durationLabel }}"
+                   data-balance="{{ shift.balanceLabel }}"
+                   data-balance-hint="{{ shift.balanceHint }}"
+                   {% if shift.opportunity %}data-opportunity="{{ shift.opportunity.summaryLabel }} · {{ shift.opportunity.restRangeLabel }}"{% endif %}>
+                <input type="radio" name="offeredShift" value="{{ shift.key }}" data-action="swap-composer#sync"{{ selectedKey == shift.key ? ' checked' : '' }}>
+                <span class="trade-option-body">
+                    <span class="trade-side-label">{{ authorName }} trabajaría</span>
+                    <strong class="swap-card-date">{{ shift.dateHeadline|upper }}</strong>
+                    <span class="shift-card-hours">{{ shift.hours }}{% if shift.endsNextDay %} <small>termina al día siguiente</small>{% endif %}</span>
+                    <span class="shift-card-duration">{{ shift.durationLabel|upper }}</span>
+                    <strong>{{ shift.shiftLabel }}</strong>
+                    {% if shift.opportunity %}<span class="composer-opportunity">★ {{ shift.opportunity.summaryLabel }} · {{ shift.opportunity.restRangeLabel }}</span>{% endif %}
+                    <span class="trade-balance">Diferencia para ti: {{ shift.balanceLabel }}<small>{{ shift.balanceHint }}</small></span>
+                </span>
+            </label>
+        {% else %}
+            <div class="trade-option-blocked"
+                 data-swap-composer-target="option"
+                 data-date="{{ shift.date }}"
+                 data-shift-key="{{ shift.key }}"
+                 data-headline="{{ shift.dateHeadline }}"
+                 data-shift-label="{{ shift.shiftLabel }}"
+                 data-hours="{{ shift.hours }}"
+                 data-duration="{{ shift.durationLabel }}"
+                 data-blocked-reason="{{ shift.blockedReason }}">
+                <strong class="swap-card-date">{{ shift.dateHeadline|upper }}</strong>
+                <span class="shift-card-hours">{{ shift.hours }}</span>
+                <span class="shift-card-duration">{{ shift.durationLabel|upper }}</span>
+                <strong>{{ shift.shiftLabel }}</strong>
+                <span class="composer-blocked-reason">No disponible para cambio · {{ shift.blockedReason }}</span>
+            </div>
+        {% endif %}
+    {% else %}
+        <div class="empty-state">
+            <strong>No tienes turnos en estas cuatro semanas.</strong>
+            <span>Prueba con las semanas siguientes o cúbrelo sin pedir nada a cambio.</span>
+        </div>
+    {% endfor %}
+</div>

@@ -217,6 +217,12 @@ solo el calendario. Ver [ADR 11](adr/0011-real-shift-proposals-balances-and-rest
 días `REST` confirmados a ambos lados. Ignora desconocidos, exige tres días
 resultantes y conserva score y razones explicables.
 
+Es **el único detector**. Lo usan tanto «Encuéntrame un puente»
+(`FindRestBlockOpportunities`) como la pantalla en la que eliges qué turno pedir
+a cambio (`GetSwapComposerCalendar`): esta última lo ejecuta una vez por
+calendario sobre el rango ya cargado, y la plantilla no vuelve a llamarlo. Si
+algún día cambia el umbral, cambia en los dos sitios a la vez.
+
 ## SwapPool: el concepto que hay que entender
 
 **Dos personas del mismo hospital no pueden intercambiar turnos automáticamente.**
@@ -342,6 +348,12 @@ validar nada es ruido.
 * `RosterMonth` — el mes que carga y navega la pantalla del calendario.
 * `ShiftKind` — enum: mañana, tarde, noche, 12 h, guardia…
 * `LocalTime` — hora de pared, sin zona. `'22:00'` no es un instante.
+* `ShiftDuration` — cómo se escribe una duración de turno (`7 h`, `7 h 30 min`).
+  Existe porque la misma regla escribe dos números: lo que dura un turno y la
+  diferencia entre dos. Una guardia de 08:00 a 08:00 dura 24 h, nunca cero.
+* `ShiftBalance` — la diferencia de minutos entre el turno que coges y el que
+  ofreces, desde el lado de quien propone. Sabe decirla (`+17 h`) y explicarla
+  («Trabajarías 17 h más»).
 * `ShiftWindow` — inicio y fin de un segmento. **Fin > inicio no se cumple**: un
   turno de noche va de 22:00 a 08:00, y `endsNextDay()` se deriva de ahí en lugar
   de almacenarse.

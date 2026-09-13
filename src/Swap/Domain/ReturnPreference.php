@@ -33,4 +33,29 @@ final readonly class ReturnPreference
     {
         return null === $this->month && null === $this->shiftKind && null === $this->durationMinutes && [] === $this->preferredWeekdays;
     }
+
+    /** @return array{int, list<string>} score and human-readable reasons */
+    public function match(WorkDate $date, ShiftKind $kind, int $durationMinutes): array
+    {
+        $score = 0;
+        $reasons = [];
+        if (null !== $this->month && str_starts_with((string) $date, $this->month.'-')) {
+            $score += OpportunityScoreWeights::PREFERRED_MONTH;
+            $reasons[] = 'coincide con el periodo que pediste';
+        }
+        if (null !== $this->shiftKind && $this->shiftKind === $kind) {
+            $score += OpportunityScoreWeights::PREFERRED_KIND;
+            $reasons[] = 'coincide con la franja que pediste';
+        }
+        if (null !== $this->durationMinutes && $this->durationMinutes === $durationMinutes) {
+            $score += OpportunityScoreWeights::PREFERRED_DURATION;
+            $reasons[] = 'coincide con la duración que pediste';
+        }
+        if ([] !== $this->preferredWeekdays && \in_array($date->dayOfWeek(), $this->preferredWeekdays, true)) {
+            $score += OpportunityScoreWeights::PREFERRED_WEEKDAY;
+            $reasons[] = 'coincide con uno de tus días preferidos';
+        }
+
+        return [$score, $reasons];
+    }
 }

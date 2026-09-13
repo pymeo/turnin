@@ -337,3 +337,67 @@ falla si alguien vuelve a estrechar el conjunto.
 tipo también. Los acentos de color reutilizan el agrupamiento que ya define
 `ShiftKind::tone()`: los de 12 h comparten banda con su equivalente corto, y
 guardia y «otro» van al tono de guardia.
+
+## 2026-09-13 — Elegir qué turno pedir a cambio es un calendario, no una lista
+
+La pantalla a la que se llega desde «Me interesa» mostraba los próximos turnos
+de quien se ofrece como una lista vertical de tarjetas. Con tres mañanas de 7 h
+seguidas —el caso normal— las tres tarjetas son idénticas, y la persona no puede
+responder a lo único que importa: *¿trabajo el día de antes?, ¿y el de después?,
+¿cuál de los tres me deja un puente?*. Para contestarlo tenía que salirse de
+Turnin y mirar su cuadrante.
+
+Ahora la vista principal es su propio calendario de cuatro semanas
+(`GetSwapComposerCalendar` → `SwapComposerCalendarView`, plantilla
+`swap/exchange_composer.html.twig`). Las decisiones que tiene detrás:
+
+**Los días libres se dibujan.** Una celda vacía se lee como «libre», y «libre» y
+«todavía no lo he rellenado» son respuestas distintas —la misma razón por la que
+existe `RosteredDayState::UNKNOWN`—. Cada día escribe su estado con palabras
+(«Libre», «Sin datos», «7 h»), no solo con color.
+
+**La lista sigue existiendo, y es la que manda.** Los `input[type=radio]` viven
+solo en la lista; el calendario y las recomendaciones marcan uno de ellos. Así
+elegir desde el calendario y elegir desde la lista son literalmente el mismo
+comando, y la pantalla sigue funcionando sin JavaScript: la lista se sirve
+visible y el conmutador «Calendario / Lista» aparece cuando el controlador de
+Stimulus conecta. Por eso los radios tampoco llevan `required`: un `required`
+dentro de un panel con `display:none` bloquea el envío en Chrome.
+
+**Una recomendación, dos como mucho.** Sale del `RestBlockOpportunityFinder` que
+ya existía —no hay un segundo detector— y la segunda solo aparece si abre un
+bloque de descanso *distinto* y al menos igual de largo. Marcar todos los turnos
+con una estrella es exactamente igual de útil que no marcar ninguno.
+
+**El orden se expresa recomendando, no reordenando.** El producto pide priorizar
+por descanso, preferencia de devolución, saldo pendiente, cercanía de duración y
+proximidad. Eso es lo que calcula el score (`OpportunityScoreWeights`), pero la
+lista y el calendario siguen en orden cronológico: reordenar el cuadrante de
+alguien rompe el modelo mental que esta pantalla existe para sostener. La
+prioridad se ve en el panel de recomendación y en la estrella de la celda.
+
+**La compatibilidad es la pertenencia al pool y nada más.** Se valoró puntuar
+también si el compañero declaró disponibilidad ese día, pero `Availabilities` no
+tiene consulta en lote por fecha y turno: sería una consulta por turno mostrado,
+justo el N+1 que esta pantalla venía a evitar. Y el calendario de la otra persona
+no se enseña nunca.
+
+**En móvil, cuatro semanas apiladas y no una semana con flechas.** El objetivo
+declarado es «ver a la vez suficientes días alrededor del turno para entender el
+descanso», y cuatro filas de siete celdas caben de sobra en 375 px mostrando
+cuatro veces más contexto que una semana sola. La navegación por semanas sigue
+existiendo (`?semana=`), como enlaces, para llegar más allá del mes.
+
+**El rango empieza el lunes de la semana en curso** y no mañana: los días ya
+pasados de esta semana son contexto igual que los demás, y aparecen visibles pero
+bloqueados. Hacia delante se para donde `GetChangesSetup` deja de ofrecer turnos
+(120 días).
+
+Las otras tres respuestas —pedir algo para más adelante, guardarse el favor y
+cubrirlo sin pedir nada— siguen ahí, dentro de un `<details>` al final. No se
+quitan: se dejan de mostrar a la vez que la pregunta principal, porque tres
+formularios compitiendo con un calendario son la razón por la que la pantalla
+anterior no se podía leer.
+
+La pantalla de cobertura (`swap/proposal_composer.html.twig`) se queda como
+estaba, reducida a lo suyo: confirmar un turno no necesita un calendario.

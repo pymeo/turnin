@@ -170,6 +170,7 @@ services:
     App\Swap\Domain\Availabilities: '@App\Swap\Infrastructure\Persistence\Doctrine\DoctrineAvailabilities'
     App\Swap\Domain\SwapIdGenerator: '@App\Swap\Infrastructure\Identity\SymfonySwapIdGenerator'
     App\Swap\Domain\SwapTransaction: '@App\Swap\Infrastructure\Persistence\Doctrine\DoctrineSwapTransaction'
+    App\Swap\Domain\ShiftExchangeGovernance: '@App\Workforce\Infrastructure\Swap\WorkforceShiftExchangeGovernance'
     App\Swap\Domain\SwapGroups: '@App\Workforce\Infrastructure\Swap\WorkforceSwapGroups'
     App\Swap\Domain\RosteredDays: '@App\Scheduling\Infrastructure\Swap\SchedulingRosteredDays'
     App\Swap\Domain\AuthenticatedWorkers: '@App\Platform\Identity\Infrastructure\Swap\IdentitySwapWorkers'

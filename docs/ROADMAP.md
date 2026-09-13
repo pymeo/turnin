@@ -171,3 +171,12 @@ Quedan para una slice posterior los webhooks `watch`, resolución interactiva de
 borrados/conflictos remotos, sincronización automática periódica e import `.ics`.
 El esquema conserva `syncToken` y el adaptador entiende la expiración 410 para
 cuando se active ese proceso.
+
+# Pendiente: «Encuéntrame un puente» con el mismo calendario
+
+`swap/_composer_calendar.html.twig` es un componente sin nada de intercambios
+dentro: recibe semanas ya proyectadas y `interactive: false` lo deja en modo
+lectura. La pantalla de puentes (`/app/changes/bridge`) sigue mostrando una lista
+de oportunidades porque no tiene todavía un read model de calendario; cuando lo
+tenga debe reutilizar ese componente en lugar de dibujar otro. Ver
+[DECISIONS.md](DECISIONS.md).

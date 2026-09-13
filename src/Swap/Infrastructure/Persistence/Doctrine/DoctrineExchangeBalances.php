@@ -35,9 +35,30 @@ final readonly class DoctrineExchangeBalances implements ExchangeBalances
         return false === $row ? null : $this->hydrate($row);
     }
 
+    public function byId(string $id): ?ExchangeBalance
+    {
+        $row = $this->connection->fetchAssociative('SELECT * FROM swap_exchange_balances WHERE id = :id', ['id' => $id]);
+
+        return false === $row ? null : $this->hydrate($row);
+    }
+
+    public function bySourceRequest(string $requestId): ?ExchangeBalance
+    {
+        $row = $this->connection->fetchAssociative('SELECT * FROM swap_exchange_balances WHERE source_request_id = :request', ['request' => $requestId]);
+
+        return false === $row ? null : $this->hydrate($row);
+    }
+
     public function involving(string $workerId): array
     {
         $rows = $this->connection->fetchAllAssociative('SELECT * FROM swap_exchange_balances WHERE creditor_worker_id = :worker OR owing_worker_id = :worker ORDER BY created_at DESC', ['worker' => $workerId]);
+
+        return array_map(fn (array $row): ExchangeBalance => $this->hydrate($row), $rows);
+    }
+
+    public function openBetween(string $creditorWorkerId, string $owingWorkerId): array
+    {
+        $rows = $this->connection->fetchAllAssociative("SELECT * FROM swap_exchange_balances WHERE creditor_worker_id = :creditor AND owing_worker_id = :owing AND status IN ('open', 'partially_redeemed') ORDER BY created_at", ['creditor' => $creditorWorkerId, 'owing' => $owingWorkerId]);
 
         return array_map(fn (array $row): ExchangeBalance => $this->hydrate($row), $rows);
     }

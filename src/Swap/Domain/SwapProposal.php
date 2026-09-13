@@ -19,7 +19,10 @@ final class SwapProposal
         private readonly ?string $offeredRosterDayId,
         private readonly ?WorkDate $offeredWorkDate,
         private readonly ?ReturnPreference $returnPreference,
+        private readonly ?string $exchangeBalanceId,
+        private readonly int $reservedMinutes,
         private SwapProposalStatus $status,
+        private ?string $approvedBy,
         private readonly DateTimeImmutable $createdAt,
         private DateTimeImmutable $updatedAt,
     ) {
@@ -33,21 +36,40 @@ final class SwapProposal
         if (SwapProposalKind::DEFERRED !== $kind && null !== $returnPreference) {
             throw new InvalidArgumentException('Solo un intercambio diferido puede guardar preferencias.');
         }
+        $isRedemption = SwapProposalKind::REDEMPTION === $kind;
+        if ($isRedemption !== (null !== $exchangeBalanceId && $reservedMinutes > 0) || (!$isRedemption && (null !== $exchangeBalanceId || 0 !== $reservedMinutes))) {
+            throw new InvalidArgumentException('La redención necesita un saldo y una reserva válidos.');
+        }
     }
 
     public static function propose(string $id, string $requestId, string $requestOwnerId, string $proposerId, string $proposerAssignmentId, SwapProposalKind $kind, ?string $offeredRosterDayId, ?WorkDate $offeredWorkDate, DateTimeImmutable $now, ?ReturnPreference $returnPreference = null): self
     {
-        return new self($id, $requestId, $requestOwnerId, $proposerId, $proposerAssignmentId, $kind, $offeredRosterDayId, $offeredWorkDate, $returnPreference, SwapProposalStatus::PENDING, $now, $now);
+        return new self($id, $requestId, $requestOwnerId, $proposerId, $proposerAssignmentId, $kind, $offeredRosterDayId, $offeredWorkDate, $returnPreference, null, 0, SwapProposalStatus::PENDING, null, $now, $now);
     }
 
-    public static function restore(string $id, string $requestId, string $requestOwnerId, string $proposerId, string $proposerAssignmentId, SwapProposalKind $kind, ?string $offeredRosterDayId, ?WorkDate $offeredWorkDate, ?ReturnPreference $returnPreference, SwapProposalStatus $status, DateTimeImmutable $createdAt, DateTimeImmutable $updatedAt): self
+    public static function proposeRedemption(string $id, string $requestId, string $requestOwnerId, string $proposerId, string $proposerAssignmentId, string $exchangeBalanceId, int $reservedMinutes, DateTimeImmutable $now): self
     {
-        return new self($id, $requestId, $requestOwnerId, $proposerId, $proposerAssignmentId, $kind, $offeredRosterDayId, $offeredWorkDate, $returnPreference, $status, $createdAt, $updatedAt);
+        return new self($id, $requestId, $requestOwnerId, $proposerId, $proposerAssignmentId, SwapProposalKind::REDEMPTION, null, null, null, $exchangeBalanceId, $reservedMinutes, SwapProposalStatus::PENDING, null, $now, $now);
     }
 
-    public function accept(string $workerId, DateTimeImmutable $now): void
+    public static function restore(string $id, string $requestId, string $requestOwnerId, string $proposerId, string $proposerAssignmentId, SwapProposalKind $kind, ?string $offeredRosterDayId, ?WorkDate $offeredWorkDate, ?ReturnPreference $returnPreference, ?string $exchangeBalanceId, int $reservedMinutes, SwapProposalStatus $status, ?string $approvedBy, DateTimeImmutable $createdAt, DateTimeImmutable $updatedAt): self
     {
-        $this->decide($workerId, SwapProposalStatus::ACCEPTED, $now);
+        return new self($id, $requestId, $requestOwnerId, $proposerId, $proposerAssignmentId, $kind, $offeredRosterDayId, $offeredWorkDate, $returnPreference, $exchangeBalanceId, $reservedMinutes, $status, $approvedBy, $createdAt, $updatedAt);
+    }
+
+    public function awaitApproval(string $workerId, DateTimeImmutable $now): void
+    {
+        $this->decide($workerId, SwapProposalStatus::PENDING_APPROVAL, $now);
+    }
+
+    public function execute(string $workerId, DateTimeImmutable $now, ?string $approvedBy = null): void
+    {
+        if ($workerId !== $this->requestOwnerId || !\in_array($this->status, [SwapProposalStatus::PENDING, SwapProposalStatus::PENDING_APPROVAL], true)) {
+            throw new InvalidArgumentException('Esta propuesta ya no se puede ejecutar.');
+        }
+        $this->status = SwapProposalStatus::EXECUTED;
+        $this->approvedBy = $approvedBy;
+        $this->updatedAt = $now;
     }
 
     public function reject(string $workerId, DateTimeImmutable $now): void
@@ -61,6 +83,15 @@ final class SwapProposal
             throw new InvalidArgumentException('Esta propuesta ya no se puede retirar.');
         }
         $this->status = SwapProposalStatus::WITHDRAWN;
+        $this->updatedAt = $now;
+    }
+
+    public function rejectApproval(DateTimeImmutable $now): void
+    {
+        if (SwapProposalStatus::PENDING_APPROVAL !== $this->status) {
+            throw new InvalidArgumentException('Esta propuesta no está pendiente de aprobación.');
+        }
+        $this->status = SwapProposalStatus::APPROVAL_REJECTED;
         $this->updatedAt = $now;
     }
 
@@ -116,6 +147,21 @@ final class SwapProposal
     public function returnPreference(): ?ReturnPreference
     {
         return $this->returnPreference;
+    }
+
+    public function exchangeBalanceId(): ?string
+    {
+        return $this->exchangeBalanceId;
+    }
+
+    public function reservedMinutes(): int
+    {
+        return $this->reservedMinutes;
+    }
+
+    public function approvedBy(): ?string
+    {
+        return $this->approvedBy;
     }
 
     public function status(): SwapProposalStatus

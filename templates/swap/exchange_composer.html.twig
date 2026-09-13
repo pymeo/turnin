@@ -1,0 +1,206 @@
+{% extends 'base.html.twig' %}
+
+{% block title %}Turnin — ¿Qué turno quieres que {{ calendar.authorName }} haga por ti?{% endblock %}
+
+{% block body %}
+{% set requested = calendar.requestedShift %}
+{% set selectedKey = calendar.selectedShift ? calendar.selectedShift.key : '' %}
+{% set offerable = calendar.shifts|filter(shift => shift.selectable) %}
+<main class="composer-shell" data-controller="swap-composer">
+    {% include 'identity/_authenticated_header.html.twig' %}
+
+    <form method="post" action="{{ path('swap_proposal_create', {requestId: calendar.requestId}) }}" class="composer-grid">
+        <input type="hidden" name="_token" value="{{ csrfToken }}">
+        <input type="hidden" name="kind" value="exchange">
+
+        <header class="composer-head">
+            <a class="text-sm text-ink-muted no-underline" href="{{ path('swap_changes_available') }}">‹ Turnos disponibles</a>
+            <p class="changes-kicker">Proponer intercambio</p>
+            <h1>¿Qué turno quieres que {{ calendar.authorName }} haga por ti?</h1>
+            <p>Selecciona uno de tus turnos. Te mostramos también qué días trabajas alrededor para que puedas elegir mejor.</p>
+            {% if calendar.blockedReason %}<span class="alert alert-critical" role="alert">{{ calendar.blockedReason }}</span>{% endif %}
+        </header>
+
+        {# Always on screen: the only thing on this page that is already decided. #}
+        <aside class="composer-take" aria-label="Turno que harías">
+            <p class="trade-side-label">Tú harías a {{ calendar.authorName }}</p>
+            <p class="swap-card-date">{{ requested.dateHeadline|upper }}</p>
+            <p class="shift-card-hours">{{ requested.hours }}</p>
+            <p class="composer-take-duration">{{ requested.durationLabel|upper }}{% if requested.endsNextDay %} <small>termina al día siguiente</small>{% endif %}</p>
+            <p class="composer-take-place"><strong>{{ requested.shiftLabel }}</strong><br>{{ requested.groupLabel }} · {{ requested.workplaceName }}</p>
+        </aside>
+
+        {% if calendar.recommendations|length %}
+            <section class="composer-reco" aria-label="Lo que te recomienda Turnin">
+                {% for option in calendar.recommendations %}
+                    <article class="reco-card">
+                        <p class="reco-kicker">✨ {{ loop.first ? 'Mejor opción' : 'Otra buena opción' }}</p>
+                        <p class="reco-lead">Si {{ calendar.authorName }} hace tu turno del</p>
+                        <p class="swap-card-date">{{ option.shift.dateHeadline|upper }}</p>
+                        <p class="shift-card-hours">{{ option.shift.hours }} · {{ option.shift.durationLabel }}</p>
+                        <p class="reco-gain"><strong>{{ option.opportunity.summaryLabel|upper }}</strong><span>{{ option.opportunity.restRangeLabel }}</span></p>
+
+                        {# The same stretch of calendar twice, so the gain is seen and not read. #}
+                        <div class="reco-timeline" aria-hidden="true">
+                            {% for row in ['Antes', 'Después'] %}
+                                <div class="reco-timeline-row">
+                                    <span class="reco-timeline-label">{{ row }}</span>
+                                    {% for day in option.timeline %}
+                                        {% set freed = row == 'Después' and day.date == option.shift.date %}
+                                        {% set state = freed ? 'rest' : (day.shifts|length ? 'working' : (day.isRestDay ? 'rest' : 'unknown')) %}
+                                        <span class="reco-timeline-cell" data-state="{{ state }}" data-freed="{{ freed ? 'true' : 'false' }}">
+                                            <b>{{ day.dateCompact }}</b>
+                                            <i>{{ state == 'working' ? 'Trabajo' : (state == 'rest' ? 'Libre' : '—') }}</i>
+                                        </span>
+                                    {% endfor %}
+                                </div>
+                            {% endfor %}
+                            <p class="reco-timeline-bar">{{ option.opportunity.resultingRestDays }} días seguidos libres</p>
+                        </div>
+                        <p class="sr-only">{{ option.headline }}: {{ option.opportunity.restRangeLabel }}.</p>
+
+                        <a class="btn-primary btn-block"
+                           href="{{ path('swap_proposal_new_exchange', {requestId: calendar.requestId, semana: calendar.weekOffset, turno: option.shift.key}) }}"
+                           data-action="swap-composer#choose"
+                           data-shift-key="{{ option.shift.key }}">Elegir este turno</a>
+                    </article>
+                {% endfor %}
+            </section>
+        {% endif %}
+
+        {# Hidden until the controller connects: without JavaScript the list is
+           the working view, and a toggle that toggles nothing would be a lie. #}
+        <div class="composer-views hidden" data-swap-composer-target="views" role="group" aria-label="Cómo quieres verlo">
+            <button class="composer-view-tab" type="button" data-action="swap-composer#showCalendar" data-swap-composer-target="calendarTab" aria-pressed="true">Calendario</button>
+            <button class="composer-view-tab" type="button" data-action="swap-composer#showList" data-swap-composer-target="listTab" aria-pressed="false">Lista</button>
+        </div>
+
+        <div class="composer-board">
+            <section class="composer-panel hidden" data-swap-composer-target="calendarPanel" aria-label="Tu calendario">
+                <div class="shift-calendar-header">
+                    {% if calendar.hasPreviousWeeks %}
+                        <a class="calendar-nav-button" data-swap-composer-target="weekLink" href="{{ path('swap_proposal_new_exchange', {requestId: calendar.requestId, semana: calendar.weekOffset - 1, turno: selectedKey}) }}" aria-label="Semanas anteriores">‹</a>
+                    {% else %}
+                        <span class="calendar-nav-button" aria-hidden="true"></span>
+                    {% endif %}
+                    <h2>{{ calendar.rangeLabel }}</h2>
+                    {% if calendar.hasMoreWeeks %}
+                        <a class="calendar-nav-button" data-swap-composer-target="weekLink" href="{{ path('swap_proposal_new_exchange', {requestId: calendar.requestId, semana: calendar.weekOffset + 1, turno: selectedKey}) }}" aria-label="Semanas siguientes">›</a>
+                    {% else %}
+                        <span class="calendar-nav-button" aria-hidden="true"></span>
+                    {% endif %}
+                </div>
+
+                {% include 'swap/_composer_calendar.html.twig' with {
+                    weeks: calendar.weeks,
+                    interactive: true,
+                    selectedKey: selectedKey,
+                    highlightDate: requested.date,
+                    highlightLabel: calendar.authorName,
+                    highlightDetail: requested.durationLabel,
+                } only %}
+
+                <ul class="composer-legend">
+                    <li><span class="legend-mark" data-state="working"></span>Trabajas</li>
+                    <li><span class="legend-mark" data-state="rest"></span>Libre</li>
+                    <li><span class="legend-mark" data-state="incoming"></span>Turno de {{ calendar.authorName }}</li>
+                    <li><span class="legend-mark" data-state="opportunity">★</span>Oportunidad</li>
+                </ul>
+            </section>
+
+            <section class="composer-panel" data-swap-composer-target="listPanel" aria-label="Tus turnos en lista">
+                {% include 'swap/_composer_shift_list.html.twig' with {
+                    shifts: calendar.shifts,
+                    selectedKey: selectedKey,
+                    authorName: calendar.authorName,
+                } only %}
+            </section>
+
+            {# A shift chosen in another week still has to travel with the form,
+               and carry everything the summary reads off it. #}
+            {% if calendar.selectedShift and (calendar.selectedShift.date < calendar.rangeStart or calendar.selectedShift.date > calendar.rangeEnd) %}
+                {% set away = calendar.selectedShift %}
+                <input class="sr-only" type="radio" name="offeredShift" value="{{ away.key }}" checked
+                       data-action="swap-composer#sync"
+                       data-swap-composer-target="option"
+                       data-date="{{ away.date }}"
+                       data-shift-key="{{ away.key }}"
+                       data-headline="{{ away.dateHeadline }}"
+                       data-shift-label="{{ away.shiftLabel }}"
+                       data-hours="{{ away.hours }}"
+                       data-duration="{{ away.durationLabel }}"
+                       data-balance="{{ away.balanceLabel }}"
+                       data-balance-hint="{{ away.balanceHint }}"
+                       {% if away.opportunity %}data-opportunity="{{ away.opportunity.summaryLabel }} · {{ away.opportunity.restRangeLabel }}"{% endif %}>
+            {% endif %}
+        </div>
+
+        <aside class="composer-summary" data-swap-composer-target="summary" aria-label="Resumen del intercambio">
+            <dl class="composer-balance">
+                <div><dt>Tú harás a {{ calendar.authorName }}</dt><dd>{{ requested.dateCompact }} · {{ requested.durationLabel }}</dd></div>
+                <div><dt>{{ calendar.authorName }} hará por ti</dt><dd data-swap-composer-target="offered">{{ calendar.selectedShift ? calendar.selectedShift.durationLabel : '—' }}</dd></div>
+                <div class="composer-balance-diff"><dt>Diferencia para ti</dt><dd data-swap-composer-target="balance">{{ calendar.selectedShift ? calendar.selectedShift.balanceLabel : '—' }}</dd></div>
+            </dl>
+            <p class="composer-selected" data-swap-composer-target="recap" aria-live="polite">
+                {%- if calendar.selectedShift -%}
+                    Propones {{ calendar.selectedShift.dateHeadline }} · {{ calendar.selectedShift.hours }}
+                {%- else -%}
+                    Todavía no has elegido ningún turno.
+                {%- endif -%}
+            </p>
+            <p class="composer-bridge{{ calendar.selectedShift and calendar.selectedShift.opportunity ? '' : ' hidden' }}" data-swap-composer-target="bridge">
+                {%- if calendar.selectedShift and calendar.selectedShift.opportunity -%}
+                    ✨ Conseguirías {{ calendar.selectedShift.opportunity.summaryLabel }} · {{ calendar.selectedShift.opportunity.restRangeLabel }}
+                {%- endif -%}
+            </p>
+            <button class="btn-primary btn-block" type="submit" data-swap-composer-target="submit"{{ offerable|length ? '' : ' disabled' }}>Continuar con este intercambio</button>
+        </aside>
+    </form>
+
+    {# The detail sheet. Outside the form on purpose: everything in it is a
+       button that ticks one of the radios above. #}
+    <dialog class="sheet" data-controller="bottom-sheet" data-swap-composer-target="sheet" aria-labelledby="composer-sheet-title">
+        <div class="sheet-inner">
+            <span class="sheet-handle" aria-hidden="true"></span>
+            <div class="sheet-header">
+                <div>
+                    <p class="eyebrow" data-swap-composer-target="sheetKicker"></p>
+                    <h2 id="composer-sheet-title" data-swap-composer-target="sheetTitle"></h2>
+                </div>
+                <button class="picker-close" type="button" data-action="bottom-sheet#close" aria-label="Cerrar">×</button>
+            </div>
+            <div class="composer-sheet-body" data-swap-composer-target="sheetBody"></div>
+            <div class="sheet-actions">
+                <button class="btn-ghost btn-block" type="button" data-action="bottom-sheet#close">Cerrar</button>
+            </div>
+        </div>
+    </dialog>
+
+    <details class="composer-extra">
+        <summary>Otras formas de responder</summary>
+
+        <section class="card flex flex-col gap-3">
+            <p class="trade-side-label">Pedir algo para más adelante</p>
+            <h2>¿Qué te gustaría recibir?</h2>
+            <form method="post" action="{{ path('swap_proposal_create', {requestId: calendar.requestId}) }}" class="flex flex-col gap-3">
+                <input type="hidden" name="_token" value="{{ csrfToken }}"><input type="hidden" name="kind" value="deferred">
+                <label class="field"><span class="field-label">Periodo (opcional)</span><input class="input" type="month" name="preferredMonth"></label>
+                <div class="grid grid-cols-2 gap-2">
+                    <label class="field"><span class="field-label">Tipo</span><select class="input" name="preferredShiftKind"><option value="">Indiferente</option><option value="morning">Mañana</option><option value="evening">Tarde</option><option value="night">Noche</option></select></label>
+                    <label class="field"><span class="field-label">Duración</span><select class="input" name="preferredDuration"><option value="">Indiferente</option><option value="480">8 h</option><option value="720">12 h</option></select></label>
+                </div>
+                <fieldset><legend class="field-label">Días preferidos</legend><div class="flex gap-1">{% for day, label in {1:'L',2:'M',3:'X',4:'J',5:'V',6:'S',7:'D'} %}<label class="picker-chip"><input type="checkbox" name="preferredWeekdays[]" value="{{ day }}"> {{ label }}</label>{% endfor %}</div></fieldset>
+                <button class="btn-secondary btn-block" type="submit">Guardar preferencia y proponérselo</button>
+            </form>
+        </section>
+
+        <form method="post" action="{{ path('swap_proposal_create', {requestId: calendar.requestId}) }}" class="card flex flex-col gap-2">
+            <input type="hidden" name="_token" value="{{ csrfToken }}"><input type="hidden" name="kind" value="deferred">
+            <strong>Guardármelo para más adelante</strong><span class="text-ink-muted">Obtendrás saldo de intercambio cuando se acepte. No hace falta decidir ahora.</span>
+            <button class="btn-secondary btn-block" type="submit">Guardarme el favor</button>
+        </form>
+
+        <a class="btn-ghost btn-block" href="{{ path('swap_proposal_new_coverage', {requestId: calendar.requestId}) }}">Cubrirlo sin pedir nada</a>
+    </details>
+</main>
+{% endblock %}

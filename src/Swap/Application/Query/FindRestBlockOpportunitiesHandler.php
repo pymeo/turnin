@@ -6,6 +6,7 @@ namespace App\Swap\Application\Query;
 
 use App\Swap\Application\SwapWorkspace;
 use App\Swap\Domain\Availabilities;
+use App\Swap\Domain\OpportunityScoreWeights;
 use App\Swap\Domain\RestBlockOpportunityFinder;
 use App\Swap\Domain\RosteredDays;
 use App\Swap\Domain\SwapGroup;
@@ -53,7 +54,7 @@ final readonly class FindRestBlockOpportunitiesHandler
                 }
                 $candidateNames = $this->names->forWorkers(\array_slice(array_values(array_unique($candidateIds)), 0, 3));
                 $existing = $this->requests->openFor($assignmentId, $date);
-                $views[] = new RestBlockOpportunityView($assignmentId, $group->poolId, (string) $date, WorkDateLabel::headline($date), $opportunity->shiftToRelease->hours(), $opportunity->shiftToRelease->durationLabel(), $opportunity->shiftToRelease->shiftLabel, $opportunity->resultingConsecutiveRestDays, $opportunity->restStartsAt, $opportunity->restEndsAt, $opportunity->score + (10 * \count($candidateNames)), [...$opportunity->reasons, ...([] === $candidateNames ? [] : ['hay profesionales compatibles y disponibles'])], array_values($candidateNames), null !== $existing);
+                $views[] = new RestBlockOpportunityView($assignmentId, $group->poolId, (string) $date, WorkDateLabel::headline($date), $opportunity->shiftToRelease->hours(), $opportunity->shiftToRelease->durationLabel(), $opportunity->shiftToRelease->shiftLabel, $opportunity->resultingConsecutiveRestDays, $opportunity->restStartsAt, $opportunity->restEndsAt, $opportunity->score + (OpportunityScoreWeights::AVAILABLE_CANDIDATE * \count($candidateNames)), [...$opportunity->reasons, ...([] === $candidateNames ? [] : ['hay profesionales compatibles y disponibles'])], array_values($candidateNames), null !== $existing);
             }
         }
         usort($views, static fn (RestBlockOpportunityView $a, RestBlockOpportunityView $b): int => $b->score <=> $a->score);

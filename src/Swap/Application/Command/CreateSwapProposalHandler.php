@@ -8,6 +8,7 @@ use App\SharedKernel\Domain\ShiftKind;
 use App\Swap\Application\SwapWorkspace;
 use App\Swap\Domain\ReturnPreference;
 use App\Swap\Domain\RosteredDays;
+use App\Swap\Domain\ShiftExchangeGovernance;
 use App\Swap\Domain\SwapIdGenerator;
 use App\Swap\Domain\SwapProposal;
 use App\Swap\Domain\SwapProposalKind;
@@ -18,7 +19,7 @@ use Psr\Clock\ClockInterface;
 
 final readonly class CreateSwapProposalHandler
 {
-    public function __construct(private SwapWorkspace $workspace, private RosteredDays $days, private SwapProposals $proposals, private SwapIdGenerator $ids, private ClockInterface $clock)
+    public function __construct(private SwapWorkspace $workspace, private RosteredDays $days, private SwapProposals $proposals, private ShiftExchangeGovernance $governance, private SwapIdGenerator $ids, private ClockInterface $clock)
     {
     }
 
@@ -34,6 +35,9 @@ final readonly class CreateSwapProposalHandler
         }
 
         $kind = SwapProposalKind::from($command->kind);
+        if (SwapProposalKind::COVERAGE === $kind && !$this->governance->policyFor($request->swapPoolId())->allowsCoverage) {
+            throw new InvalidArgumentException('Este centro no permite coberturas sin devolución.');
+        }
         $offered = null;
         $offeredDate = null;
         if (SwapProposalKind::EXCHANGE === $kind) {
