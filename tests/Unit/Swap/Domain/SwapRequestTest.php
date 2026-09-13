@@ -77,6 +77,26 @@ final class SwapRequestTest extends TestCase
         SwapRequest::open('id', 'pedro', 'assignment', '', 'roster-day', WorkDate::fromString('2026-09-18'), ShiftKind::NIGHT, WorkDate::fromString(self::TODAY), $this->now());
     }
 
+    public function test_only_the_author_can_choose_a_different_worker_to_cover_it(): void
+    {
+        $request = $this->open('2026-09-18');
+        $request->cover('pedro', 'maria', 'assignment-maria', $this->now());
+
+        self::assertSame(SwapRequestStatus::COVERED, $request->status());
+        self::assertSame('maria', $request->coveredByWorkerId());
+        self::assertSame('assignment-maria', $request->coveredByAssignmentId());
+        self::assertFalse($request->isOpen());
+    }
+
+    public function test_a_covered_request_cannot_be_covered_twice(): void
+    {
+        $request = $this->open('2026-09-18');
+        $request->cover('pedro', 'maria', 'assignment-maria', $this->now());
+
+        $this->expectException(InvalidArgumentException::class);
+        $request->cover('pedro', 'javier', 'assignment-javier', $this->now());
+    }
+
     private function open(string $date): SwapRequest
     {
         return SwapRequest::open(

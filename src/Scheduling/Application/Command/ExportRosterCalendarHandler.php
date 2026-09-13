@@ -24,6 +24,9 @@ final readonly class ExportRosterCalendarHandler
     {
         $worker = $this->workspace->requireAssignment($command->workerId, $command->assignmentId);
         $connection = $this->connections->activeFor($command->workerId) ?? throw new RuntimeException('Conecta Google Calendar antes de exportar.');
+        if (!$connection->canWriteEvents()) {
+            throw new RuntimeException('Activa el permiso de exportación de Google Calendar.');
+        }
         $created = 0;
         $updated = 0;
         foreach ($this->exporter->events($worker, $this->days->inRange($worker->assignmentId, $command->from, $command->to)) as $event) {

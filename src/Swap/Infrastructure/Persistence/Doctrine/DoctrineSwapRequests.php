@@ -12,6 +12,7 @@ use App\Swap\Domain\WorkDate;
 use DateTimeImmutable;
 use Doctrine\DBAL\ArrayParameterType;
 use Doctrine\DBAL\Connection;
+use RuntimeException;
 
 final readonly class DoctrineSwapRequests implements SwapRequests
 {
@@ -21,6 +22,17 @@ final readonly class DoctrineSwapRequests implements SwapRequests
 
     public function save(SwapRequest $request): void
     {
+        if (SwapRequestStatus::COVERED === $request->status()) {
+            $changed = $this->connection->executeStatement(
+                "UPDATE swap_requests SET status = 'covered', covered_by_worker_id = :worker, covered_by_assignment_id = :assignment, updated_at = :updated WHERE id = :id AND status = 'open'",
+                ['worker' => $request->coveredByWorkerId(), 'assignment' => $request->coveredByAssignmentId(), 'updated' => $request->updatedAt()->format(DateTimeImmutable::ATOM), 'id' => $request->id()],
+            );
+            if (1 !== $changed) {
+                throw new RuntimeException('Esta solicitud ya ha sido resuelta por otra persona.');
+            }
+
+            return;
+        }
         $this->connection->executeStatement(
             <<<'SQL'
                 INSERT INTO swap_requests (id, worker_id, worker_assignment_id, swap_pool_id, roster_day_id, work_date, shift_kind, status, created_at, updated_at)
@@ -45,6 +57,13 @@ final readonly class DoctrineSwapRequests implements SwapRequests
     public function byId(string $id): ?SwapRequest
     {
         $row = $this->connection->fetchAssociative('SELECT * FROM swap_requests WHERE id = :id', ['id' => $id]);
+
+        return false === $row ? null : $this->hydrate($row);
+    }
+
+    public function byIdForUpdate(string $id): ?SwapRequest
+    {
+        $row = $this->connection->fetchAssociative('SELECT * FROM swap_requests WHERE id = :id FOR UPDATE', ['id' => $id]);
 
         return false === $row ? null : $this->hydrate($row);
     }
@@ -148,6 +167,8 @@ final readonly class DoctrineSwapRequests implements SwapRequests
             WorkDate::fromString($this->text($row['work_date'] ?? null)),
             ShiftKind::from($this->text($row['shift_kind'] ?? null)),
             SwapRequestStatus::from($this->text($row['status'] ?? null)),
+            null !== ($row['covered_by_worker_id'] ?? null) ? $this->text($row['covered_by_worker_id']) : null,
+            null !== ($row['covered_by_assignment_id'] ?? null) ? $this->text($row['covered_by_assignment_id']) : null,
             new DateTimeImmutable($this->text($row['created_at'] ?? null)),
             new DateTimeImmutable($this->text($row['updated_at'] ?? null)),
         );

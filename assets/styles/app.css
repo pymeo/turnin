@@ -134,7 +134,11 @@
 	margin-inline: auto;
 	padding-inline: 1.25rem;
 	padding-top: max(1.5rem, env(safe-area-inset-top));
-	padding-bottom: max(2rem, env(safe-area-inset-bottom));
+	padding-bottom: calc(5.75rem + env(safe-area-inset-bottom));
+
+	@media (width >= 48rem) {
+		padding-bottom: max(2rem, env(safe-area-inset-bottom));
+	}
 }
 
 @utility brand-lockup {
@@ -186,6 +190,28 @@
 }
 
 @utility btn-brand { @apply btn-primary; }
+
+@utility shift-trading-card { @apply gap-3; }
+@utility shift-card-hours { @apply text-xl font-extrabold tracking-tight text-ink; }
+@utility shift-card-duration {
+	@apply w-fit rounded-xl px-3 py-2 text-2xl font-black tracking-tight text-white;
+	background: var(--turnin-petroleum);
+}
+@utility trade-comparison { @apply flex flex-col gap-2; }
+@utility trade-side-label { @apply text-xs font-black uppercase tracking-[0.12em] text-ink-muted; }
+@utility trade-shift { @apply flex flex-col gap-2 rounded-2xl border border-line bg-surface p-4 shadow-sm; }
+@utility trade-shift-take { border-left: .35rem solid var(--turnin-teal); }
+@utility trade-confirmation { @apply flex flex-col gap-4; }
+@utility trade-option { @apply relative block cursor-pointer; }
+@utility trade-option-body { @apply flex flex-col gap-2 rounded-2xl border-2 border-line bg-surface p-4 transition; }
+.trade-option > input:first-child { @apply sr-only; }
+.trade-option > input:first-child:checked + .trade-option-body { border-color: var(--turnin-teal); box-shadow: 0 0 0 3px rgb(20 184 166 / 15%); }
+@utility trade-balance { @apply flex flex-col rounded-xl bg-surface-muted px-3 py-2 text-base font-bold; }
+@utility coverage-warning { @apply flex flex-col gap-1 rounded-2xl border border-amber-300 bg-amber-50 p-4 text-amber-950; }
+@utility proposal-card { @apply flex flex-col gap-3 rounded-2xl border border-line bg-surface p-4 shadow-sm; }
+@utility proposal-side { @apply flex flex-col gap-1; }
+@utility proposal-swap-mark { @apply text-center text-2xl font-black text-ink-muted; }
+@utility proposal-status { @apply rounded-xl bg-surface-muted px-3 py-2 text-sm font-bold; }
 
 @utility btn-secondary {
 	@apply btn border bg-surface text-ink;
@@ -511,7 +537,11 @@
 	@apply mx-auto flex w-full max-w-lg flex-col gap-4 px-3 sm:px-5;
 	padding-top: max(0.75rem, env(safe-area-inset-top));
 	/* Room for the docked CTA so the last week is never hidden behind it. */
-	padding-bottom: calc(6.5rem + env(safe-area-inset-bottom));
+	padding-bottom: calc(10.75rem + env(safe-area-inset-bottom));
+
+	@media (width >= 48rem) {
+		padding-bottom: calc(6.5rem + env(safe-area-inset-bottom));
+	}
 
 	/* Paint mode replaces that CTA with a palette, an undo row and a save
 	   button, so the page needs to make room for all three. */
@@ -536,6 +566,34 @@
 
 @utility calendar-weekdays {
 	@apply grid grid-cols-7 gap-1 px-0.5 text-center text-[0.68rem] font-bold tracking-[0.08em] text-ink-muted uppercase;
+}
+
+@utility calendar-filters {
+	@apply rounded-xl border border-line bg-surface px-3 py-2 text-sm;
+
+	& > summary { @apply cursor-pointer font-semibold text-brand-700; }
+	& > label { @apply mt-2 mr-4 inline-flex min-h-8 items-center gap-2 text-ink-muted; }
+}
+
+@utility calendar-personal-indicators {
+	@apply absolute inset-x-1 bottom-1 flex items-center justify-center gap-1 text-[0.58rem] leading-none;
+
+	& > i { @apply block size-1.5 rounded-full bg-violet-500; }
+	& > b { @apply font-bold text-violet-700; }
+}
+
+@utility calendar-day-event {
+	@apply flex items-center justify-between gap-3 rounded-xl bg-surface-muted px-3 py-2 text-sm;
+
+	& > span { @apply shrink-0 text-ink-muted; }
+}
+
+[data-show-personal="false"] .calendar-personal-indicators { display: none; }
+[data-show-work="false"] .calendar-cell-code,
+[data-show-work="false"] .combined-cell-codes { visibility: hidden; }
+[data-show-work="false"] .calendar-cell {
+	background: var(--turnin-soft-gray);
+	color: var(--ink-muted);
 }
 
 @utility calendar-grid {
@@ -729,9 +787,14 @@
 }
 
 @utility calendar-dock {
-	@apply fixed inset-x-0 bottom-0 z-20 mx-auto flex w-full max-w-lg flex-col gap-2 px-3 pt-3 sm:px-5;
+	@apply fixed inset-x-0 z-20 mx-auto flex w-full max-w-lg flex-col gap-2 px-3 pt-3 sm:px-5;
+	bottom: calc(3.5rem + env(safe-area-inset-bottom));
 	padding-bottom: max(0.75rem, env(safe-area-inset-bottom));
 	background: linear-gradient(to top, var(--canvas) 62%, transparent);
+
+	@media (width >= 48rem) {
+		bottom: 0;
+	}
 }
 
 /* --- Paint mode ----------------------------------------------------------- */
@@ -1060,6 +1123,12 @@
 	&[data-kind="morning"] { --kind-accent: var(--color-shift-morning); }
 	&[data-kind="evening"] { --kind-accent: var(--color-shift-evening); }
 	&[data-kind="night"] { --kind-accent: var(--color-shift-night); }
+	/* Mismo agrupamiento que ShiftKind::tone(): un turno de 12 h comparte banda
+	   con su equivalente corto, y guardia y «otro» van al tono de guardia. */
+	&[data-kind="long_day"] { --kind-accent: var(--color-shift-morning); }
+	&[data-kind="long_night"] { --kind-accent: var(--color-shift-night); }
+	&[data-kind="on_call"] { --kind-accent: var(--color-shift-oncall); }
+	&[data-kind="other"] { --kind-accent: var(--color-shift-oncall); }
 	&[data-kind="any"] { --kind-accent: var(--color-brand-600); }
 	strong { @apply text-base; }
 	small { @apply text-sm text-ink-muted; }
@@ -1118,5 +1187,36 @@
 
 	&[aria-current="page"] {
 		@apply text-brand-700 dark:text-brand-300;
+	}
+}
+
+@utility app-navigation {
+	@apply fixed inset-x-0 bottom-0 z-40 mx-auto flex w-full max-w-lg items-stretch justify-around border-t border-line bg-surface/95 px-1 backdrop-blur;
+	padding-bottom: env(safe-area-inset-bottom);
+
+	@media (width >= 48rem) {
+		@apply static rounded-2xl border px-2;
+		padding-bottom: 0;
+	}
+}
+
+@utility app-navigation-item {
+	@apply flex min-h-14 flex-1 flex-col items-center justify-center gap-0.5 rounded-xl px-1 py-1.5 text-[0.7rem] font-semibold text-ink-muted no-underline transition hover:bg-surface-muted hover:text-brand-700;
+
+	&[aria-current="page"] {
+		@apply text-brand-700;
+		background: var(--turnin-soft-aqua);
+	}
+
+	@media (width >= 48rem) {
+		@apply min-h-11 flex-row gap-2 text-sm;
+	}
+}
+
+@utility app-navigation-icon {
+	@apply text-xl leading-none;
+
+	@media (width >= 48rem) {
+		@apply text-lg;
 	}
 }

@@ -18,6 +18,8 @@ final readonly class OpenSwapRequestView
         public string $shiftLabel,
         public string $abbreviation,
         public string $hours,
+        public int $durationMinutes,
+        public string $durationLabel,
         public bool $endsNextDay,
         public string $colorKey,
         public string $groupLabel,

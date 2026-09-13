@@ -1,0 +1,11 @@
+{% extends 'base.html.twig' %}
+{% block title %}Turnin — Encuéntrame un puente{% endblock %}
+{% block body %}
+<main class="changes-shell">
+{% include 'identity/_authenticated_header.html.twig' %}
+<header class="changes-heading"><a class="text-sm text-ink-muted no-underline" href="{{ path('swap_changes') }}">‹ Cambios</a><p class="changes-kicker">Análisis de tus próximas semanas</p><h1>Encuéntrame un puente</h1><p>Solo mostramos oportunidades de al menos tres días de descanso confirmado. Un día desconocido nunca cuenta como libre.</p></header>
+<section class="available-grid">
+{% for opportunity in opportunities %}<article class="proposal-card"><p class="changes-kicker">{% if loop.first %}✨ MEJOR OPORTUNIDAD{% else %}OPORTUNIDAD{% endif %}</p><h2>Cambia 1 turno → consigue {{ opportunity.resultingDays }} días libres</h2><p class="swap-card-date">{{ opportunity.dateHeadline }}</p><p class="shift-card-hours">{{ opportunity.hours }}</p><p class="shift-card-duration">{{ opportunity.duration|upper }}</p><strong>{{ opportunity.label }}</strong><p class="trade-balance">Descanso: {{ opportunity.restStartsAt }} → {{ opportunity.restEndsAt }}</p>{% if opportunity.recommendedPeople %}<p><strong>Recomendado</strong><br>{{ opportunity.recommendedPeople|join(' · ') }}</p>{% endif %}<ul class="text-sm text-ink-muted">{% for reason in opportunity.reasons %}<li>✓ {{ reason }}</li>{% endfor %}</ul>{% if opportunity.alreadyOpen %}<a class="btn-secondary btn-block" href="{{ path('swap_changes_mine') }}">Ya estás buscando cambio</a>{% else %}<a class="btn-primary btn-block" href="{{ path('swap_changes', {flow: 'release'}) }}">Buscar quién podría hacerlo</a>{% endif %}</article>
+{% else %}<div class="empty-state"><strong>No vemos un puente relevante ahora mismo.</strong><span>No llamamos puente a cualquier par de días libres.</span></div>{% endfor %}
+</section></main>
+{% endblock %}

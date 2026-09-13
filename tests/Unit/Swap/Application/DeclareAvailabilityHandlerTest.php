@@ -4,6 +4,7 @@ declare(strict_types=1);
 
 namespace App\Tests\Unit\Swap\Application;
 
+use App\SharedKernel\Domain\ShiftKind;
 use App\Swap\Application\Command\DeclareAvailability;
 use App\Swap\Application\Command\DeclareAvailabilityHandler;
 use App\Swap\Application\SwapAccessDenied;
@@ -17,6 +18,7 @@ use App\Tests\Support\Swap\InMemoryAvailabilities;
 use App\Tests\Support\Swap\InMemorySwapRequests;
 use App\Tests\Support\Swap\SequentialSwapIds;
 use InvalidArgumentException;
+use PHPUnit\Framework\Attributes\DataProvider;
 use PHPUnit\Framework\TestCase;
 use Symfony\Component\Clock\MockClock;
 
@@ -44,6 +46,43 @@ final class DeclareAvailabilityHandlerTest extends TestCase
 
         self::assertSame(['pool-uci', 'pool-emergency'], $pools);
         self::assertSame(2, $this->availabilities->count());
+    }
+
+    /**
+     * A swap request takes its kind from the roster, so a guardia or a 12-hour
+     * shift can be published; availability is matched by exact kind. When these
+     * could not be offered, those requests were unmatchable by construction and
+     * sat at "0 personas disponibles" with no way for anyone to help.
+     */
+    #[DataProvider('everyPublishableKind')]
+    public function test_every_kind_a_roster_can_hold_can_also_be_offered(string $kind): void
+    {
+        $pools = ($this->handler())(new DeclareAvailability('maria', 'assignment-2', self::DATE, ['pool-uci'], [$kind]));
+
+        self::assertSame(['pool-uci'], $pools);
+        $offered = $this->availabilities->activeByWorkerOnDate('maria', WorkDate::fromString(self::DATE));
+        self::assertCount(1, $offered);
+        self::assertSame($kind, $offered[0]->shiftKind()->value);
+    }
+
+    /** @return iterable<string, array{string}> */
+    public static function everyPublishableKind(): iterable
+    {
+        foreach (ShiftKind::cases() as $case) {
+            yield $case->value => [$case->value];
+        }
+    }
+
+    /** Offering nothing in particular has to mean every kind, not the first three. */
+    public function test_offering_no_kind_in_particular_covers_all_of_them(): void
+    {
+        ($this->handler())(new DeclareAvailability('maria', 'assignment-2', self::DATE, ['pool-uci'], []));
+
+        $offered = array_map(static fn ($availability): string => $availability->shiftKind()->value, $this->availabilities->activeByWorkerOnDate('maria', WorkDate::fromString(self::DATE)));
+        sort($offered);
+        $everything = array_map(static fn (ShiftKind $kind): string => $kind->value, ShiftKind::cases());
+        sort($everything);
+        self::assertSame($everything, $offered);
     }
 
     public function test_it_can_be_narrowed_to_the_chosen_groups(): void
@@ -89,7 +128,7 @@ final class DeclareAvailabilityHandlerTest extends TestCase
         }
 
         self::assertSame(1, $this->availabilities->count());
-        self::assertTrue($this->availabilities->forSlot('maria', 'pool-uci', WorkDate::fromString(self::DATE), \App\SharedKernel\Domain\ShiftKind::MORNING)?->isActive());
+        self::assertTrue($this->availabilities->forSlot('maria', 'pool-uci', WorkDate::fromString(self::DATE), ShiftKind::MORNING)?->isActive());
     }
 
     public function test_a_pool_the_worker_does_not_belong_to_is_refused(): void

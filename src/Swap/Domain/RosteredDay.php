@@ -43,6 +43,28 @@ final readonly class RosteredDay
         return '' === $this->startsAt ? '' : $this->startsAt.'–'.$this->endsAt;
     }
 
+    public function durationMinutes(): int
+    {
+        if ('' === $this->startsAt || '' === $this->endsAt) {
+            return 0;
+        }
+
+        $start = self::minutesSinceMidnight($this->startsAt);
+        $end = self::minutesSinceMidnight($this->endsAt);
+        $duration = $end - $start;
+
+        return $duration > 0 ? $duration : $duration + 1440;
+    }
+
+    public function durationLabel(): string
+    {
+        $minutes = $this->durationMinutes();
+        $hours = intdiv($minutes, 60);
+        $remainder = $minutes % 60;
+
+        return 0 === $remainder ? $hours.' h' : \sprintf('%d h %02d min', $hours, $remainder);
+    }
+
     /** The key both sides of the port agree on for a lookup. */
     public function key(): string
     {
@@ -52,5 +74,12 @@ final readonly class RosteredDay
     public static function keyFor(string $assignmentId, string $date): string
     {
         return $assignmentId.'|'.$date;
+    }
+
+    private static function minutesSinceMidnight(string $time): int
+    {
+        [$hours, $minutes] = array_map('intval', explode(':', $time));
+
+        return $hours * 60 + $minutes;
     }
 }

@@ -20,14 +20,17 @@ final readonly class DoctrineExternalCalendars implements ExternalCalendarConnec
     {
     }
 
-    public function connect(string $userId, string $accountSubject, string $accessToken, ?string $refreshToken, ?DateTimeImmutable $expiresAt, array $scopes): void
+    public function connect(string $userId, string $accountSubject, ?string $accountEmail, string $accessToken, ?string $refreshToken, ?DateTimeImmutable $expiresAt, array $scopes): void
     {
         $id = 'google:'.$userId;
-        $existingRefresh = $this->connection->fetchOne('SELECT encrypted_refresh_token FROM scheduling_external_calendar_connections WHERE id = :id', ['id' => $id]);
+        $existing = $this->connection->fetchAssociative('SELECT encrypted_refresh_token, granted_scopes FROM scheduling_external_calendar_connections WHERE id = :id', ['id' => $id]);
+        $existingRefresh = false === $existing ? null : ($existing['encrypted_refresh_token'] ?? null);
         $encryptedRefresh = null !== $refreshToken ? $this->cipher->encrypt($refreshToken) : (\is_string($existingRefresh) ? $existingRefresh : null);
+        $existingScopes = false === $existing ? [] : json_decode($this->text($existing['granted_scopes'] ?? null), true);
+        $mergedScopes = array_values(array_unique([...array_filter(\is_array($existingScopes) ? $existingScopes : [], 'is_string'), ...$scopes]));
         $this->connection->executeStatement(
-            'INSERT INTO scheduling_external_calendar_connections (id, user_id, provider, account_subject, encrypted_access_token, encrypted_refresh_token, expires_at, granted_scopes, connected_at, revoked_at) VALUES (:id, :user, :provider, :subject, :access, :refresh, :expires, :scopes, NOW(), NULL) ON CONFLICT (id) DO UPDATE SET account_subject = EXCLUDED.account_subject, encrypted_access_token = EXCLUDED.encrypted_access_token, encrypted_refresh_token = EXCLUDED.encrypted_refresh_token, expires_at = EXCLUDED.expires_at, granted_scopes = EXCLUDED.granted_scopes, connected_at = NOW(), revoked_at = NULL',
-            ['id' => $id, 'user' => $userId, 'provider' => 'google', 'subject' => $accountSubject, 'access' => $this->cipher->encrypt($accessToken), 'refresh' => $encryptedRefresh, 'expires' => $expiresAt, 'scopes' => json_encode(array_values(array_unique($scopes)), \JSON_THROW_ON_ERROR)],
+            'INSERT INTO scheduling_external_calendar_connections (id, user_id, provider, account_subject, account_email, encrypted_access_token, encrypted_refresh_token, expires_at, granted_scopes, connected_at, reauthentication_required_at, revoked_at) VALUES (:id, :user, :provider, :subject, :email, :access, :refresh, :expires, :scopes, NOW(), NULL, NULL) ON CONFLICT (id) DO UPDATE SET account_subject = EXCLUDED.account_subject, account_email = EXCLUDED.account_email, encrypted_access_token = EXCLUDED.encrypted_access_token, encrypted_refresh_token = EXCLUDED.encrypted_refresh_token, expires_at = EXCLUDED.expires_at, granted_scopes = EXCLUDED.granted_scopes, connected_at = NOW(), reauthentication_required_at = NULL, revoked_at = NULL',
+            ['id' => $id, 'user' => $userId, 'provider' => 'google', 'subject' => $accountSubject, 'email' => $accountEmail, 'access' => $this->cipher->encrypt($accessToken), 'refresh' => $encryptedRefresh, 'expires' => $expiresAt, 'scopes' => json_encode($mergedScopes, \JSON_THROW_ON_ERROR)],
             ['expires' => Types::DATETIMETZ_IMMUTABLE],
         );
     }
@@ -40,12 +43,17 @@ final readonly class DoctrineExternalCalendars implements ExternalCalendarConnec
         }
         $scopes = json_decode($this->text($row['granted_scopes'] ?? null), true, 512, \JSON_THROW_ON_ERROR);
 
-        return new ExternalCalendarConnection($this->text($row['id'] ?? null), $this->text($row['user_id'] ?? null), $this->text($row['account_subject'] ?? null), $this->cipher->decrypt($this->text($row['encrypted_access_token'] ?? null)), null === ($row['encrypted_refresh_token'] ?? null) ? null : $this->cipher->decrypt($this->text($row['encrypted_refresh_token'])), null === ($row['expires_at'] ?? null) ? null : new DateTimeImmutable($this->text($row['expires_at'])), \is_array($scopes) ? array_values(array_filter($scopes, 'is_string')) : [], null);
+        return new ExternalCalendarConnection($this->text($row['id'] ?? null), $this->text($row['user_id'] ?? null), $this->text($row['account_subject'] ?? null), $this->nullableText($row['account_email'] ?? null), $this->cipher->decrypt($this->text($row['encrypted_access_token'] ?? null)), null === ($row['encrypted_refresh_token'] ?? null) ? null : $this->cipher->decrypt($this->text($row['encrypted_refresh_token'])), null === ($row['expires_at'] ?? null) ? null : new DateTimeImmutable($this->text($row['expires_at'])), \is_array($scopes) ? array_values(array_filter($scopes, 'is_string')) : [], null === ($row['reauthentication_required_at'] ?? null) ? null : new DateTimeImmutable($this->text($row['reauthentication_required_at'])), null);
     }
 
     public function refreshAccessToken(string $userId, string $accessToken, ?DateTimeImmutable $expiresAt): void
     {
         $this->connection->executeStatement('UPDATE scheduling_external_calendar_connections SET encrypted_access_token = :token, expires_at = :expires WHERE user_id = :user AND provider = :provider AND revoked_at IS NULL', ['token' => $this->cipher->encrypt($accessToken), 'expires' => $expiresAt, 'user' => $userId, 'provider' => 'google'], ['expires' => Types::DATETIMETZ_IMMUTABLE]);
+    }
+
+    public function requireReauthentication(string $userId): void
+    {
+        $this->connection->executeStatement('UPDATE scheduling_external_calendar_connections SET reauthentication_required_at = NOW() WHERE user_id = :user AND provider = :provider AND revoked_at IS NULL', ['user' => $userId, 'provider' => 'google']);
     }
 
     public function disconnect(string $userId): void
@@ -104,5 +112,10 @@ final readonly class DoctrineExternalCalendars implements ExternalCalendarConnec
     private function text(mixed $value): string
     {
         return \is_scalar($value) ? (string) $value : '';
+    }
+
+    private function nullableText(mixed $value): ?string
+    {
+        return \is_string($value) && '' !== trim($value) ? trim($value) : null;
     }
 }

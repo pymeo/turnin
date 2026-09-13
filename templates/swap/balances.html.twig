@@ -1,0 +1,15 @@
+{% extends 'base.html.twig' %}
+{% block title %}Turnin — Mis intercambios{% endblock %}
+{% block body %}
+<main class="changes-shell">
+{% include 'identity/_authenticated_header.html.twig' %}
+<header class="changes-heading"><a class="text-sm text-ink-muted no-underline" href="{{ path('swap_changes') }}">‹ Cambios</a><h1>Mis intercambios</h1><p>Horas acordadas entre profesionales. Cada uso necesita una nueva solicitud y aceptación.</p></header>
+{% for favor, title in {1:'A MI FAVOR',0:'PENDIENTES DE DEVOLVER'} %}
+<section class="activity-section"><h2 class="changes-section-title">{{ title }}</h2>
+{% for balance in balances|filter(item => item.inMyFavor == favor) %}
+<article class="activity-card"><h3>{{ balance.otherName }}</h3><p class="shift-card-duration">{{ (balance.remainingMinutes / 60) }} H PENDIENTES</p><p>Saldo inicial: {{ balance.earnedMinutes / 60 }} h<br>Utilizado: {{ balance.redeemedMinutes / 60 }} h<br>Disponible: {{ balance.availableMinutes / 60 }} h</p><p class="text-ink-muted">Procede del turno del {{ balance.sourceDate }}.</p>{% if balance.preferredMonth or balance.preferredKind or balance.preferredDuration %}<p class="swap-card-done">Preferencia: {{ balance.preferredMonth|default('cualquier periodo') }} · {{ balance.preferredKind|default('cualquier turno') }} · {{ balance.preferredDuration ? balance.preferredDuration / 60 ~ ' h' : 'cualquier duración' }}</p>{% else %}<p class="text-ink-muted">Decidirás qué quieres más adelante.</p>{% endif %}</article>
+{% else %}<div class="empty-state"><span>No hay saldos en esta sección.</span></div>{% endfor %}
+</section>
+{% endfor %}
+</main>
+{% endblock %}

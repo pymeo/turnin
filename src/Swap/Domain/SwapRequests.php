@@ -16,6 +16,9 @@ interface SwapRequests
 
     public function byId(string $id): ?SwapRequest;
 
+    /** Must be called inside {@see SwapTransaction}; serializes competing decisions. */
+    public function byIdForUpdate(string $id): ?SwapRequest;
+
     public function openFor(string $workerAssignmentId, WorkDate $date): ?SwapRequest;
 
     /**

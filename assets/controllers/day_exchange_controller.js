@@ -116,11 +116,22 @@ export default class extends Controller {
 		title.textContent = `${candidates.length} ${candidates.length === 1 ? 'persona disponible' : 'personas disponibles'} ese día`;
 		this.candidatesTarget.append(title);
 		for (const candidate of candidates) {
-			const row = document.createElement('p');
+			const row = document.createElement('div');
 			row.className = 'candidate-row';
-			row.textContent = `${candidate.name} · ${candidate.groupLabel}`;
+			const text = document.createElement('span');
+			text.textContent = `${candidate.name} · ${candidate.groupLabel}`;
+			const button = document.createElement('button');
+			button.type = 'button';
+			button.className = 'btn-secondary';
+			button.textContent = 'Elegir';
+			button.addEventListener('click', () => this.cover(button, candidate.availabilityId));
+			row.append(text, button);
 			this.candidatesTarget.append(row);
 		}
+	}
+
+	async cover(button, availabilityId) {
+		await this.act(button, `/app/changes/${this.state.requestId}/cubrir`, { availabilityId });
 	}
 
 	async publish(event) {

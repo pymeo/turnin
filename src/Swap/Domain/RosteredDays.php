@@ -31,4 +31,8 @@ interface RosteredDays
      * @return list<RosteredDay>
      */
     public function inRangeForAssignments(array $workerAssignmentIds, string $from, string $to): array;
+
+    public function transferCoverage(string $fromAssignmentId, string $toAssignmentId, string $date): void;
+
+    public function exchange(string $firstAssignmentId, string $firstDate, string $secondAssignmentId, string $secondDate): void;
 }

@@ -5,14 +5,16 @@
 } %}
 <div class="calendar-grid" role="grid" aria-label="Todos mis trabajos" data-calendar-target="grid" data-month="{{ month.month }}">
     {% for cell in month.cells %}
+        {% set personal = personalByDate[cell.date]|default([]) %}
         <button type="button" role="gridcell" class="calendar-cell {{ cell.shifts|length == 1 ? tones[cell.shifts[0].colorKey]|default('calendar-tone-slate') : 'calendar-tone-unknown' }}"
-                data-day="{{ cell.date }}" data-state="{{ cell.state }}" data-detail="{% for shift in cell.shifts %}{{ shift.workplace }}{% if shift.destination %} · {{ shift.destination }}{% endif %}: {{ shift.label }} {{ shift.start }}–{{ shift.end }}{% if not loop.last %}&#10;{% endif %}{% endfor %}" data-outside="{{ cell.inMonth ? 'false' : 'true' }}" data-today="{{ cell.isToday ? 'true' : 'false' }}" data-weekend="{{ cell.isWeekend ? 'true' : 'false' }}" aria-label="{{ cell.ariaLabel }}">
+                data-day="{{ cell.date }}" data-state="{{ cell.state }}" data-personal-events="{{ personal|json_encode|e('html_attr') }}" data-detail="{% for shift in cell.shifts %}{{ shift.workplace }}{% if shift.destination %} · {{ shift.destination }}{% endif %}: {{ shift.label }} {{ shift.start }}–{{ shift.end }}{% if not loop.last %}&#10;{% endif %}{% endfor %}" data-outside="{{ cell.inMonth ? 'false' : 'true' }}" data-today="{{ cell.isToday ? 'true' : 'false' }}" data-weekend="{{ cell.isWeekend ? 'true' : 'false' }}" aria-label="{{ cell.ariaLabel }}">
             <span class="calendar-cell-number">{{ cell.dayNumber }}</span>
             <span class="combined-cell-codes" aria-hidden="true">
                 {% for shift in cell.shifts|slice(0, 3) %}<span class="workplace-dot"></span>{{ shift.abbreviation }}{% endfor %}
                 {% if not cell.shifts|length %}{{ cell.state == 'global_free' ? 'L' : '·' }}{% endif %}
             </span>
             {% if cell.overlap %}<span class="overlap-mark" aria-hidden="true">!</span>{% endif %}
+            {% if personal|length %}<span class="calendar-personal-indicators" aria-hidden="true">{% for event in personal|slice(0, 2) %}<i></i>{% endfor %}{% if personal|length > 2 %}<b>+{{ personal|length - 2 }}</b>{% endif %}</span>{% endif %}
         </button>
     {% endfor %}
 </div>

@@ -6,22 +6,26 @@ namespace App\Scheduling\Infrastructure\Swap;
 
 use App\Scheduling\Domain\RosterDay;
 use App\Scheduling\Domain\RosterDays;
+use App\Scheduling\Domain\RosterIdGenerator;
+use App\Scheduling\Domain\RosterSource;
+use App\Scheduling\Domain\ShiftSegment;
 use App\Scheduling\Domain\WorkDate;
 use App\Swap\Domain\RosteredDay;
 use App\Swap\Domain\RosteredDays;
 use App\Swap\Domain\RosteredDayState;
+use InvalidArgumentException;
+use Psr\Clock\ClockInterface;
 
 /**
  * Scheduling answering what Swap needs to know about a calendar: is this day
  * worked, and what does the shift look like.
  *
- * It reads, and only reads. Publishing a shift or offering to cover one never
- * writes to a roster — the shift stays with whoever has it until an agreement
- * exists, and agreements are the next slice.
+ * Publishing and offering are reads. Once the author accepts an offer, this
+ * adapter atomically moves the copied shift snapshot between both calendars.
  */
 final readonly class SchedulingRosteredDays implements RosteredDays
 {
-    public function __construct(private RosterDays $rosterDays)
+    public function __construct(private RosterDays $rosterDays, private RosterIdGenerator $ids, private ClockInterface $clock)
     {
     }
 
@@ -81,6 +85,53 @@ final readonly class SchedulingRosteredDays implements RosteredDays
                 WorkDate::fromString($to),
             ),
         );
+    }
+
+    public function transferCoverage(string $fromAssignmentId, string $toAssignmentId, string $date): void
+    {
+        $workDate = WorkDate::fromString($date);
+        $source = $this->rosterDays->onDate($fromAssignmentId, $workDate);
+        $target = $this->rosterDays->onDate($toAssignmentId, $workDate);
+        if (null === $source || !$source->isWorking() || (null !== $target && $target->isWorking())) {
+            throw new InvalidArgumentException('Los calendarios han cambiado y este turno ya no puede cubrirse.');
+        }
+        $now = $this->clock->now();
+        $segments = array_map(fn (ShiftSegment $segment): ShiftSegment => new ShiftSegment($this->ids->next(), $segment->presetId, $segment->labelSnapshot, $segment->abbreviationSnapshot, $segment->window, $segment->kind, $segment->position, $segment->colorSnapshot), $source->segments());
+        $source->markRest(RosterSource::SWAP, $now);
+        $covered = RosterDay::working($target?->id() ?? $this->ids->next(), $toAssignmentId, $workDate, $segments, RosterSource::SWAP, $now);
+        $this->rosterDays->apply($fromAssignmentId, [$source], []);
+        $this->rosterDays->apply($toAssignmentId, [$covered], []);
+    }
+
+    public function exchange(string $firstAssignmentId, string $firstDate, string $secondAssignmentId, string $secondDate): void
+    {
+        $firstWorkDate = WorkDate::fromString($firstDate);
+        $secondWorkDate = WorkDate::fromString($secondDate);
+        $first = $this->rosterDays->onDate($firstAssignmentId, $firstWorkDate);
+        $second = $this->rosterDays->onDate($secondAssignmentId, $secondWorkDate);
+        $firstTarget = $this->rosterDays->onDate($firstAssignmentId, $secondWorkDate);
+        $secondTarget = $this->rosterDays->onDate($secondAssignmentId, $firstWorkDate);
+        if (null === $first || !$first->isWorking() || null === $second || !$second->isWorking() || (null !== $firstTarget && $firstTarget->isWorking()) || (null !== $secondTarget && $secondTarget->isWorking())) {
+            throw new InvalidArgumentException('Los calendarios han cambiado y estos turnos ya no se pueden intercambiar.');
+        }
+
+        $now = $this->clock->now();
+        $firstSegments = $this->copySegments($first->segments());
+        $secondSegments = $this->copySegments($second->segments());
+        $first->markRest(RosterSource::SWAP, $now);
+        $second->markRest(RosterSource::SWAP, $now);
+        $firstReceives = RosterDay::working($firstTarget?->id() ?? $this->ids->next(), $firstAssignmentId, $secondWorkDate, $secondSegments, RosterSource::SWAP, $now);
+        $secondReceives = RosterDay::working($secondTarget?->id() ?? $this->ids->next(), $secondAssignmentId, $firstWorkDate, $firstSegments, RosterSource::SWAP, $now);
+        $this->rosterDays->apply($firstAssignmentId, [$first, $firstReceives], []);
+        $this->rosterDays->apply($secondAssignmentId, [$second, $secondReceives], []);
+    }
+
+    /** @param list<ShiftSegment> $segments
+     * @return list<ShiftSegment>
+     */
+    private function copySegments(array $segments): array
+    {
+        return array_map(fn (ShiftSegment $segment): ShiftSegment => new ShiftSegment($this->ids->next(), $segment->presetId, $segment->labelSnapshot, $segment->abbreviationSnapshot, $segment->window, $segment->kind, $segment->position, $segment->colorSnapshot), $segments);
     }
 
     private function project(string $assignmentId, RosterDay $day): RosteredDay

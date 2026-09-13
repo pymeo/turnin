@@ -4,6 +4,7 @@ declare(strict_types=1);
 
 namespace App\Tests\Integration\Platform\Persistence;
 
+use Doctrine\DBAL\DriverManager;
 use PHPUnit\Framework\Attributes\Group;
 use PHPUnit\Framework\TestCase;
 use Symfony\Component\Process\Process;
@@ -66,6 +67,72 @@ final class MigrationsFromScratchTest extends TestCase
                 \sprintf('Migration %s exists on disk but Doctrine never executed it.', $version),
             );
         }
+    }
+
+    public function test_orphaned_workforce_destinations_are_quarantined_before_constraints_are_added(): void
+    {
+        $this->console(['doctrine:database:create']);
+        $beforeRepair = $this->console(['doctrine:migrations:migrate', 'DoctrineMigrations\\Version20260912120000']);
+        self::assertSame(0, $beforeRepair->getExitCode(), $beforeRepair->getErrorOutput().$beforeRepair->getOutput());
+
+        $database = parse_url($this->throwawayDatabaseUrl());
+        self::assertIsArray($database);
+        $connection = DriverManager::getConnection([
+            'driver' => 'pdo_pgsql',
+            'host' => $database['host'] ?? '127.0.0.1',
+            'port' => $database['port'] ?? 5432,
+            'dbname' => ltrim($database['path'] ?? '', '/'),
+            'user' => $database['user'] ?? '',
+            'password' => $database['pass'] ?? '',
+        ]);
+        $assignmentId = '0199ffff-0000-7000-8000-000000000001';
+        $poolId = '0199ffff-0000-7000-8000-000000000002';
+        $missingUnitId = '0199ffff-0000-7000-8000-000000000003';
+        $now = '2026-09-12T14:00:00+00:00';
+        $connection->insert('workforce_worker_assignments', [
+            'id' => $assignmentId,
+            'worker_id' => '0199ffff-0000-7000-8000-000000000004',
+            'workplace_id' => '0199ffff-0000-7000-8000-000000000005',
+            'staff_category_id' => '0199ffff-0000-7000-8000-000000000006',
+            'organizational_unit_id' => $missingUnitId,
+            'primary_assignment' => true,
+            'active' => true,
+            'created_at' => $now,
+            'updated_at' => $now,
+        ]);
+        $connection->insert('workforce_swap_pools', [
+            'id' => $poolId,
+            'workplace_id' => '0199ffff-0000-7000-8000-000000000005',
+            'staff_category_id' => '0199ffff-0000-7000-8000-000000000006',
+            'organizational_unit_id' => $missingUnitId,
+            'fingerprint' => 'orphaned-destination-fixture',
+            'active' => true,
+            'created_at' => $now,
+            'updated_at' => $now,
+        ]);
+        $connection->insert('workforce_swap_pool_memberships', [
+            'id' => '0199ffff-0000-7000-8000-000000000007',
+            'swap_pool_id' => $poolId,
+            'worker_id' => '0199ffff-0000-7000-8000-000000000004',
+            'assignment_id' => $assignmentId,
+            'source' => 'self_declared',
+            'is_primary' => true,
+            'active' => true,
+            'created_at' => $now,
+            'updated_at' => $now,
+        ]);
+
+        $repair = $this->console(['doctrine:migrations:migrate', '--allow-no-migration']);
+        self::assertSame(0, $repair->getExitCode(), $repair->getErrorOutput().$repair->getOutput());
+        self::assertFalse((bool) $connection->fetchOne('SELECT active FROM workforce_worker_assignments WHERE id = ?', [$assignmentId]));
+        self::assertNull($connection->fetchOne('SELECT organizational_unit_id FROM workforce_worker_assignments WHERE id = ?', [$assignmentId]));
+        self::assertFalse((bool) $connection->fetchOne('SELECT active FROM workforce_swap_pools WHERE id = ?', [$poolId]));
+        self::assertNull($connection->fetchOne('SELECT organizational_unit_id FROM workforce_swap_pools WHERE id = ?', [$poolId]));
+        self::assertFalse((bool) $connection->fetchOne('SELECT active FROM workforce_swap_pool_memberships WHERE swap_pool_id = ?', [$poolId]));
+        $constraintCount = $connection->fetchOne("SELECT COUNT(*) FROM pg_constraint WHERE conname IN ('workforce_assignment_unit_fk', 'workforce_swap_pool_unit_fk')");
+        self::assertIsNumeric($constraintCount);
+        self::assertSame(2, (int) $constraintCount);
+        $connection->close();
     }
 
     /**

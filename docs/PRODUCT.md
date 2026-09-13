@@ -75,8 +75,10 @@ Implicación: la disponibilidad es un modelo con grados, no un booleano.
 favor en dinero, en tokens negociables ni en una moneda interna: eso cambiaría la
 naturaleza del producto y su encaje legal.
 
-Sí queremos poder representar «Marta hizo mi turno y ahora le debo uno»:
-`ShiftDebt`, una deuda nominal entre dos personas, sin precio y sin mercado.
+Sí representamos «Marta hizo mi turno y ya se lo devolveré» como **saldo de
+intercambio**: horas nominales entre dos personas, sin precio ni mercado, con
+consumo parcial y una nueva aceptación para cada devolución. Una preferencia
+futura ayuda a descubrir oportunidades, pero nunca crea un turno ficticio.
 
 ### Cobertura B2B
 

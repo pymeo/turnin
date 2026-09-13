@@ -38,7 +38,7 @@ final readonly class ChangeAvailabilityDayHandler
         $kinds = [];
         foreach (array_values(array_unique($command->shiftKinds)) as $value) {
             $kind = ShiftKind::tryFrom($value);
-            if (null === $kind || !\in_array($kind, ShiftKind::basic(), true)) {
+            if (null === $kind || !\in_array($kind, ShiftKind::offerable(), true)) {
                 throw new InvalidArgumentException('Selecciona un turno válido.');
             }
             $kinds[$kind->value] = $kind;

@@ -12,17 +12,15 @@
     </header>
     <section class="available-grid" aria-label="Turnos disponibles">
         {% for request in openRequests %}
-            <article class="activity-card" data-request-id="{{ request.requestId }}">
+            <article class="activity-card shift-trading-card" data-request-id="{{ request.requestId }}">
+                <p class="changes-kicker">{{ request.authorName }} quiere librarse</p>
                 <p class="swap-card-date">{{ request.dateHeadline }}</p>
+                <p class="shift-card-hours">{{ request.hours }}{% if request.endsNextDay %} <small>· termina al día siguiente</small>{% endif %}</p>
+                <p class="shift-card-duration">{{ request.durationLabel|upper }}</p>
                 <h2>{{ request.shiftLabel }}</h2>
-                <p>{{ request.hours }}{% if request.endsNextDay %} <small>(+1 día)</small>{% endif %}</p>
                 <p><strong>{{ request.groupLabel }}</strong><br><span class="text-ink-muted">{{ request.workplaceName }}</span></p>
-                <p>{{ request.authorName }} quiere librar este turno.</p>
-                {% if request.alreadyAvailable %}
-                    <p class="swap-card-done">✓ Encaja con tu disponibilidad</p>
-                {% else %}
-                    <button class="btn-primary btn-block" type="button" data-action="changes#offer" data-request-id="{{ request.requestId }}">Puedo hacerlo</button>
-                {% endif %}
+                {% if request.alreadyAvailable %}<p class="swap-card-done">Sugerido · Marcaste que podrías trabajar este día</p>{% endif %}
+                <a class="btn-primary btn-block" href="{{ path('swap_proposal_new_exchange', {requestId: request.requestId}) }}">Me interesa</a>
             </article>
         {% else %}
             <div class="empty-state"><strong>Ahora mismo no hay turnos compatibles disponibles.</strong><span>Cuando aparezca alguno que encaje contigo lo verás aquí.</span></div>

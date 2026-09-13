@@ -32,6 +32,8 @@ final class SwapRequest
         private readonly WorkDate $workDate,
         private readonly ShiftKind $shiftKind,
         private SwapRequestStatus $status,
+        private ?string $coveredByWorkerId,
+        private ?string $coveredByAssignmentId,
         private readonly DateTimeImmutable $createdAt,
         private DateTimeImmutable $updatedAt,
     ) {
@@ -59,7 +61,7 @@ final class SwapRequest
             throw new InvalidArgumentException('Solo puedes publicar turnos futuros.');
         }
 
-        return new self($id, $workerId, $workerAssignmentId, $swapPoolId, $rosterDayId, $workDate, $shiftKind, SwapRequestStatus::OPEN, $now, $now);
+        return new self($id, $workerId, $workerAssignmentId, $swapPoolId, $rosterDayId, $workDate, $shiftKind, SwapRequestStatus::OPEN, null, null, $now, $now);
     }
 
     public static function restore(
@@ -71,10 +73,12 @@ final class SwapRequest
         WorkDate $workDate,
         ShiftKind $shiftKind,
         SwapRequestStatus $status,
+        ?string $coveredByWorkerId,
+        ?string $coveredByAssignmentId,
         DateTimeImmutable $createdAt,
         DateTimeImmutable $updatedAt,
     ): self {
-        return new self($id, $workerId, $workerAssignmentId, $swapPoolId, $rosterDayId, $workDate, $shiftKind, $status, $createdAt, $updatedAt);
+        return new self($id, $workerId, $workerAssignmentId, $swapPoolId, $rosterDayId, $workDate, $shiftKind, $status, $coveredByWorkerId, $coveredByAssignmentId, $createdAt, $updatedAt);
     }
 
     /**
@@ -92,6 +96,20 @@ final class SwapRequest
         }
 
         $this->status = SwapRequestStatus::CANCELLED;
+        $this->updatedAt = $now;
+    }
+
+    public function cover(string $byWorkerId, string $candidateWorkerId, string $candidateAssignmentId, DateTimeImmutable $now): void
+    {
+        if ($byWorkerId !== $this->workerId) {
+            throw new InvalidArgumentException('Solo quien publicó el turno puede elegir quién lo cubre.');
+        }
+        if (SwapRequestStatus::OPEN !== $this->status || $candidateWorkerId === $this->workerId || '' === trim($candidateAssignmentId)) {
+            throw new InvalidArgumentException('Esta solicitud ya no puede cubrirse.');
+        }
+        $this->status = SwapRequestStatus::COVERED;
+        $this->coveredByWorkerId = $candidateWorkerId;
+        $this->coveredByAssignmentId = $candidateAssignmentId;
         $this->updatedAt = $now;
     }
 
@@ -138,6 +156,16 @@ final class SwapRequest
     public function isOpen(): bool
     {
         return SwapRequestStatus::OPEN === $this->status;
+    }
+
+    public function coveredByWorkerId(): ?string
+    {
+        return $this->coveredByWorkerId;
+    }
+
+    public function coveredByAssignmentId(): ?string
+    {
+        return $this->coveredByAssignmentId;
     }
 
     public function createdAt(): DateTimeImmutable

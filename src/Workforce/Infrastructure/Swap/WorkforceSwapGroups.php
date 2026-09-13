@@ -61,6 +61,10 @@ final readonly class WorkforceSwapGroups implements SwapGroups
                AND m.active = TRUE
                AND p.active = TRUE
                AND a.active = TRUE
+               AND (
+                    u.id IS NOT NULL
+                    OR NULLIF(BTRIM(COALESCE(p.functional_area, '')), '') IS NOT NULL
+               )
             SQL;
         $parameters = ['worker' => $workerId];
         if (null !== $assignmentId) {

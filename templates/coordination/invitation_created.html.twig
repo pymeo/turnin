@@ -1,0 +1,14 @@
+{% extends 'base.html.twig' %}
+{% block title %}Turnin — Invitación creada{% endblock %}
+{% block body %}
+<main class="page flex flex-col gap-6">
+    {% include 'identity/_authenticated_header.html.twig' %}
+    <section class="card flex flex-col gap-4">
+        <p class="eyebrow">Invitación privada</p>
+        <h1 class="text-2xl font-bold">Comparte este enlace</h1>
+        <p class="text-ink-muted">Caduca el {{ expiresAt|date('d/m/Y H:i') }} y solo puede utilizarse una vez.</p>
+        <label class="field"><span>Enlace</span><input readonly value="{{ url }}" onfocus="this.select()"></label>
+        <a class="btn-secondary" href="{{ path('coordination_together') }}">Volver</a>
+    </section>
+</main>
+{% endblock %}

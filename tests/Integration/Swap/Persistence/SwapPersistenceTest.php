@@ -7,12 +7,16 @@ namespace App\Tests\Integration\Swap\Persistence;
 use App\SharedKernel\Domain\ShiftKind;
 use App\Swap\Domain\Availabilities;
 use App\Swap\Domain\Availability;
+use App\Swap\Domain\SwapProposal;
+use App\Swap\Domain\SwapProposalKind;
+use App\Swap\Domain\SwapProposals;
 use App\Swap\Domain\SwapRequest;
 use App\Swap\Domain\SwapRequests;
 use App\Swap\Domain\WorkDate;
 use DateTimeImmutable;
 use Doctrine\DBAL\Connection;
 use Doctrine\DBAL\Exception\UniqueConstraintViolationException;
+use RuntimeException;
 use Symfony\Bundle\FrameworkBundle\Test\KernelTestCase;
 use Symfony\Component\Uid\Uuid;
 
@@ -35,6 +39,8 @@ final class SwapPersistenceTest extends KernelTestCase
 
     private Availabilities $availabilities;
 
+    private SwapProposals $proposals;
+
     private string $poolUci;
 
     private string $poolPorters;
@@ -54,13 +60,16 @@ final class SwapPersistenceTest extends KernelTestCase
         $connection = $container->get(Connection::class);
         $requests = $container->get(SwapRequests::class);
         $availabilities = $container->get(Availabilities::class);
+        $proposals = $container->get(SwapProposals::class);
         self::assertInstanceOf(Connection::class, $connection);
         self::assertInstanceOf(SwapRequests::class, $requests);
         self::assertInstanceOf(Availabilities::class, $availabilities);
+        self::assertInstanceOf(SwapProposals::class, $proposals);
 
         $this->connection = $connection;
         $this->requests = $requests;
         $this->availabilities = $availabilities;
+        $this->proposals = $proposals;
         $this->connection->beginTransaction();
 
         $workplace = $this->seedWorkplace();
@@ -188,6 +197,61 @@ final class SwapPersistenceTest extends KernelTestCase
         $this->availabilities->save($this->availability($this->pedro, $this->pedroAssignment, $this->poolUci, true));
 
         self::assertSame([$request->id() => 0], $this->requests->candidateCounts([$request->id()]));
+    }
+
+    public function test_a_covered_request_records_one_real_worker_and_closes_discovery(): void
+    {
+        $request = $this->request($this->pedro, $this->pedroAssignment, $this->poolUci);
+        $this->requests->save($request);
+        $request->cover($this->pedro, $this->maria, $this->mariaAssignment, new DateTimeImmutable('2026-09-16'));
+        $this->requests->save($request);
+
+        $stored = $this->requests->byId($request->id());
+        self::assertNotNull($stored);
+        self::assertSame($this->maria, $stored->coveredByWorkerId());
+        self::assertSame($this->mariaAssignment, $stored->coveredByAssignmentId());
+        self::assertNull($this->requests->openFor($this->pedroAssignment, WorkDate::fromString(self::DATE)));
+    }
+
+    public function test_only_one_of_two_stale_coverage_decisions_can_win(): void
+    {
+        $request = $this->request($this->pedro, $this->pedroAssignment, $this->poolUci);
+        $this->requests->save($request);
+        $first = $this->requests->byId($request->id());
+        $stale = $this->requests->byId($request->id());
+        self::assertNotNull($first);
+        self::assertNotNull($stale);
+        $first->cover($this->pedro, $this->maria, $this->mariaAssignment, new DateTimeImmutable('2026-09-16'));
+        $this->requests->save($first);
+        $stale->cover($this->pedro, $this->maria, $this->mariaAssignment, new DateTimeImmutable('2026-09-16'));
+
+        $this->expectException(RuntimeException::class);
+        $this->requests->save($stale);
+    }
+
+    public function test_a_deferred_proposal_round_trips_without_a_fictitious_return_shift(): void
+    {
+        $request = $this->request($this->pedro, $this->pedroAssignment, $this->poolUci);
+        $this->requests->save($request);
+        $proposal = SwapProposal::propose(
+            Uuid::v7()->toRfc4122(),
+            $request->id(),
+            $this->pedro,
+            $this->maria,
+            $this->mariaAssignment,
+            SwapProposalKind::DEFERRED,
+            null,
+            null,
+            new DateTimeImmutable(self::TODAY),
+        );
+
+        $this->proposals->save($proposal);
+
+        $stored = $this->proposals->byId($proposal->id());
+        self::assertNotNull($stored);
+        self::assertSame(SwapProposalKind::DEFERRED, $stored->kind());
+        self::assertNull($stored->offeredRosterDayId());
+        self::assertNull($stored->offeredWorkDate());
     }
 
     private function request(string $workerId, string $assignmentId, string $poolId): SwapRequest

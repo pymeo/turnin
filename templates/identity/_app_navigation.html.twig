@@ -1,0 +1,19 @@
+{% set currentRoute = app.request.attributes.get('_route')|default('') %}
+<nav class="app-navigation" aria-label="Navegación principal" data-testid="app-navigation">
+    <a class="app-navigation-item" href="{{ path('identity_app') }}"{% if currentRoute == 'identity_app' %} aria-current="page"{% endif %}>
+        <span class="app-navigation-icon" aria-hidden="true">⌂</span>
+        <span>Inicio</span>
+    </a>
+    <a class="app-navigation-item" href="{{ path('scheduling_calendar') }}"{% if currentRoute starts with 'scheduling_' %} aria-current="page"{% endif %}>
+        <span class="app-navigation-icon" aria-hidden="true">▦</span>
+        <span>Calendario</span>
+    </a>
+    <a class="app-navigation-item" href="{{ path('swap_changes') }}"{% if currentRoute starts with 'swap_' %} aria-current="page"{% endif %}>
+        <span class="app-navigation-icon" aria-hidden="true">⇄</span>
+        <span>Cambios</span>
+    </a>
+    <a class="app-navigation-item" href="{{ path('workforce_assignments') }}"{% if currentRoute starts with 'workforce_' %} aria-current="page"{% endif %}>
+        <span class="app-navigation-icon" aria-hidden="true">♙</span>
+        <span>Perfil laboral</span>
+    </a>
+</nav>

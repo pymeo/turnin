@@ -81,6 +81,8 @@ final readonly class GetOpenSwapRequestsHandler
                 $day->shiftLabel,
                 $day->abbreviation,
                 $day->hours(),
+                $day->durationMinutes(),
+                $day->durationLabel(),
                 $day->endsNextDay,
                 $day->colorKey,
                 $group->label(),

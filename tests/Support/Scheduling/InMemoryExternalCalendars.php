@@ -19,16 +19,20 @@ final class InMemoryExternalCalendars implements ExternalCalendarConnections, Ex
     /** @var array<string, true> */
     private array $imports = [];
 
-    public function connect(string $userId, string $accountSubject, string $accessToken, ?string $refreshToken, ?DateTimeImmutable $expiresAt, array $scopes): void
+    public function connect(string $userId, string $accountSubject, ?string $accountEmail, string $accessToken, ?string $refreshToken, ?DateTimeImmutable $expiresAt, array $scopes): void
     {
     }
 
     public function activeFor(string $userId): ExternalCalendarConnection
     {
-        return new ExternalCalendarConnection('google:'.$userId, $userId, 'subject', 'access', 'refresh', null, [], null);
+        return new ExternalCalendarConnection('google:'.$userId, $userId, 'subject', 'worker@example.test', 'access', 'refresh', null, [ExternalCalendarConnection::CALENDAR_LIST_READ, ExternalCalendarConnection::EVENTS_READ, ExternalCalendarConnection::EVENTS_WRITE], null, null);
     }
 
     public function refreshAccessToken(string $userId, string $accessToken, ?DateTimeImmutable $expiresAt): void
+    {
+    }
+
+    public function requireReauthentication(string $userId): void
     {
     }
 

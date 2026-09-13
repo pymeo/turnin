@@ -31,6 +31,11 @@ final class InMemorySwapRequests implements SwapRequests
         return $this->requests[$id] ?? null;
     }
 
+    public function byIdForUpdate(string $id): ?SwapRequest
+    {
+        return $this->byId($id);
+    }
+
     public function openFor(string $workerAssignmentId, WorkDate $date): ?SwapRequest
     {
         foreach ($this->requests as $request) {

@@ -39,6 +39,11 @@ parameters:
               - type: classNameRegex
                 value: '#^App\\Swap\\#'
 
+        - name: Coordination
+          collectors:
+              - type: classNameRegex
+                value: '#^App\\Coordination\\#'
+
         - name: SharedKernel
           collectors:
               - type: classNameRegex
@@ -83,12 +88,17 @@ parameters:
         Scheduling:
             - Vendor
             - Swap
+            - Coordination
             - SharedKernel
 
         # Swap depends on nobody. Pools, calendars and people all arrive through
         # ports it declares, which is what lets it be the context that changes
         # most in the next slices.
         Swap:
+            - Vendor
+            - Coordination
+            - SharedKernel
+        Coordination:
             - Vendor
             - SharedKernel
         SharedKernel:

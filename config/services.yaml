@@ -100,6 +100,18 @@ services:
         tags:
             - { name: 'messenger.message_handler', bus: 'command.bus' }
 
+    turnin.coordination_query_handlers:
+        namespace: App\Coordination\Application\Query\
+        resource: '../src/Coordination/Application/Query/*Handler.php'
+        tags:
+            - { name: 'messenger.message_handler', bus: 'query.bus' }
+
+    turnin.coordination_command_handlers:
+        namespace: App\Coordination\Application\Command\
+        resource: '../src/Coordination/Application/Command/*Handler.php'
+        tags:
+            - { name: 'messenger.message_handler', bus: 'command.bus' }
+
     turnin.identity_command_handlers:
         namespace: App\Platform\Identity\Application\Command\
         resource: '../src/Platform/Identity/Application/Command/*Handler.php'
@@ -141,6 +153,8 @@ services:
     App\Scheduling\Domain\ShiftPresets: '@App\Scheduling\Infrastructure\Persistence\Doctrine\DoctrineShiftPresets'
     App\Scheduling\Domain\RosterPatterns: '@App\Scheduling\Infrastructure\Persistence\Doctrine\DoctrineRosterPatterns'
     App\Scheduling\Domain\RosterIdGenerator: '@App\Scheduling\Infrastructure\Identity\SymfonyRosterIdGenerator'
+    App\Scheduling\Domain\CalendarBlocks: '@App\Scheduling\Infrastructure\Persistence\Doctrine\DoctrineCalendarBlocks'
+    App\Scheduling\Domain\CalendarBlockIdGenerator: '@App\Scheduling\Infrastructure\Identity\SymfonyCalendarBlockIdGenerator'
     # Declared by Scheduling, implemented by Workforce, which owns the data.
     App\Scheduling\Domain\AssignedWorkers: '@App\Workforce\Infrastructure\Scheduling\WorkforceAssignedWorkers'
     App\Scheduling\Domain\AuthenticatedWorkers: '@App\Platform\Identity\Infrastructure\Scheduling\IdentityAuthenticatedWorkers'
@@ -150,8 +164,12 @@ services:
     # the pools by Workforce, the calendar by Scheduling, the people by Identity.
     # Swap never reads another context's tables. See docs/CONTEXT_MAP.md.
     App\Swap\Domain\SwapRequests: '@App\Swap\Infrastructure\Persistence\Doctrine\DoctrineSwapRequests'
+    App\Swap\Domain\SwapProposals: '@App\Swap\Infrastructure\Persistence\Doctrine\DoctrineSwapProposals'
+    App\Swap\Domain\ExchangeBalances: '@App\Swap\Infrastructure\Persistence\Doctrine\DoctrineExchangeBalances'
+    App\Swap\Domain\RestBlockOpportunityFinder: ~
     App\Swap\Domain\Availabilities: '@App\Swap\Infrastructure\Persistence\Doctrine\DoctrineAvailabilities'
     App\Swap\Domain\SwapIdGenerator: '@App\Swap\Infrastructure\Identity\SymfonySwapIdGenerator'
+    App\Swap\Domain\SwapTransaction: '@App\Swap\Infrastructure\Persistence\Doctrine\DoctrineSwapTransaction'
     App\Swap\Domain\SwapGroups: '@App\Workforce\Infrastructure\Swap\WorkforceSwapGroups'
     App\Swap\Domain\RosteredDays: '@App\Scheduling\Infrastructure\Swap\SchedulingRosteredDays'
     App\Swap\Domain\AuthenticatedWorkers: '@App\Platform\Identity\Infrastructure\Swap\IdentitySwapWorkers'
@@ -168,6 +186,17 @@ services:
     App\Scheduling\Domain\ScheduleTextParser: ~
     App\Scheduling\Domain\DateExpressionParser: ~
     App\Scheduling\Domain\RepeatingRosterPatternDetector: ~
+
+    # --- Coordination -----------------------------------------------------
+    App\Coordination\Domain\ScheduleInvitations: '@App\Coordination\Infrastructure\Persistence\Doctrine\DoctrineScheduleInvitations'
+    App\Coordination\Domain\ScheduleLinks: '@App\Coordination\Infrastructure\Persistence\Doctrine\DoctrineScheduleLinks'
+    App\Coordination\Domain\CoordinationIdGenerator: '@App\Coordination\Infrastructure\Identity\SymfonyCoordinationIdGenerator'
+    App\Coordination\Domain\InvitationTokenGenerator: '@App\Coordination\Infrastructure\Identity\CryptographicInvitationTokenGenerator'
+    App\Coordination\Application\Query\LinkedScheduleTimelines: '@App\Scheduling\Infrastructure\Coordination\SchedulingLinkedScheduleTimelines'
+    App\Coordination\Application\Query\CoordinationDisplayNames: '@App\Platform\Identity\Infrastructure\Coordination\IdentityCoordinationUsers'
+    App\Coordination\Application\Query\CurrentCoordinationUser: '@App\Platform\Identity\Infrastructure\Coordination\IdentityCoordinationUsers'
+    App\Coordination\Application\Command\CoordinationSwapRequests: '@App\Swap\Infrastructure\Coordination\SwapCoordinationRequests'
+    App\Coordination\Domain\ScheduleComparator: ~
 
     workforce.ministry.primary_care:
         class: App\Workforce\Infrastructure\Ministry\MinistryWorkplaceCatalog

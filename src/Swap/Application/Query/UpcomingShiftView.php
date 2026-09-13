@@ -13,6 +13,8 @@ final readonly class UpcomingShiftView
         public string $dateHeadline,
         public string $shiftLabel,
         public string $hours,
+        public int $durationMinutes,
+        public string $durationLabel,
         public string $shiftKind,
         public string $workplaceName,
         public string $destinationLabel,

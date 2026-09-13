@@ -16,7 +16,7 @@
         {% for request in myRequests %}
             <article class="activity-card" data-request-id="{{ request.requestId }}">
                 <p class="swap-card-date">{{ request.dateHeadline }}</p>
-                <div><h3>{{ request.shiftLabel }}</h3><p>{{ request.hours }}</p><p><strong>{{ request.workplaceName }}</strong><br><span class="text-ink-muted">{{ request.groupLabel }}</span></p></div>
+                <div><h3>{{ request.shiftLabel }}</h3><p class="shift-card-hours">{{ request.hours }}</p><p class="shift-card-duration">{{ request.durationLabel|upper }}</p><p><strong>{{ request.workplaceName }}</strong><br><span class="text-ink-muted">{{ request.groupLabel }}</span></p></div>
                 <p class="activity-status">
                     {% if request.candidateCount > 0 %}<strong>{{ request.candidateCount }} {{ request.candidateCount == 1 ? 'persona disponible' : 'personas disponibles' }}</strong>{% else %}Buscando compañero · 0 personas disponibles{% endif %}
                 </p>
@@ -29,6 +29,7 @@
             <div class="empty-state"><span>No estás buscando cambio para ningún turno.</span><a class="btn-primary" href="{{ path('swap_changes', {flow: 'release'}) }}">Quiero librar un turno</a></div>
         {% endfor %}
     </section>
+    <a class="btn-secondary btn-block" href="{{ path('swap_proposals') }}">Ver propuestas</a>
 
     <section class="activity-section" aria-labelledby="availability-title">
         <h2 id="availability-title" class="changes-section-title">Puedo trabajar</h2>

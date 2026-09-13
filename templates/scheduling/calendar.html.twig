@@ -24,6 +24,12 @@
 
     <div class="flex justify-end"><a class="btn-ghost text-sm" href="{{ path('scheduling_calendar_integrations') }}">⋯ Integraciones</a></div>
 
+    <details class="calendar-filters">
+        <summary>Mostrar calendarios</summary>
+        <label><input type="checkbox" checked data-calendar-target="filterWork" data-action="calendar#filterChanged"> Turnos</label>
+        <label><input type="checkbox" checked data-calendar-target="filterPersonal" data-action="calendar#filterChanged"> Eventos personales</label>
+    </details>
+
     <section class="flex flex-col gap-1" aria-label="Calendario seleccionado">
         {% if assignments|length > 1 %}
             <details class="rounded-xl border border-line bg-surface px-3 py-2">

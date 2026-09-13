@@ -11,18 +11,29 @@
 
     <section class="card flex flex-col gap-4">
         <span><h2 class="text-lg font-semibold">Google Calendar</h2><p class="text-sm text-ink-muted">{{ connected ? '✓ Conectado' : 'No conectado' }}</p></span>
+        {% if app.request.query.get('google') == 'connected' %}<p class="rounded-xl bg-brand-50 p-3 text-sm text-brand-800" role="status">Google Calendar se ha conectado correctamente.</p>{% endif %}
+        {% if app.request.query.get('google') == 'error' %}<p class="field-error" role="alert">No hemos podido conectar Google Calendar. Vuelve a intentarlo.</p>{% endif %}
         {% if not connected %}
             <p>Conecta Calendar de forma independiente a tu inicio de sesión. Turnin seguirá siendo la fuente de verdad.</p>
             <span class="flex flex-wrap gap-2"><a class="btn-primary" href="{{ path('scheduling_google_calendar_connect') }}">Conectar para importar</a><a class="btn-secondary" href="{{ path('scheduling_google_calendar_connect', {intent: 'export'}) }}">Conectar para exportar</a></span>
         {% else %}
+            {% if connection.accountEmail %}<p class="text-sm text-ink-muted">Conectado con <strong class="text-ink">{{ connection.accountEmail }}</strong></p>{% endif %}
+            {% if connection.requiresReauthentication %}
+                <div class="rounded-xl bg-surface-muted p-4"><strong>Tu conexión con Google ha caducado.</strong><p class="mt-1 text-sm text-ink-muted">Vuelve a conectar para importar o exportar.</p><a class="btn-primary mt-3" href="{{ path('scheduling_google_calendar_connect') }}">Volver a conectar</a></div>
+            {% else %}
             <p class="text-sm">Elige explícitamente un calendario Google y el lugar de trabajo Turnin. No leeremos otros calendarios.</p>
             <label>Calendario Google<select class="field" data-calendar-integration-target="calendar">{% for calendar in calendars %}<option value="{{ calendar.id }}" data-writable="{{ calendar.writable ? '1' : '0' }}">{{ calendar.name }}</option>{% endfor %}</select></label>
             <label>Importar/exportar en<select class="field" data-calendar-integration-target="assignment">{% for assignment in assignments %}<option value="{{ assignment.assignmentId }}">{{ assignment.shortLabel }}</option>{% endfor %}</select></label>
             <span class="grid grid-cols-2 gap-2"><label>Desde<input class="field" type="date" data-calendar-integration-target="from"></label><label>Hasta<input class="field" type="date" data-calendar-integration-target="to"></label></span>
-            <span class="flex flex-wrap gap-2"><button class="btn-primary" type="button" data-action="calendar-integration#preview">Importar turnos</button><button class="btn-secondary" type="button" data-action="calendar-integration#export">Exportar turnos</button><button class="btn-ghost" type="button" data-action="calendar-integration#downloadIcs">Descargar .ics</button></span>
+            <span class="flex flex-wrap gap-2">
+                {% if connection.canReadEvents %}<button class="btn-primary" type="button" data-action="calendar-integration#preview">Importar calendario</button>{% else %}<a class="btn-primary" href="{{ path('scheduling_google_calendar_connect') }}">Activar importación</a>{% endif %}
+                {% if connection.canWriteEvents %}<button class="btn-secondary" type="button" data-action="calendar-integration#export">Exportar turnos</button>{% else %}<a class="btn-secondary" href="{{ path('scheduling_google_calendar_connect', {intent: 'export'}) }}">Activar exportación</a>{% endif %}
+                <button class="btn-ghost" type="button" data-action="calendar-integration#downloadIcs">Descargar .ics</button>
+            </span>
             <div class="hidden flex-col gap-3" data-calendar-integration-target="preview" aria-live="polite"><strong data-calendar-integration-target="summary"></strong><div class="flex flex-col gap-2" data-calendar-integration-target="items"></div><button class="btn-primary" type="button" data-action="calendar-integration#importSelected">Confirmar importación</button></div>
             <p class="text-sm text-ink-muted" data-calendar-integration-target="message" aria-live="polite"></p>
             <button class="btn-ghost self-start text-danger" type="button" data-action="calendar-integration#disconnect">Desconectar</button>
+            {% endif %}
         {% endif %}
     </section>
 </main>

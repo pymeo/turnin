@@ -73,4 +73,12 @@ final readonly class FixedRosteredDays implements RosteredDays
     {
         return new self([...$this->days, ...$days]);
     }
+
+    public function transferCoverage(string $fromAssignmentId, string $toAssignmentId, string $date): void
+    {
+    }
+
+    public function exchange(string $firstAssignmentId, string $firstDate, string $secondAssignmentId, string $secondDate): void
+    {
+    }
 }

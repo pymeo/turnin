@@ -71,15 +71,20 @@ frontera de contexto sería una llamada remota para responder algo trivial.
 
 Son un contexto con cuatro agregados. `SwapPool` es la raíz interesante.
 
+Las dos mitades de esa pregunta no se proyectan como la misma lista:
+`WorkerAssignment` enumera empleos reales; `Membership`/`SwapPoolAccess` enumera
+ámbitos de intercambio del empleo al que referencia. Un acceso adicional nunca
+crea una asignación ni una tarjeta de lugar de trabajo.
+
 ### `Scheduling` (antes: Calendar, Shift, Availability)
 
 `Calendar` no es un agregado: es la *vista* de los turnos de una persona en un
 intervalo. Modelarlo como agregado propio lleva derecho a un objeto gigante que
 carga meses de datos para responder «¿qué hago el sábado?».
 
-`Shift` y `Availability` sí son agregados, y comparten contexto porque
-`Availability` solo tiene sentido contra el calendario: «quiero mañanas» es una
-afirmación sobre los turnos que uno aceptaría.
+`Shift` pertenece a Scheduling. La disponibilidad de intercambio pertenece a
+`Swap` y llega separada del cuadrante; Scheduling solo expone por puerto la
+proyección mínima necesaria para validar turnos y calcular descansos.
 
 ### `Swap` (antes: SwapRequest, SwapPreference, SwapProposal, SwapAgreement, ShiftDebt)
 
@@ -88,7 +93,7 @@ mueren con su `SwapRequest`: son parte del mismo agregado o vecinos inmediatos, 
 aceptar una propuesta tiene que ser atómico respecto a la solicitud. Partirlos
 significa coordinación distribuida para una operación que es un `UPDATE`.
 
-`ShiftDebt` sí es agregado aparte —sobrevive al acuerdo que lo creó y tiene su
+`ExchangeBalance` sí es agregado aparte —sobrevive al acuerdo que lo creó y tiene su
 propio ciclo de vida— pero comparte el lenguaje de `Swap` y se queda en el mismo
 contexto.
 

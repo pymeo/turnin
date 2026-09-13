@@ -13,6 +13,8 @@ final readonly class MySwapRequestView
         public string $shiftLabel,
         public string $abbreviation,
         public string $hours,
+        public int $durationMinutes,
+        public string $durationLabel,
         public string $colorKey,
         public string $workplaceName,
         public string $groupLabel,

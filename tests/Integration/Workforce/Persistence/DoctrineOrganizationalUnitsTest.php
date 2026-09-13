@@ -79,6 +79,17 @@ final class DoctrineOrganizationalUnitsTest extends KernelTestCase
         self::assertSame(OrganizationalUnitOrigin::TURNIN_REFERENCE, $unit->origin());
     }
 
+    public function test_a_materialized_reference_destination_remains_featured_without_active_memberships(): void
+    {
+        $unit = $this->units->resolveSelection($this->workplaceId, 'reference:emergency');
+
+        $results = $this->units->discover($this->workplaceId, '', 20);
+        $emergency = array_values(array_filter($results, static fn ($option): bool => $option->selectionId === 'unit:'.$unit->id()));
+
+        self::assertCount(1, $emergency);
+        self::assertTrue($emergency[0]->featured);
+    }
+
     public function test_a_manual_unit_is_local_pending_and_scoped_to_its_workplace(): void
     {
         $unit = $this->units->addLocal($this->workplaceId, 'Observación 2');

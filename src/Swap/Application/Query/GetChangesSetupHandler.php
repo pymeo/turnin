@@ -61,6 +61,8 @@ final readonly class GetChangesSetupHandler
                 WorkDateLabel::headline(\App\Swap\Domain\WorkDate::fromString($day->date)),
                 $day->shiftLabel,
                 $day->hours(),
+                $day->durationMinutes(),
+                $day->durationLabel(),
                 $day->shiftKind->value,
                 $group->workplaceName,
                 $group->label(),

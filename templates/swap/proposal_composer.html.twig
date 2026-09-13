@@ -1,0 +1,81 @@
+{% extends 'base.html.twig' %}
+
+{% block title %}Turnin — {{ kind == 'exchange' ? 'Proponer intercambio' : 'Cubrir turno' }}{% endblock %}
+
+{% block body %}
+<main class="changes-shell">
+    {% include 'identity/_authenticated_header.html.twig' %}
+    <header class="changes-heading">
+        <a class="text-sm text-ink-muted no-underline" href="{{ path('swap_changes_available') }}">‹ Turnos disponibles</a>
+        <p class="changes-kicker">{{ kind == 'exchange' ? 'Proponer intercambio' : 'Proponer cobertura' }}</p>
+        <h1>{{ kind == 'exchange' ? '¿Qué turno quieres ofrecerle a ' ~ request.authorName ~ '?' : 'Confirma qué turno cubrirías' }}</h1>
+    </header>
+
+    <section class="trade-comparison" aria-label="Turno que vas a coger">
+        <p class="trade-side-label">Tú trabajarías</p>
+        <article class="trade-shift trade-shift-take">
+            <p class="swap-card-date">{{ request.dateHeadline }}</p>
+            <p class="shift-card-hours">{{ request.hours }}</p>
+            <p class="shift-card-duration">{{ request.durationLabel|upper }}</p>
+            <h2>{{ request.shiftLabel }}</h2>
+            <p>{{ request.groupLabel }} · {{ request.workplaceName }}</p>
+        </article>
+    </section>
+
+    {% if kind == 'coverage' %}
+        <form method="post" action="{{ path('swap_proposal_create', {requestId: request.requestId}) }}" class="trade-confirmation">
+            <input type="hidden" name="_token" value="{{ csrfToken }}">
+            <input type="hidden" name="kind" value="coverage">
+            <p class="coverage-warning"><strong>No recibes otro turno a cambio.</strong><span>Es una cobertura, no un intercambio. Turnin no gestiona pagos entre profesionales.</span></p>
+            <button class="btn-primary btn-block" type="submit">Enviar propuesta de cobertura</button>
+        </form>
+    {% else %}
+        <form method="post" action="{{ path('swap_proposal_create', {requestId: request.requestId}) }}" class="flex flex-col gap-4">
+            <input type="hidden" name="_token" value="{{ csrfToken }}">
+            <input type="hidden" name="kind" value="exchange">
+            {% for shift in shifts %}
+                {% if not shift.alreadyOpen %}
+                    {% set balance = request.durationMinutes - shift.durationMinutes %}
+                    <label class="trade-option">
+                        <input type="radio" name="offeredShift" value="{{ shift.assignmentId }}|{{ shift.date }}" required>
+                        <span class="trade-option-body">
+                            <span class="trade-side-label">A cambio {{ request.authorName }} trabajaría</span>
+                            <strong class="swap-card-date">{{ shift.dateHeadline }}</strong>
+                            <span class="shift-card-hours">{{ shift.hours }}</span>
+                            <span class="shift-card-duration">{{ shift.durationLabel|upper }}</span>
+                            <strong>{{ shift.shiftLabel }}</strong>
+                            <span class="trade-balance">Balance para ti: {% if balance > 0 %}trabajarías {{ (balance / 60)|abs }} h más{% elseif balance < 0 %}trabajarías {{ (balance / 60)|abs }} h menos{% else %}mismas horas{% endif %}</span>
+                        </span>
+                    </label>
+                {% endif %}
+            {% else %}
+                <div class="empty-state"><strong>No tienes turnos próximos que puedas ofrecer.</strong><span>La cobertura puede seguir estando disponible.</span></div>
+            {% endfor %}
+            <button class="btn-primary btn-block" type="submit">Enviar propuesta</button>
+        </form>
+
+        <section class="card flex flex-col gap-3">
+            <p class="trade-side-label">Pedir algo para más adelante</p>
+            <h2>¿Qué te gustaría recibir?</h2>
+            <form method="post" action="{{ path('swap_proposal_create', {requestId: request.requestId}) }}" class="flex flex-col gap-3">
+                <input type="hidden" name="_token" value="{{ csrfToken }}"><input type="hidden" name="kind" value="deferred">
+                <label class="field"><span class="field-label">Periodo (opcional)</span><input class="input" type="month" name="preferredMonth"></label>
+                <div class="grid grid-cols-2 gap-2">
+                    <label class="field"><span class="field-label">Tipo</span><select class="input" name="preferredShiftKind"><option value="">Indiferente</option><option value="morning">Mañana</option><option value="evening">Tarde</option><option value="night">Noche</option></select></label>
+                    <label class="field"><span class="field-label">Duración</span><select class="input" name="preferredDuration"><option value="">Indiferente</option><option value="480">8 h</option><option value="720">12 h</option></select></label>
+                </div>
+                <fieldset><legend class="field-label">Días preferidos</legend><div class="flex gap-1">{% for day, label in {1:'L',2:'M',3:'X',4:'J',5:'V',6:'S',7:'D'} %}<label class="picker-chip"><input type="checkbox" name="preferredWeekdays[]" value="{{ day }}"> {{ label }}</label>{% endfor %}</div></fieldset>
+                <button class="btn-secondary btn-block" type="submit">Guardar preferencia y proponérselo</button>
+            </form>
+        </section>
+
+        <form method="post" action="{{ path('swap_proposal_create', {requestId: request.requestId}) }}" class="card flex flex-col gap-2">
+            <input type="hidden" name="_token" value="{{ csrfToken }}"><input type="hidden" name="kind" value="deferred">
+            <strong>Guardármelo para más adelante</strong><span class="text-ink-muted">Obtendrás saldo de intercambio cuando se acepte. No hace falta decidir ahora.</span>
+            <button class="btn-secondary btn-block" type="submit">Guardarme el favor</button>
+        </form>
+
+        <a class="btn-ghost btn-block" href="{{ path('swap_proposal_new_coverage', {requestId: request.requestId}) }}">Cubrirlo sin pedir nada</a>
+    {% endif %}
+</main>
+{% endblock %}

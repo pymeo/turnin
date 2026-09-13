@@ -17,13 +17,15 @@ export default class extends Controller {
     async preview() {
         const result = await this.post('/app/calendar/integrations/google/import/preview', this.payload());
         this.lastItems = result.items || [];
-        this.summaryTarget.textContent = `${result.recognized} reconocidos · ${result.review} para revisar · ${result.ignored} ignorados`;
+        this.summaryTarget.textContent = `${result.recognized} turnos · ${result.review} eventos personales o para revisar · ${result.ignored} ignorados`;
         this.itemsTarget.replaceChildren(...this.lastItems.map((item) => {
             const label = document.createElement('label');
             label.className = 'flex items-start gap-2 rounded-xl border border-line p-3 text-sm';
-            const checked = item.status === 'recognized' ? 'checked' : '';
-            const disabled = item.status === 'recognized' ? '' : 'disabled';
-            label.innerHTML = `<input type="checkbox" value="${this.escape(item.eventId)}" ${checked} ${disabled}><span><strong>${this.escape(item.date)} · ${this.escape(item.title)}</strong><br>${this.escape(item.description)} · ${this.escape(item.status)}</span>`;
+            const importable = ['recognized', 'personal'].includes(item.status);
+            const checked = importable ? 'checked' : '';
+            const disabled = importable ? '' : 'disabled';
+            const kind = item.status === 'recognized' ? 'Detectado como turno' : item.status === 'personal' ? 'Evento personal' : 'Necesita revisión';
+            label.innerHTML = `<input type="checkbox" value="${this.escape(item.eventId)}" ${checked} ${disabled}><span><strong>${this.escape(item.date)} · ${this.escape(item.title)}</strong><br>${this.escape(item.description)} · ${this.escape(kind)}</span>`;
             return label;
         }));
         this.previewTarget.classList.remove('hidden');
@@ -33,7 +35,7 @@ export default class extends Controller {
     async importSelected() {
         const eventIds = [...this.itemsTarget.querySelectorAll('input:checked')].map((input) => input.value);
         const result = await this.post('/app/calendar/integrations/google/import', {...this.payload(), eventIds});
-        this.messageTarget.textContent = `${result.applied || 0} turnos importados. Los conflictos existentes se han conservado.`;
+        this.messageTarget.textContent = `${result.applied || 0} turnos · ${result.personalCreated || 0} eventos personales nuevos · ${result.personalUpdated || 0} actualizados. Los conflictos existentes se han conservado.`;
         this.previewTarget.classList.add('hidden');
     }
 

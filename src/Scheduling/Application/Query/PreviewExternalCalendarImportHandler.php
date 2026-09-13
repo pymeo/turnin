@@ -21,8 +21,12 @@ final readonly class PreviewExternalCalendarImportHandler
     public function __invoke(PreviewExternalCalendarImport $query): ExternalCalendarImportPreview
     {
         $worker = $this->workspace->requireAssignment($query->workerId, $query->assignmentId);
+        $connection = $this->connections->activeFor($query->workerId) ?? throw new RuntimeException('Conecta Google Calendar antes de importar.');
+        if (!$connection->canReadEvents()) {
+            throw new RuntimeException('Activa el permiso de importación de Google Calendar.');
+        }
         $page = $this->provider->listEvents($query->workerId, $query->externalCalendarId, $query->from, $query->to);
-        $connectionId = ($this->connections->activeFor($query->workerId) ?? throw new RuntimeException('Conecta Google Calendar antes de importar.'))->id;
+        $connectionId = $connection->id;
         $events = array_values(array_filter($page->events, fn ($event): bool => !$this->externalEvents->imported($connectionId, $query->externalCalendarId, $event->id, $worker->assignmentId)));
         $plan = $this->importer->prepare($worker->assignmentId, $events, $this->workspace->presetsFor($worker), $worker->timeZone());
         $recognized = 0;
@@ -31,7 +35,7 @@ final readonly class PreviewExternalCalendarImportHandler
         foreach ($plan->items as $item) {
             match ($item->status) {
                 'recognized' => ++$recognized,
-                'review' => ++$review,
+                'review', 'personal' => ++$review,
                 default => ++$ignored,
             };
         }

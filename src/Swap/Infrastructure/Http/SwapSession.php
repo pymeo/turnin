@@ -47,6 +47,13 @@ final readonly class SwapSession
         return $this->csrf->getToken(self::CSRF_TOKEN_ID)->getValue();
     }
 
+    public function isValid(Request $request): bool
+    {
+        $value = $request->headers->get('X-CSRF-TOKEN', $request->request->getString('_token'));
+
+        return $this->csrf->isTokenValid(new CsrfToken(self::CSRF_TOKEN_ID, $value));
+    }
+
     /** @return array<string, mixed> */
     public function payload(Request $request): array
     {
@@ -106,7 +113,7 @@ final readonly class SwapSession
         if (null === $workerId) {
             return new JsonResponse(['error' => 'Inicia sesión para continuar.'], Response::HTTP_UNAUTHORIZED);
         }
-        if (!$this->csrf->isTokenValid(new CsrfToken(self::CSRF_TOKEN_ID, $request->headers->get('X-CSRF-TOKEN', '')))) {
+        if (!$this->isValid($request)) {
             return new JsonResponse(['error' => 'La sesión ha caducado. Recarga la página.'], 419);
         }
 

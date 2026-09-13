@@ -43,9 +43,20 @@ enum ShiftKind: string
         };
     }
 
-    /** @return non-empty-list<self> The simple choices supported by availability today. */
-    public static function basic(): array
+    /**
+     * Every kind a worker can offer to cover.
+     *
+     * This has to stay the complete set. A swap request takes its kind from the
+     * roster, so any of these can be published; availability is matched to a
+     * request by exact kind. Offering fewer kinds here than a roster can hold
+     * does not narrow the feature — it makes those requests impossible to match,
+     * and they sit at "0 personas disponibles" forever with nothing to show for
+     * it. See docs/DECISIONS.md.
+     *
+     * @return non-empty-list<self>
+     */
+    public static function offerable(): array
     {
-        return [self::MORNING, self::EVENING, self::NIGHT];
+        return self::cases();
     }
 }

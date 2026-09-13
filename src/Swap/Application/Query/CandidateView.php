@@ -6,7 +6,7 @@ namespace App\Swap\Application\Query;
 
 final readonly class CandidateView
 {
-    public function __construct(public string $name, public string $groupLabel)
+    public function __construct(public string $availabilityId, public string $name, public string $groupLabel)
     {
     }
 }

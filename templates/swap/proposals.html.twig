@@ -1,0 +1,53 @@
+{% extends 'base.html.twig' %}
+
+{% block title %}Turnin — Propuestas{% endblock %}
+
+{% block body %}
+<main class="changes-shell">
+    {% include 'identity/_authenticated_header.html.twig' %}
+    <header class="changes-heading">
+        <a class="text-sm text-ink-muted no-underline" href="{{ path('swap_changes') }}">‹ Cambios</a>
+        <h1>Propuestas</h1>
+        <p>Los dos turnos y su estado, sin letra pequeña.</p>
+    </header>
+    <section class="available-grid" aria-label="Propuestas de cambio">
+        {% for proposal in proposals %}
+            <article class="proposal-card">
+                <p class="changes-kicker">{% if proposal.incoming %}{{ proposal.otherName|upper }} TE PROPONE{% else %}PROPUESTA A {{ proposal.otherName|upper }}{% endif %}</p>
+                <div class="proposal-side">
+                    <p class="trade-side-label">{% if proposal.incoming %}Tú das{% else %}Tú coges{% endif %}</p>
+                    <strong class="swap-card-date">{{ proposal.requestedHeadline }}</strong>
+                    <span class="shift-card-hours">{{ proposal.requestedHours }}</span>
+                    <span class="shift-card-duration">{{ proposal.requestedDuration|upper }}</span>
+                    <span>{{ proposal.requestedLabel }}</span>
+                </div>
+                <div class="proposal-swap-mark" aria-hidden="true">↕</div>
+                {% if proposal.kind == 'exchange' %}
+                    <div class="proposal-side">
+                        <p class="trade-side-label">{% if proposal.incoming %}Tú recibes{% else %}Tú entregas{% endif %}</p>
+                        <strong class="swap-card-date">{{ proposal.offeredHeadline }}</strong>
+                        <span class="shift-card-hours">{{ proposal.offeredHours }}</span>
+                        <span class="shift-card-duration">{{ proposal.offeredDuration|upper }}</span>
+                        <span>{{ proposal.offeredLabel }}</span>
+                    </div>
+                    {% set personalBalance = proposal.incoming ? proposal.ownerBalanceMinutes : -proposal.ownerBalanceMinutes %}
+                    <p class="trade-balance"><strong>Diferencia</strong><span>{% if personalBalance > 0 %}Trabajarías {{ personalBalance / 60 }} h más{% elseif personalBalance < 0 %}Trabajarías {{ (personalBalance / 60)|abs }} h menos{% else %}Trabajarías las mismas horas{% endif %}</span></p>
+                {% else %}
+                    <p class="coverage-warning"><strong>Es una cobertura</strong><span>No hay otro turno a cambio.</span></p>
+                {% endif %}
+                <p class="proposal-status">Estado: {{ proposal.status == 'pending' ? 'Pendiente de respuesta' : proposal.status|replace({'accepted':'Aceptada','rejected':'Rechazada','withdrawn':'Retirada','expired':'Caducada'}) }}</p>
+                {% if proposal.status == 'pending' %}
+                    {% if proposal.incoming %}
+                        <form method="post" action="{{ path('swap_proposal_decide', {proposalId: proposal.proposalId, decision: 'accept'}) }}"><input type="hidden" name="_token" value="{{ csrfToken }}"><button class="btn-primary btn-block">Aceptar {{ proposal.kind == 'exchange' ? 'intercambio' : 'cobertura' }}</button></form>
+                        <form method="post" action="{{ path('swap_proposal_decide', {proposalId: proposal.proposalId, decision: 'reject'}) }}"><input type="hidden" name="_token" value="{{ csrfToken }}"><button class="btn-ghost btn-block">Rechazar</button></form>
+                    {% else %}
+                        <form method="post" action="{{ path('swap_proposal_decide', {proposalId: proposal.proposalId, decision: 'withdraw'}) }}"><input type="hidden" name="_token" value="{{ csrfToken }}"><button class="btn-ghost btn-block">Retirar propuesta</button></form>
+                    {% endif %}
+                {% endif %}
+            </article>
+        {% else %}
+            <div class="empty-state"><strong>Aún no hay propuestas.</strong><span>La disponibilidad solo muestra oportunidades; una propuesta nace cuando alguien elige un turno real o una cobertura.</span></div>
+        {% endfor %}
+    </section>
+</main>
+{% endblock %}

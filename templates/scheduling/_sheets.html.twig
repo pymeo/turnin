@@ -24,6 +24,10 @@
         </div>
         {% else %}
         <div class="grid gap-2">
+            <button type="button" class="sheet-choice" data-action="calendar#openPersonal">
+                <span class="sheet-choice-icon" aria-hidden="true">●</span>
+                <span><strong>Evento personal</strong><span class="sheet-choice-detail">Cita, vacaciones, viaje o cualquier compromiso</span></span>
+            </button>
             <button type="button" class="sheet-choice" data-action="calendar#startPainting">
                 <span class="sheet-choice-icon" aria-hidden="true">🎨</span>
                 <span><strong>Pintar calendario</strong><span class="sheet-choice-detail">Elige un turno y toca los días</span></span>
@@ -46,6 +50,21 @@
     </div>
 </dialog>
 
+<dialog class="sheet" data-controller="bottom-sheet" data-calendar-target="personalSheet" aria-labelledby="personal-sheet-title">
+    <form class="sheet-inner" data-action="submit->calendar#savePersonal">
+        <span class="sheet-handle" aria-hidden="true"></span>
+        <div class="sheet-header"><h2 id="personal-sheet-title">Evento personal</h2><button type="button" class="picker-close" data-action="bottom-sheet#close" aria-label="Cerrar">×</button></div>
+        <label class="field"><span class="field-label">Título</span><input class="input" required maxlength="160" placeholder="Dentista" data-calendar-target="personalTitle"></label>
+        <label class="field"><span class="field-label">Fecha</span><input class="input" type="date" required data-calendar-target="personalDate"></label>
+        <label class="flex min-h-11 items-center gap-2"><input type="checkbox" data-calendar-target="personalAllDay" data-action="calendar#personalAllDayChanged"> Todo el día</label>
+        <div class="grid grid-cols-2 gap-2" data-calendar-target="personalTimes"><label class="field"><span class="field-label">Desde</span><input class="input" type="time" value="10:00" data-calendar-target="personalStart"></label><label class="field"><span class="field-label">Hasta</span><input class="input" type="time" value="11:00" data-calendar-target="personalEnd"></label></div>
+        <label class="field"><span class="field-label">Tipo</span><select class="input" data-calendar-target="personalType"><option value="personal">Personal</option><option value="vacation">Vacaciones</option><option value="personal_leave">Asuntos propios</option><option value="appointment">Cita</option><option value="legal">Legal</option><option value="travel">Viaje</option><option value="other">Otro</option></select></label>
+        <label class="flex min-h-11 items-center gap-2"><input type="checkbox" checked data-calendar-target="personalBlocks"> Bloquea mi disponibilidad</label>
+        <p class="text-sm text-ink-muted">Las personas vinculadas solo verán “Ocupado” y el horario, nunca este título.</p>
+        <button class="btn-primary btn-block" type="submit">Guardar evento</button>
+    </form>
+</dialog>
+
 {# ── Un día ───────────────────────────────────────────────────────────────
    Quick selection, never a form. An unknown day offers the palette straight
    away; a known day offers the three things you might want to change. #}
@@ -59,6 +78,7 @@
             </span>
             <button type="button" class="picker-close" data-action="bottom-sheet#close" aria-label="Cerrar">×</button>
         </div>
+        <div class="hidden flex-col gap-2" data-calendar-target="dayPersonalList" aria-label="Eventos personales del día"></div>
         <div class="flex flex-wrap gap-2" role="group" aria-label="Elegir turno">
             {% for preset in presets %}
                 <button type="button" class="picker-chip" data-action="calendar#setDayPreset" data-preset-id="{{ preset.id }}">

@@ -81,13 +81,13 @@ final readonly class DeclareAvailabilityHandler
     private function resolveKinds(DeclareAvailability $command): array
     {
         if ([] === $command->shiftKinds) {
-            return ShiftKind::basic();
+            return ShiftKind::offerable();
         }
 
         $kinds = [];
         foreach (array_unique($command->shiftKinds) as $value) {
             $kind = ShiftKind::tryFrom($value);
-            if (null === $kind || !\in_array($kind, ShiftKind::basic(), true)) {
+            if (null === $kind || !\in_array($kind, ShiftKind::offerable(), true)) {
                 throw new InvalidArgumentException('Selecciona al menos un turno válido.');
             }
             $kinds[] = $kind;

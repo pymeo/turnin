@@ -5,8 +5,10 @@ declare(strict_types=1);
 namespace App\Scheduling\Infrastructure\Http;
 
 use App\Scheduling\Application\Command\ExportRosterCalendar;
+use App\Scheduling\Application\Command\ExternalCalendarImported;
 use App\Scheduling\Application\Command\ImportExternalCalendar;
 use App\Scheduling\Application\Command\RosterCalendarExported;
+use App\Scheduling\Application\ExternalCalendar\ExternalCalendarConnection;
 use App\Scheduling\Application\ExternalCalendar\ExternalCalendarConnections;
 use App\Scheduling\Application\ExternalCalendar\ExternalCalendarProvider;
 use App\Scheduling\Application\Query\ExportRosterIcs;
@@ -22,18 +24,20 @@ use KnpU\OAuth2ClientBundle\Client\Provider\GoogleClient;
 use League\OAuth2\Client\Provider\GoogleUser;
 use League\OAuth2\Client\Token\AccessToken;
 use LogicException;
+use Psr\Log\LoggerInterface;
 use Symfony\Component\HttpFoundation\JsonResponse;
 use Symfony\Component\HttpFoundation\RedirectResponse;
 use Symfony\Component\HttpFoundation\Request;
 use Symfony\Component\HttpFoundation\Response;
 use Symfony\Component\Messenger\MessageBusInterface;
 use Symfony\Component\Routing\Attribute\Route;
+use Throwable;
 use Twig\Environment;
 
 #[Route('/app/calendar/integrations')]
 final readonly class CalendarIntegrationController
 {
-    public function __construct(private RosterRequest $roster, private RosterWorkspace $workspace, private ExternalCalendarConnections $connections, private ExternalCalendarProvider $provider, private ClientRegistry $clients, private MessageBusInterface $queryBus, private MessageBusInterface $commandBus, private Environment $twig)
+    public function __construct(private RosterRequest $roster, private RosterWorkspace $workspace, private ExternalCalendarConnections $connections, private ExternalCalendarProvider $provider, private ClientRegistry $clients, private MessageBusInterface $queryBus, private MessageBusInterface $commandBus, private Environment $twig, private LoggerInterface $logger)
     {
     }
 
@@ -45,8 +49,16 @@ final readonly class CalendarIntegrationController
             return new RedirectResponse('/login');
         }
         $connection = $this->connections->activeFor($userId);
+        $calendars = [];
+        if (null !== $connection && !$connection->requiresReauthentication() && $connection->canReadCalendars()) {
+            try {
+                $calendars = $this->provider->listCalendars($userId);
+            } catch (Throwable $exception) {
+                $this->logger->warning('calendar.google.list_failed', ['exception_class' => $exception::class]);
+            }
+        }
 
-        return new Response($this->twig->render('scheduling/integrations.html.twig', ['connected' => null !== $connection, 'calendars' => null === $connection ? [] : $this->provider->listCalendars($userId), 'assignments' => $this->workspace->activeAssignments($userId)]));
+        return new Response($this->twig->render('scheduling/integrations.html.twig', ['connection' => $connection, 'connected' => null !== $connection, 'calendars' => $calendars, 'assignments' => $this->workspace->activeAssignments($userId)]));
     }
 
     #[Route('/google/connect', name: 'scheduling_google_calendar_connect', methods: ['GET'])]
@@ -57,35 +69,42 @@ final readonly class CalendarIntegrationController
         }
         $client = $this->googleClient();
         $export = 'export' === $request->query->getString('intent');
-        $scopes = ['openid', 'email', 'https://www.googleapis.com/auth/calendar.calendarlist.readonly', $export ? 'https://www.googleapis.com/auth/calendar.events' : 'https://www.googleapis.com/auth/calendar.events.readonly'];
+        $scopes = ['openid', 'email', ExternalCalendarConnection::CALENDAR_LIST_READ, $export ? ExternalCalendarConnection::EVENTS_WRITE : ExternalCalendarConnection::EVENTS_READ];
 
         return $client->redirect($scopes, ['access_type' => 'offline', 'include_granted_scopes' => 'true', 'prompt' => 'consent']);
     }
 
     #[Route('/google/callback', name: 'scheduling_google_calendar_callback', methods: ['GET'])]
-    public function callback(): RedirectResponse
+    public function callback(Request $request): RedirectResponse
     {
         $userId = $this->roster->workerId();
         if (null === $userId) {
             return new RedirectResponse('/login');
         }
-        $client = $this->googleClient();
-        $token = $client->getAccessToken();
-        if (!$token instanceof AccessToken) {
-            throw new LogicException('Google Calendar has not returned a usable token.');
-        }
-        $owner = $client->fetchUserFromToken($token);
-        if (!$owner instanceof GoogleUser || !\is_scalar($owner->getId())) {
-            throw new LogicException('Google Calendar has not returned an account identity.');
-        }
-        $values = $token->getValues();
-        $scope = $values['scope'] ?? '';
-        $scopes = \is_string($scope) ? preg_split('/\s+/', trim($scope)) : [];
-        $expires = $token->getExpires();
-        $expiresAt = \is_int($expires) && $expires > 0 ? DateTimeImmutable::createFromFormat('U', (string) $expires) : null;
-        $this->connections->connect($userId, (string) $owner->getId(), $token->getToken(), $token->getRefreshToken(), false === $expiresAt ? null : $expiresAt, false === $scopes ? [] : $scopes);
+        try {
+            $client = $this->googleClient();
+            $token = $client->getAccessToken();
+            if (!$token instanceof AccessToken) {
+                throw new LogicException('Google Calendar has not returned a usable token.');
+            }
+            $owner = $client->fetchUserFromToken($token);
+            if (!$owner instanceof GoogleUser || !\is_scalar($owner->getId())) {
+                throw new LogicException('Google Calendar has not returned an account identity.');
+            }
+            $values = $token->getValues();
+            $scope = $values['scope'] ?? '';
+            $scopes = \is_string($scope) ? preg_split('/\s+/', trim($scope)) : [];
+            $expires = $token->getExpires();
+            $expiresAt = \is_int($expires) && $expires > 0 ? DateTimeImmutable::createFromFormat('U', (string) $expires) : null;
+            $email = $owner->getEmail();
+            $this->connections->connect($userId, (string) $owner->getId(), \is_string($email) ? $email : null, $token->getToken(), $token->getRefreshToken(), false === $expiresAt ? null : $expiresAt, false === $scopes ? [] : $scopes);
 
-        return new RedirectResponse('/app/calendar/integrations');
+            return new RedirectResponse('/app/calendar/integrations?google=connected');
+        } catch (Throwable $exception) {
+            $this->logger->warning('calendar.google.connection_failed', ['exception_class' => $exception::class]);
+
+            return new RedirectResponse('/app/calendar/integrations?google=error');
+        }
     }
 
     #[Route('/google/disconnect', name: 'scheduling_google_calendar_disconnect', methods: ['POST'])]
@@ -124,7 +143,7 @@ final readonly class CalendarIntegrationController
             $ids = $payload['eventIds'] ?? [];
             $result = $this->roster->handled($this->commandBus, new ImportExternalCalendar($userId, $this->required($payload, 'assignmentId'), $this->required($payload, 'calendarId'), $this->dateTime($payload, 'from'), $this->dateTime($payload, 'to'), \is_array($ids) ? array_values(array_filter($ids, 'is_string')) : [], ConflictPolicy::SKIP_EXISTING));
 
-            return ['applied' => $result instanceof \App\Scheduling\Application\Command\ScheduleDraftApplied ? $result->writtenDays : 0];
+            return $result instanceof ExternalCalendarImported ? ['applied' => $result->workDays, 'personalCreated' => $result->personalBlocks, 'personalUpdated' => $result->updatedBlocks] : [];
         });
     }
 

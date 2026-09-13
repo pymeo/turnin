@@ -10,15 +10,17 @@ use App\Scheduling\Application\ExternalCalendar\ExternalCalendarEvent;
 use App\Scheduling\Application\ExternalCalendar\ExternalCalendarEventDraft;
 use App\Scheduling\Application\ExternalCalendar\ExternalCalendarPage;
 use App\Scheduling\Application\ExternalCalendar\ExternalCalendarProvider;
+use App\Scheduling\Application\ExternalCalendar\ExternalCalendarReauthenticationRequired;
 use App\Scheduling\Application\ExternalCalendar\ExternalSyncTokenExpired;
 use DateTimeImmutable;
+use Psr\Clock\ClockInterface;
 use RuntimeException;
 use Symfony\Contracts\HttpClient\HttpClientInterface;
 
 /** Google REST adapter. No Google type crosses into Application. */
 final readonly class GoogleCalendarProvider implements ExternalCalendarProvider
 {
-    public function __construct(private HttpClientInterface $httpClient, private ExternalCalendarConnections $connections, private string $googleOAuthClientId, private string $googleOAuthClientSecret)
+    public function __construct(private HttpClientInterface $httpClient, private ExternalCalendarConnections $connections, private ClockInterface $clock, private string $googleOAuthClientId, private string $googleOAuthClientSecret)
     {
     }
 
@@ -108,20 +110,27 @@ final readonly class GoogleCalendarProvider implements ExternalCalendarProvider
     private function accessToken(string $userId): string
     {
         $connection = $this->connections->activeFor($userId) ?? throw new RuntimeException('Google Calendar no está conectado.');
-        if (null === $connection->expiresAt || $connection->expiresAt->getTimestamp() > time() + 60) {
+        if ($connection->requiresReauthentication()) {
+            throw new ExternalCalendarReauthenticationRequired('Tu conexión con Google ha caducado. Vuelve a conectarla.');
+        }
+        if (null === $connection->expiresAt || $connection->expiresAt > $this->clock->now()->modify('+60 seconds')) {
             return $connection->accessToken;
         }
         if (null === $connection->refreshToken) {
-            throw new RuntimeException('Google ha revocado el acceso. Vuelve a conectar Calendar.');
+            $this->connections->requireReauthentication($userId);
+
+            throw new ExternalCalendarReauthenticationRequired('Tu conexión con Google ha caducado. Vuelve a conectarla.');
         }
         $response = $this->httpClient->request('POST', 'https://oauth2.googleapis.com/token', ['body' => ['client_id' => $this->googleOAuthClientId, 'client_secret' => $this->googleOAuthClientSecret, 'refresh_token' => $connection->refreshToken, 'grant_type' => 'refresh_token']]);
         $data = $response->toArray(false);
         $token = $data['access_token'] ?? null;
-        if (!\is_string($token)) {
-            throw new RuntimeException('No hemos podido renovar el acceso a Google Calendar.');
+        if ($response->getStatusCode() >= 400 || !\is_string($token)) {
+            $this->connections->requireReauthentication($userId);
+
+            throw new ExternalCalendarReauthenticationRequired('Tu conexión con Google ha caducado. Vuelve a conectarla.');
         }
         $expiresIn = $data['expires_in'] ?? 3600;
-        $expiresAt = new DateTimeImmutable('+'.(is_numeric($expiresIn) ? (int) $expiresIn : 3600).' seconds');
+        $expiresAt = $this->clock->now()->modify('+'.(is_numeric($expiresIn) ? (int) $expiresIn : 3600).' seconds');
         $this->connections->refreshAccessToken($userId, $token, $expiresAt);
 
         return $token;

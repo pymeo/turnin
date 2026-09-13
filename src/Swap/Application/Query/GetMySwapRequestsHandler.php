@@ -67,6 +67,8 @@ final readonly class GetMySwapRequestsHandler
                 $day->shiftLabel,
                 $day->abbreviation,
                 $day->hours(),
+                $day->durationMinutes(),
+                $day->durationLabel(),
                 $day->colorKey,
                 $group instanceof SwapGroup ? $group->workplaceName : '',
                 $group instanceof SwapGroup ? $group->label() : '',

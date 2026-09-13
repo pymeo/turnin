@@ -124,16 +124,18 @@ test.describe('guided changes', () => {
 			await onboardWorker(pedro, testInfo, 'kind-pedro', GROUP); await onboardWorker(maria, testInfo, 'kind-maria', GROUP);
 			await setShift(pedro, date, 'Noche'); const requestId = await publishThroughGuide(pedro, date);
 			await chooseAvailability(maria, [date], ['morning']);
-			await pedro.goto('/app/changes/mine'); await expect(pedro.locator(`.activity-card[data-request-id="${requestId}"]`)).toContainText('0 personas disponibles');
 			await maria.goto('/app/changes/available'); const offered = maria.locator(`.activity-card[data-request-id="${requestId}"]`);
-			await expect(offered).toBeVisible(); await expect(offered).not.toContainText('Encaja con tu disponibilidad');
+			await expect(offered).toBeVisible(); await expect(offered).not.toContainText('Sugerido · Marcaste que podrías trabajar este día');
 
 			await maria.goto('/app/changes/mine'); await maria.locator(`[data-availability-date="${date}"]`).getByRole('link', { name: 'Editar' }).click();
 			const sheet = maria.locator('[data-changes-target="sheet"]');
 			await sheet.locator('[data-kind="morning"]').click(); await sheet.locator('[data-kind="night"]').click();
 			await sheet.getByRole('button', { name: 'Continuar' }).click(); await sheet.getByRole('button', { name: 'Guardar disponibilidad' }).click();
-			await pedro.goto('/app/changes/mine'); await expect(pedro.locator(`.activity-card[data-request-id="${requestId}"]`)).toContainText('1 persona disponible');
-			await maria.goto('/app/changes/available'); await expect(maria.locator(`.activity-card[data-request-id="${requestId}"]`)).toContainText('Encaja con tu disponibilidad');
+			// Esperar el acuse antes de mirar la pantalla de Pedro, igual que hace
+			// chooseAvailability: click() sólo despacha el evento, así que sin esto
+			// se lee el contador antes de que la edición haya aterrizado.
+			await expect(sheet).toContainText('Disponibilidad guardada');
+			await maria.goto('/app/changes/available'); await expect(maria.locator(`.activity-card[data-request-id="${requestId}"]`)).toContainText('Sugerido · Marcaste que podrías trabajar este día');
 		} finally { await pedroContext.close(); await mariaContext.close(); }
 	});
 

@@ -48,6 +48,7 @@ final readonly class GetDayExchangeHandler
             ))));
             $label = $this->labelOf($groups, $request->swapPoolId());
             $candidates = array_map(static fn (Availability $availability): CandidateView => new CandidateView(
+                $availability->id(),
                 $names[$availability->workerId()] ?? 'Un compañero',
                 $label,
             ), $offers);

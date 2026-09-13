@@ -1,0 +1,17 @@
+{% extends 'base.html.twig' %}
+{% block title %}Turnin — Vincular calendarios{% endblock %}
+{% block body %}
+<main class="page flex flex-col gap-6">
+    {% include 'identity/_authenticated_header.html.twig' %}
+    <section class="card flex flex-col gap-4">
+        <p class="eyebrow">Calendario compartido</p>
+        <h1 class="text-2xl font-bold">{{ invitation.inviterName }} quiere comparar horarios contigo</h1>
+        <p class="text-ink-muted">La relación será bilateral. Veréis horas ocupadas y turnos, pero no títulos personales, centros, unidades ni grupos de intercambio.</p>
+        {% if invitation.available %}
+            <form method="post" action="{{ path('coordination_accept', {token: token}) }}"><input type="hidden" name="_token" value="{{ csrf_token('coordination') }}"><button class="btn-primary btn-block" type="submit">Aceptar y vincular</button></form>
+        {% else %}
+            <p class="notice">Esta invitación ha caducado o ya fue utilizada.</p>
+        {% endif %}
+    </section>
+</main>
+{% endblock %}

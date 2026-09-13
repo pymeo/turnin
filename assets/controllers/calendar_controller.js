@@ -9,7 +9,7 @@ import { applyTone, closeSheet, configureCalendarContext, getJson, openSheet, po
  * exactly one confirm-and-write path.
  */
 export default class extends Controller {
-	static targets = ['grid', 'summary', 'title', 'emptyState', 'addSheet', 'daySheet', 'daySheetTitle', 'daySheetDetail', 'daySheetClear', 'manualFields', 'manualLabel', 'manualAbbreviation', 'manualStart', 'manualEnd', 'manualKind', 'manualColor', 'patternSheet', 'voiceSheet', 'voiceChoice', 'detection', 'detectionText', 'addButton'];
+	static targets = ['grid', 'summary', 'title', 'emptyState', 'addSheet', 'daySheet', 'daySheetTitle', 'daySheetDetail', 'daySheetClear', 'dayPersonalList', 'manualFields', 'manualLabel', 'manualAbbreviation', 'manualStart', 'manualEnd', 'manualKind', 'manualColor', 'personalSheet', 'personalTitle', 'personalDate', 'personalAllDay', 'personalTimes', 'personalStart', 'personalEnd', 'personalType', 'personalBlocks', 'filterWork', 'filterPersonal', 'patternSheet', 'voiceSheet', 'voiceChoice', 'detection', 'detectionText', 'addButton'];
 	static values = { month: String, today: String, csrf: String, assignment: String, view: String };
 
 	connect() {
@@ -17,6 +17,7 @@ export default class extends Controller {
 		this.painting = false;
 		this.selectedDate = null;
 		this.detected = null;
+		this.restoreFilters();
 		this.element.addEventListener('calendar:changed', (event) => this.changed(event));
 		this.element.addEventListener('paint:mode', (event) => this.paintModeChanged(event));
 		this.element.addEventListener('pattern:ready', () => closeSheet(this.patternSheetTarget));
@@ -30,6 +31,7 @@ export default class extends Controller {
 		if (!this.speechAvailable()) this.voiceChoiceTarget.classList.add('hidden');
 		this.refreshDetection();
 		this.markExchange();
+		this.applyFilters();
 	}
 
 	previous() {
@@ -56,6 +58,7 @@ export default class extends Controller {
 			this.dispatch('monthLoaded', { detail: { month: payload.month }, prefix: 'calendar' });
 			this.refreshDetection();
 			this.markExchange();
+			this.applyFilters();
 		} catch (error) {
 			this.report(error);
 		}
@@ -81,6 +84,7 @@ export default class extends Controller {
 			? 'Aún no has indicado tu turno.'
 			: described.charAt(0).toLocaleUpperCase('es') + described.slice(1));
 		this.daySheetClearTarget.classList.toggle('hidden', unknown);
+		this.renderPersonalEvents(cell);
 		// Swap decides what this day allows; the calendar only says which day.
 		document.dispatchEvent(new CustomEvent('exchange:day', {
 			detail: { date: this.selectedDate, assignmentId: this.hasAssignmentValue ? this.assignmentValue : '' },
@@ -138,6 +142,71 @@ export default class extends Controller {
 
 	openAdd() {
 		openSheet(this.addSheetTarget);
+	}
+
+	openPersonal() {
+		closeSheet(this.addSheetTarget);
+		this.personalDateTarget.value = this.selectedDate || `${this.monthValue}-01`;
+		openSheet(this.personalSheetTarget);
+		requestAnimationFrame(() => this.personalTitleTarget.focus());
+	}
+
+	personalAllDayChanged() {
+		this.personalTimesTarget.classList.toggle('hidden', this.personalAllDayTarget.checked);
+	}
+
+	async savePersonal(event) {
+		event.preventDefault();
+		try {
+			await postJson('/app/calendar/blocks', this.csrfValue, {
+				title: this.personalTitleTarget.value,
+				date: this.personalDateTarget.value,
+				start: this.personalStartTarget.value,
+				end: this.personalEndTarget.value,
+				type: this.personalTypeTarget.value,
+				allDay: this.personalAllDayTarget.checked,
+				blocksAvailability: this.personalBlocksTarget.checked,
+			});
+			closeSheet(this.personalSheetTarget);
+			this.personalTitleTarget.value = '';
+			await this.load(this.personalDateTarget.value.slice(0, 7));
+		} catch (error) { this.report(error); }
+	}
+
+	filterChanged() {
+		const value = { work: this.filterWorkTarget.checked, personal: this.filterPersonalTarget.checked };
+		localStorage.setItem('turnin.calendar.filters.v1', JSON.stringify(value));
+		this.applyFilters();
+	}
+
+	restoreFilters() {
+		let value = {};
+		try { value = JSON.parse(localStorage.getItem('turnin.calendar.filters.v1') || '{}'); } catch { value = {}; }
+		this.filterWorkTarget.checked = value.work !== false;
+		this.filterPersonalTarget.checked = value.personal !== false;
+	}
+
+	applyFilters() {
+		this.element.dataset.showWork = String(this.filterWorkTarget.checked);
+		this.element.dataset.showPersonal = String(this.filterPersonalTarget.checked);
+	}
+
+	renderPersonalEvents(cell) {
+		let events = [];
+		try { events = JSON.parse(cell.dataset.personalEvents || '[]'); } catch { events = []; }
+		this.dayPersonalListTarget.replaceChildren();
+		this.dayPersonalListTarget.classList.toggle('hidden', events.length === 0);
+		this.dayPersonalListTarget.classList.toggle('flex', events.length > 0);
+		for (const event of events) {
+			const row = document.createElement('article');
+			row.className = 'calendar-day-event';
+			const title = document.createElement('strong');
+			title.textContent = event.title;
+			const hours = document.createElement('span');
+			hours.textContent = event.allDay ? 'Todo el día' : `${event.start}–${event.end}`;
+			row.append(title, hours);
+			this.dayPersonalListTarget.append(row);
+		}
 	}
 
 	async seedPresets() {

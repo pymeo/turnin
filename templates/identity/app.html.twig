@@ -26,6 +26,12 @@
         <p class="text-ink-muted">Aquí aparecerán tus compañeros compatibles.</p>
     </section>
 
+    <section class="card flex flex-col gap-3">
+        <p class="text-xl font-semibold">❤️ Cuadrar turnos</p>
+        <p class="text-ink-muted">Compara tu calendario con alguien importante para ti y encuentra días que podéis intentar librar juntos.</p>
+        <a class="btn-secondary btn-block" href="{{ path('coordination_together') }}">Sincronizar calendarios</a>
+    </section>
+
     <nav class="flex flex-col gap-3">
         <a class="btn-primary btn-block" href="{{ path('swap_changes', {flow: 'release'}) }}">Quiero librar un turno</a>
         <a class="btn-secondary btn-block" href="{{ path('swap_changes', {flow: 'availability'}) }}">Puedo trabajar</a>

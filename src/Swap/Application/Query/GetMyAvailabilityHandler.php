@@ -70,7 +70,7 @@ final readonly class GetMyAvailabilityHandler
         $views = [];
         foreach ($days as $day) {
             $kinds = array_values($day['kinds']);
-            usort($kinds, static fn (ShiftKind $a, ShiftKind $b): int => array_search($a, ShiftKind::basic(), true) <=> array_search($b, ShiftKind::basic(), true));
+            usort($kinds, static fn (ShiftKind $a, ShiftKind $b): int => array_search($a, ShiftKind::offerable(), true) <=> array_search($b, ShiftKind::offerable(), true));
             $places = [];
             foreach ($day['places'] as $workplace => $place) {
                 $destinations = array_keys($place['destinations']);

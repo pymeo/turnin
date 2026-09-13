@@ -46,7 +46,13 @@
                 <button class="kind-choice" type="button" data-kind="morning" aria-pressed="false" data-action="changes#toggleKind"><strong>Mañana</strong><small>08:00 aprox.</small><span>✓</span></button>
                 <button class="kind-choice" type="button" data-kind="evening" aria-pressed="false" data-action="changes#toggleKind"><strong>Tarde</strong><small>15:00 aprox.</small><span>✓</span></button>
                 <button class="kind-choice" type="button" data-kind="night" aria-pressed="false" data-action="changes#toggleKind"><strong>Noche</strong><small>22:00 aprox.</small><span>✓</span></button>
-                <button class="kind-choice kind-choice-any" type="button" data-kind="any" aria-pressed="false" data-action="changes#toggleKind"><strong>Cualquier turno</strong><small>Mañana, tarde o noche</small><span>✓</span></button>
+                {# Un turno que puede publicarse tiene que poder ofrecerse: si falta
+                   aquí, la solicitud de quien lo tenga no encuentra a nadie nunca. #}
+                <button class="kind-choice" type="button" data-kind="long_day" aria-pressed="false" data-action="changes#toggleKind"><strong>12 h (día)</strong><small>08:00 aprox.</small><span>✓</span></button>
+                <button class="kind-choice" type="button" data-kind="long_night" aria-pressed="false" data-action="changes#toggleKind"><strong>12 h (noche)</strong><small>20:00 aprox.</small><span>✓</span></button>
+                <button class="kind-choice" type="button" data-kind="on_call" aria-pressed="false" data-action="changes#toggleKind"><strong>Guardia</strong><small>24 h aprox.</small><span>✓</span></button>
+                <button class="kind-choice" type="button" data-kind="other" aria-pressed="false" data-action="changes#toggleKind"><strong>Otro</strong><small>Cualquier otro turno</small><span>✓</span></button>
+                <button class="kind-choice kind-choice-any" type="button" data-kind="any" aria-pressed="false" data-action="changes#toggleKind"><strong>Cualquier turno</strong><small>Todos los de arriba</small><span>✓</span></button>
             </div>
             <div class="sheet-actions">
                 <button class="btn-primary btn-block" type="button" data-action="changes#continueToPlaces" data-changes-target="kindsContinue" disabled>Continuar</button>

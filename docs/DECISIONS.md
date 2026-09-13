@@ -42,6 +42,15 @@ entrar en la caché offline de la PWA. Las unidades de referencia se materializa
 en el centro al seleccionarlas; una unidad escrita por el usuario nace local y
 pendiente, sin fingir que está verificada.
 
+## 2026-09-12 — Los accesos de intercambio no son empleos
+
+«Mis lugares de trabajo» se proyecta exclusivamente desde `WorkerAssignment`.
+El membership principal y los adicionales pertenecen a esa asignación y amplían
+los grupos con los que se puede cambiar, sin fabricar otros lugares de trabajo.
+Un pool sin unidad resoluble ni área funcional legible es dato inconsistente y
+no se ofrece como opción. PostgreSQL impide además borrar una unidad todavía
+referenciada por una asignación o un pool.
+
 ## 2026-09-11 — El calendario se persiste con DBAL, no con el ORM
 
 `RosterDay` posee sus segmentos, y una asociación de Doctrine exigiría un
@@ -302,3 +311,29 @@ una local, y es exactamente la distinción que interesa.
 
 Por `localhost` el profiler sigue disponible tal y como documenta
 [DEVELOPMENT.md](DEVELOPMENT.md).
+
+## 2026-09-13 — La disponibilidad ofrece todos los tipos de turno, no tres
+
+`ShiftKind` tiene siete valores y una solicitud toma el suyo del cuadrante, así
+que cualquiera de los siete puede publicarse. La disponibilidad, en cambio, solo
+ofrecía `morning`, `evening` y `night` (`ShiftKind::basic()`), y «Cualquier
+turno» significaba exactamente esos tres.
+
+Como el emparejamiento exige igualdad exacta de `shift_kind`, **una guardia, un
+turno de 12 h o un «otro» eran imposibles de emparejar por construcción**: su
+solicitud se quedaba en «0 personas disponibles» para siempre, sin que nadie
+pudiera ofrecerse aunque quisiera y aunque estuviera en el mismo pool. Apareció
+con un usuario real que publicó una guardia.
+
+Ofrecer menos tipos de los publicables no acota la funcionalidad: crea
+solicitudes que el sistema no puede resolver nunca y que además no se distinguen
+de «todavía no se ha ofrecido nadie». Por eso `basic()` pasa a ser
+`offerable()` y devuelve `self::cases()`, con el nombre diciendo lo que hace
+falta que siga siendo cierto: **todo lo que se puede publicar se tiene que poder
+ofrecer**. Hay un test con proveedor de datos sobre `ShiftKind::cases()` que
+falla si alguien vuelve a estrechar el conjunto.
+
+«Cualquier turno» pasa a significar todos, y declarar disponibilidad sin elegir
+tipo también. Los acentos de color reutilizan el agrupamiento que ya define
+`ShiftKind::tone()`: los de 12 h comparten banda con su equivalente corto, y
+guardia y «otro» van al tono de guardia.

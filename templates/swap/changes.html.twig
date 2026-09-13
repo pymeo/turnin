@@ -65,6 +65,10 @@
         <a class="btn-secondary" href="{{ path('swap_changes_mine') }}">Ver mi actividad</a>
     </section>
 
+    <a class="btn-secondary btn-block" href="{{ path('swap_proposals') }}">Ver propuestas de intercambio y cobertura</a>
+    <a class="btn-secondary btn-block" href="{{ path('swap_balances') }}">Mis intercambios y saldos</a>
+    <a class="btn-primary btn-block" href="{{ path('swap_bridge_finder') }}">✨ Encuéntrame un puente</a>
+
     <p class="field-error hidden" data-changes-target="error" role="alert"></p>
 
     {% include 'swap/_flows.html.twig' %}

@@ -67,7 +67,7 @@ final class OnboardingFlowTest extends WebTestCase
             'workplace_id' => $workplaceId,
             'staff_category_id' => $categoryId,
             'primary_destination_id' => 'reference:emergency',
-            'additional_destination_ids' => ['reference:intensive_care'],
+            'additional_destination_ids' => ['reference:intensive_care', 'reference:hospitalization'],
         ]);
 
         self::assertSame(1, $this->countRows('SELECT COUNT(*) FROM workforce_onboarding_drafts WHERE worker_id = :worker', ['worker' => $this->userId]));
@@ -85,7 +85,7 @@ final class OnboardingFlowTest extends WebTestCase
         self::assertSame(0, $this->countRows('SELECT COUNT(*) FROM workforce_onboarding_drafts WHERE worker_id = :worker', ['worker' => $this->userId]));
         self::assertTrue((bool) $this->connection->fetchOne('SELECT has_worker_profile FROM identity_users WHERE id = :worker', ['worker' => $this->userId]));
         self::assertSame(1, $this->countRows('SELECT COUNT(*) FROM workforce_worker_assignments WHERE worker_id = :worker AND active = TRUE', ['worker' => $this->userId]));
-        self::assertSame(2, $this->countRows('SELECT COUNT(*) FROM workforce_swap_pool_memberships WHERE worker_id = :worker AND active = TRUE', ['worker' => $this->userId]));
+        self::assertSame(3, $this->countRows('SELECT COUNT(*) FROM workforce_swap_pool_memberships WHERE worker_id = :worker AND active = TRUE', ['worker' => $this->userId]));
         $memberships = $this->connection->fetchAllAssociative(
             <<<'SQL'
 				SELECT unit.name, membership.is_primary, membership.source
@@ -99,8 +99,12 @@ final class OnboardingFlowTest extends WebTestCase
         );
         self::assertSame([
             ['name' => 'Urgencias', 'is_primary' => true, 'source' => 'self_declared'],
+            ['name' => 'Hospitalización', 'is_primary' => false, 'source' => 'self_declared'],
             ['name' => 'UCI', 'is_primary' => false, 'source' => 'self_declared'],
         ], $memberships);
+        $places = $this->client->request('GET', '/app/workplaces');
+        self::assertResponseIsSuccessful();
+        self::assertCount(1, $places->filter('article[data-assignment-id]'), 'Additional pool access never becomes another workplace card.');
         self::assertNotSame('600123123', $this->scalar('SELECT phone_encrypted FROM identity_personal_profiles WHERE user_id = :worker', ['worker' => $this->userId]));
         self::assertNotSame('12345678Z', $this->scalar('SELECT identity_document_fingerprint FROM identity_usage_identities WHERE user_id = :worker', ['worker' => $this->userId]));
 
@@ -112,6 +116,7 @@ final class OnboardingFlowTest extends WebTestCase
         $this->post('/onboarding/complete');
 
         self::assertSame(1, $this->countRows('SELECT COUNT(*) FROM workforce_worker_assignments WHERE worker_id = :worker AND active = TRUE', ['worker' => $this->userId]));
+        self::assertSame(1, $this->countRows('SELECT COUNT(*) FROM workforce_swap_pool_memberships WHERE worker_id = :worker AND active = TRUE', ['worker' => $this->userId]));
         self::assertSame(1, $this->countRows('SELECT COUNT(*) FROM workforce_swap_pool_memberships WHERE worker_id = :worker AND active = TRUE AND is_primary = TRUE', ['worker' => $this->userId]));
     }
 
@@ -146,6 +151,9 @@ final class OnboardingFlowTest extends WebTestCase
         self::assertSame(2, $this->countRows('SELECT COUNT(*) FROM workforce_worker_assignments WHERE worker_id = :worker AND active = TRUE', ['worker' => $this->userId]));
         self::assertSame(1, $this->countRows('SELECT COUNT(*) FROM workforce_worker_assignments WHERE worker_id = :worker AND active = TRUE AND primary_assignment = TRUE', ['worker' => $this->userId]));
         self::assertSame(2, $this->countRows('SELECT COUNT(*) FROM workforce_swap_pool_memberships WHERE worker_id = :worker AND active = TRUE AND is_primary = TRUE', ['worker' => $this->userId]));
+        $places = $this->client->request('GET', '/app/workplaces');
+        self::assertResponseIsSuccessful();
+        self::assertCount(2, $places->filter('article[data-assignment-id]'));
     }
 
     /** @param array<string, mixed> $parameters

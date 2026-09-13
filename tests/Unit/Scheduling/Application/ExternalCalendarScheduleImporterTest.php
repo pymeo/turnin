@@ -30,7 +30,7 @@ final class ExternalCalendarScheduleImporterTest extends TestCase
         self::assertSame('assignment-a', $plan->draft()->workerAssignmentId);
     }
 
-    public function test_unknown_and_all_day_events_need_review_instead_of_becoming_shifts(): void
+    public function test_unknown_and_all_day_events_become_personal_blocks_instead_of_shifts(): void
     {
         $events = [
             new ExternalCalendarEvent('noise', 'Dentista', new DateTimeImmutable('2026-09-15T10:00:00+02:00'), new DateTimeImmutable('2026-09-15T11:00:00+02:00'), false, false, new DateTimeImmutable('2026-09-01')),
@@ -39,7 +39,9 @@ final class ExternalCalendarScheduleImporterTest extends TestCase
 
         $plan = (new ExternalCalendarScheduleImporter())->prepare('assignment-a', $events, new ShiftPresetResolver([]), new DateTimeZone('Europe/Madrid'));
 
-        self::assertSame(['review', 'ignored'], array_map(static fn ($item): string => $item->status, $plan->items));
+        self::assertSame(['personal', 'personal'], array_map(static fn ($item): string => $item->status, $plan->items));
+        self::assertFalse($plan->items[0]->event->allDay);
+        self::assertTrue($plan->items[1]->event->allDay);
         self::assertTrue($plan->draft()->isEmpty());
     }
 }

@@ -6,10 +6,14 @@ namespace App\Scheduling\Infrastructure\Http;
 
 use App\Scheduling\Application\Command\ApplyManualShift;
 use App\Scheduling\Application\Command\ApplyScheduleDraft;
+use App\Scheduling\Application\Command\CalendarBlockCreated;
+use App\Scheduling\Application\Command\CreateCalendarBlock;
 use App\Scheduling\Application\Command\EnsureShiftPresets;
 use App\Scheduling\Application\Command\ScheduleDraftApplied;
+use App\Scheduling\Application\Query\CalendarTimelineView;
 use App\Scheduling\Application\Query\CombinedRosterMonthView;
 use App\Scheduling\Application\Query\DetectRosterPattern;
+use App\Scheduling\Application\Query\GetCalendarTimeline;
 use App\Scheduling\Application\Query\GetCombinedRosterMonth;
 use App\Scheduling\Application\Query\GetNextShift;
 use App\Scheduling\Application\Query\GetRosterMonth;
@@ -25,6 +29,7 @@ use App\Scheduling\Application\RosterAccessDenied;
 use App\Scheduling\Application\RosterWorkspace;
 use App\Scheduling\Domain\AssignedWorker;
 use App\Scheduling\Domain\RosterSource;
+use DateTimeImmutable;
 use InvalidArgumentException;
 use LogicException;
 use Symfony\Component\HttpFoundation\JsonResponse;
@@ -74,6 +79,10 @@ final readonly class CalendarController
             $month = $combined
                 ? $this->roster->handled($this->queryBus, new GetCombinedRosterMonth($workerId, $request->query->getString('month') ?: null))
                 : $this->month($request, $workerId, $selected?->assignmentId);
+            if (!$month instanceof CombinedRosterMonthView && !$month instanceof RosterMonthView) {
+                throw new LogicException('The roster month query returned an unexpected result.');
+            }
+            $personalByDate = $this->personalByDate($workerId, $month->month, $selected ?? $this->workspace->requirePrimary($workerId));
         } catch (Throwable $exception) {
             if (RosterRequest::rootCause($exception) instanceof RosterAccessDenied) {
                 return new RedirectResponse('/onboarding');
@@ -95,6 +104,7 @@ final readonly class CalendarController
             // The day sheet hosts Swap's block, and Swap guards its own
             // mutations with its own token.
             'swapCsrfToken' => $this->csrf->getToken('changes')->getValue(),
+            'personalByDate' => $personalByDate,
         ]));
     }
 
@@ -119,6 +129,7 @@ final readonly class CalendarController
                 throw new LogicException('The roster month query returned an unexpected result.');
             }
             $month = $result;
+            $personalByDate = $this->personalByDate($workerId, $month->month, $this->workspace->requirePrimary($workerId));
         } catch (RosterAccessDenied|InvalidArgumentException $exception) {
             return new JsonResponse(['error' => RosterRequest::rootCause($exception)->getMessage()], Response::HTTP_UNPROCESSABLE_ENTITY);
         }
@@ -128,9 +139,33 @@ final readonly class CalendarController
             'title' => $month->title,
             'previousMonth' => $month->previousMonth,
             'nextMonth' => $month->nextMonth,
-            'grid' => $this->twig->render($month instanceof CombinedRosterMonthView ? 'scheduling/_combined_month_grid.html.twig' : 'scheduling/_month_grid.html.twig', ['month' => $month]),
+            'grid' => $this->twig->render($month instanceof CombinedRosterMonthView ? 'scheduling/_combined_month_grid.html.twig' : 'scheduling/_month_grid.html.twig', ['month' => $month, 'personalByDate' => $personalByDate]),
             'summary' => $this->twig->render($month instanceof CombinedRosterMonthView ? 'scheduling/_combined_month_summary.html.twig' : 'scheduling/_month_summary.html.twig', ['month' => $month]),
         ]);
+    }
+
+    #[Route('/app/calendar/blocks', name: 'scheduling_calendar_block_create', methods: ['POST'])]
+    public function createBlock(Request $request): JsonResponse
+    {
+        return $this->roster->respond($request, function (string $workerId) use ($request): array {
+            $payload = $this->roster->payload($request);
+            $date = $this->requiredText($payload, 'date');
+            $allDay = true === ($payload['allDay'] ?? false);
+            $timeZone = $this->workspace->require($workerId, $this->roster->assignmentId($request))->timeZone();
+            $startTime = $allDay ? '00:00' : $this->requiredText($payload, 'start');
+            $endTime = $allDay ? '00:00' : $this->requiredText($payload, 'end');
+            $startsAt = DateTimeImmutable::createFromFormat('!Y-m-d H:i', $date.' '.$startTime, $timeZone);
+            $endsAt = DateTimeImmutable::createFromFormat('!Y-m-d H:i', $date.' '.$endTime, $timeZone);
+            if (false === $startsAt || false === $endsAt) {
+                throw new InvalidArgumentException('Indica una fecha y un horario válidos.');
+            }
+            if ($allDay || $endsAt <= $startsAt) {
+                $endsAt = $endsAt->modify('+1 day');
+            }
+            $result = $this->roster->handled($this->commandBus, new CreateCalendarBlock($workerId, $this->requiredText($payload, 'title'), $this->requiredText($payload, 'type'), $startsAt, $endsAt, $allDay, false !== ($payload['blocksAvailability'] ?? true)));
+
+            return ['id' => $result instanceof CalendarBlockCreated ? $result->id : null];
+        });
     }
 
     #[Route('/app/calendar/preview', name: 'scheduling_calendar_preview', methods: ['POST'])]
@@ -284,5 +319,43 @@ final readonly class CalendarController
             'from' => $preview->from,
             'to' => $preview->to,
         ];
+    }
+
+    /** @return array<string, list<array<string, mixed>>> */
+    private function personalByDate(string $workerId, string $month, AssignedWorker $clock): array
+    {
+        $from = new DateTimeImmutable($month.'-01 00:00:00', $clock->timeZone());
+        $to = $from->modify('+1 month');
+        $timeline = $this->roster->handled($this->queryBus, new GetCalendarTimeline($workerId, $from, $to));
+        if (!$timeline instanceof CalendarTimelineView) {
+            return [];
+        }
+        $result = [];
+        foreach ($timeline->entries as $entry) {
+            if ('personal' !== $entry->kind) {
+                continue;
+            }
+            $localStart = $entry->startsAt->setTimezone($clock->timeZone());
+            $localEnd = $entry->endsAt->setTimezone($clock->timeZone());
+            $cursor = $localStart->setTime(0, 0);
+            $last = ($entry->allDay ? $localEnd->modify('-1 second') : $localEnd)->setTime(0, 0);
+            while ($cursor <= $last) {
+                $result[$cursor->format('Y-m-d')][] = ['id' => $entry->id, 'title' => $entry->displayLabel, 'start' => $entry->allDay ? null : $localStart->format('H:i'), 'end' => $entry->allDay ? null : $localEnd->format('H:i'), 'allDay' => $entry->allDay, 'blocksAvailability' => $entry->blocksAvailability];
+                $cursor = $cursor->modify('+1 day');
+            }
+        }
+
+        return $result;
+    }
+
+    /** @param array<string, mixed> $payload */
+    private function requiredText(array $payload, string $key): string
+    {
+        $value = $payload[$key] ?? null;
+        if (!\is_string($value) || '' === trim($value)) {
+            throw new InvalidArgumentException('Falta un campo obligatorio.');
+        }
+
+        return trim($value);
     }
 }

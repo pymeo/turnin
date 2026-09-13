@@ -1,0 +1,47 @@
+{% extends 'base.html.twig' %}
+{% block title %}Turnin — Cuadrar turnos{% endblock %}
+{% block body %}
+<main class="page flex flex-col gap-6">
+    {% include 'identity/_authenticated_header.html.twig' %}
+    <header class="flex flex-col gap-2">
+        <p class="eyebrow">Calendario compartido</p>
+        <h1 class="text-3xl font-bold">❤️ Cuadrar turnos</h1>
+        <p class="text-ink-muted">Compara vuestra disponibilidad sin compartir los detalles privados de la agenda.</p>
+    </header>
+
+    {% if coordination is null %}
+        <section class="card flex flex-col gap-4">
+            <h2 class="text-xl font-semibold">Invita a alguien importante para ti</h2>
+            <p class="text-ink-muted">Puede ser tu pareja, un familiar o un amigo. No se compartirá nada hasta que acepte.</p>
+            <form method="post" action="{{ path('coordination_invite') }}"><input type="hidden" name="_token" value="{{ csrf_token('coordination') }}"><button class="btn-primary btn-block" type="submit">Crear invitación segura</button></form>
+        </section>
+    {% else %}
+        <section class="card flex flex-col gap-2">
+            <p class="text-lg font-semibold">Tú + {{ coordination.partnerName }}</p>
+            <p class="text-ink-muted">Los compromisos personales de la otra persona aparecen únicamente como «Ocupado».</p>
+        </section>
+        {% if app.request.query.get('requested') %}<p class="notice">Se han creado {{ app.request.query.get('requested') }} solicitudes de cambio independientes.</p>{% endif %}
+        <form class="flex flex-col gap-3" method="post" action="{{ path('coordination_requests') }}" data-testid="coordination-days">
+            <input type="hidden" name="_token" value="{{ csrf_token('coordination') }}">
+            <input type="hidden" name="month" value="{{ month }}">
+            {% for day in coordination.days %}
+                <article class="card coordination-day coordination-day--{{ day.status.value }}">
+                    <div><strong>{{ day.date|date('D j') }}</strong></div>
+                    {% if day.status.value == 'both_free' %}
+                        <p>✓ Los dos libres</p>
+                    {% elseif day.status.value == 'a_works_b_free' %}
+                        <p>Tú: {{ day.actionableShift.label }} · La otra persona: libre</p>
+                        <label class="picker-chip"><input type="checkbox" name="days[]" value="{{ day.actionableShift.assignmentId }}|{{ day.actionableShift.date }}"> Intentar librar este día</label>
+                    {% elseif day.status.value == 'a_free_b_works' %}
+                        <p>Tú libre · {{ coordination.partnerName }} trabaja</p>
+                    {% else %}
+                        <p>Tenéis horarios ocupados diferentes.</p>
+                    {% endif %}
+                </article>
+            {% endfor %}
+            <button class="btn-primary btn-block" type="submit">Intentar librar los días seleccionados</button>
+        </form>
+        <form method="post" action="{{ path('coordination_unlink') }}"><input type="hidden" name="_token" value="{{ csrf_token('coordination') }}"><button class="btn-ghost" type="submit">Dejar de compartir calendarios</button></form>
+    {% endif %}
+</main>
+{% endblock %}

@@ -1,7 +1,9 @@
 import { Controller } from '@hotwired/stimulus';
 
-const BASIC_KINDS = ['morning', 'evening', 'night'];
-const KIND_LABELS = { morning: 'Mañana', evening: 'Tarde', night: 'Noche' };
+// Los siete tipos que un cuadrante puede contener. «Cualquier turno» significa
+// todos: ofrecer menos que lo publicable deja solicitudes sin emparejar jamás.
+const OFFERABLE_KINDS = ['morning', 'evening', 'night', 'long_day', 'long_night', 'on_call', 'other'];
+const KIND_LABELS = { morning: 'Mañana', evening: 'Tarde', night: 'Noche', long_day: '12 h (día)', long_night: '12 h (noche)', on_call: 'Guardia', other: 'Otro' };
 const MONTHS = ['enero', 'febrero', 'marzo', 'abril', 'mayo', 'junio', 'julio', 'agosto', 'septiembre', 'octubre', 'noviembre', 'diciembre'];
 
 export default class extends Controller {
@@ -176,15 +178,15 @@ export default class extends Controller {
 	toggleKind(event) {
 		const kind = event.currentTarget.dataset.kind;
 		if (kind === 'any') {
-			const all = BASIC_KINDS.every((value) => this.selectedKinds.has(value));
-			this.selectedKinds = new Set(all ? [] : BASIC_KINDS);
+			const all = OFFERABLE_KINDS.every((value) => this.selectedKinds.has(value));
+			this.selectedKinds = new Set(all ? [] : OFFERABLE_KINDS);
 		} else if (this.selectedKinds.has(kind)) this.selectedKinds.delete(kind); else this.selectedKinds.add(kind);
 		this.renderKinds();
 	}
 	renderKinds() {
 		this.availabilityKindsTarget.querySelectorAll('[data-kind]').forEach((button) => {
 			const kind = button.dataset.kind;
-			const selected = kind === 'any' ? BASIC_KINDS.every((value) => this.selectedKinds.has(value)) : this.selectedKinds.has(kind);
+			const selected = kind === 'any' ? OFFERABLE_KINDS.every((value) => this.selectedKinds.has(value)) : this.selectedKinds.has(kind);
 			button.setAttribute('aria-pressed', selected ? 'true' : 'false');
 		});
 		this.kindsContinueTarget.disabled = this.selectedKinds.size === 0;
@@ -192,13 +194,17 @@ export default class extends Controller {
 
 	continueToPlaces() {
 		if (!this.selectedKinds.size) return;
+		if (this.groupsValue.length === 0) {
+			this.showFlowError('No tienes ningún grupo de intercambio válido. Revisa tu lugar de trabajo antes de continuar.');
+			return;
+		}
 		if (this.groupsValue.length === 1) {
 			this.selectedPools = new Set([this.groupsValue[0].poolId]);
 			this.continueToSummary();
 			return;
 		}
 		this.renderPlaces();
-		this.showPanel('availabilityPlaces', 'Paso 3 de 4', '¿Dónde podrías trabajar?');
+		this.showPanel('availabilityPlaces', 'Paso 3 de 4', '¿Para qué grupo estás disponible?');
 	}
 	backToKinds() { this.showPanel('availabilityKinds', 'Paso 2 de 4', '¿Qué turnos podrías hacer?'); this.renderKinds(); }
 	renderPlaces() {
@@ -208,13 +214,11 @@ export default class extends Controller {
 			const section = document.createElement('fieldset');
 			section.className = 'place-group';
 			const legend = document.createElement('legend'); legend.textContent = workplace; section.append(legend);
-			const repeated = this.groupBy(groups, (group) => group.label);
-			groups.forEach((group, index) => {
+			groups.forEach((group) => {
 				const label = document.createElement('label'); label.className = 'place-choice';
 				const input = document.createElement('input'); input.type = 'checkbox'; input.value = group.poolId; input.checked = this.selectedPools.has(group.poolId);
 				input.addEventListener('change', () => { if (input.checked) this.selectedPools.add(group.poolId); else this.selectedPools.delete(group.poolId); this.placesContinueTarget.disabled = this.selectedPools.size === 0; });
-				const text = repeated[group.label].length > 1 ? `${group.label} · destino ${index + 1} (nombre no disponible)` : group.label;
-				label.append(input, document.createTextNode(text)); section.append(label);
+				label.append(input, document.createTextNode(group.label)); section.append(label);
 			});
 			this.placeListTarget.append(section);
 		});
@@ -226,7 +230,7 @@ export default class extends Controller {
 		this.availabilityRecapTarget.replaceChildren();
 		const dates = [...this.selectedDates].sort().map((date) => this.humanDate(date));
 		this.availabilityRecapTarget.append(this.recapHeading('Vas a indicar que puedes trabajar:'), ...dates.map((date) => this.recapLine(date, true)));
-		this.availabilityRecapTarget.append(this.recapHeading('Turnos:'), this.recapLine(BASIC_KINDS.filter((kind) => this.selectedKinds.has(kind)).map((kind) => KIND_LABELS[kind]).join(' · ')));
+		this.availabilityRecapTarget.append(this.recapHeading('Turnos:'), this.recapLine(OFFERABLE_KINDS.filter((kind) => this.selectedKinds.has(kind)).map((kind) => KIND_LABELS[kind]).join(' · ')));
 		const groups = this.groupsValue.filter((group) => this.selectedPools.has(group.poolId));
 		const workplaces = [...new Set(groups.map((group) => group.workplaceName))];
 		this.availabilityRecapTarget.append(this.recapHeading('En:'));

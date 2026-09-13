@@ -111,11 +111,18 @@ un día trabajado y «Puedo trabajar este día» sobre uno libre o sin indicar.
 
 **Pendiente**
 
-* `SwapProposal` y aceptación;
 * `SwapAgreement`;
-* modificación de calendarios al cerrarse un cambio;
-* matching automático, ranking, puentes y cadenas;
-* grados de disponibilidad, `ShiftDebt`, aprobación de supervisión.
+* aprobación de supervisión ligada a una organización;
+* consumo de saldo mediante solicitud posterior;
+* matching automático avanzado y cadenas;
+* grados de disponibilidad.
+
+**Ampliado el 2026-09-13**
+
+* propuestas directas, diferidas y de cobertura con aceptación/rechazo/retirada;
+* comparador por horas reales y saldo parcial sin dinero;
+* preferencias futuras opcionales;
+* detector determinista de puentes con umbral, score y razones explicables.
 
 Esta pantalla de consulta es un andamio deliberado para validar la red y
 producir los datos que consumirá el matcher. El producto final no es un tablón.

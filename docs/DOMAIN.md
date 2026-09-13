@@ -147,10 +147,10 @@ mañana», «1-4 mañana», «uno y dos mañana», los aliases de cada preset y 
 rotaciones dictadas («mi patrón es mañana mañana tarde tarde…»). Lo que no
 entiende lo devuelve como fragmento no reconocido; nunca lo adivina.
 
-## `Swap` — publicar un turno y ofrecerse, implementado
+## `Swap` — solicitudes, propuestas y saldos
 
-La primera vuelta del producto: descubrir posibilidades. Todavía no ejecuta
-ningún cambio.
+La disponibilidad descubre posibilidades; una propuesta explícita es la que
+puede llegar a ejecutar un cambio.
 
 ```
 Pedro   18 sep · Noche  →  «quiero quitarme este turno»
@@ -178,10 +178,11 @@ Referencia el `RosterDay` por identidad; no copia el turno. Invariantes:
 * solo una solicitud `OPEN` por asignación y día —constraint parcial en
   PostgreSQL, no solo comprobación de aplicación.
 
-Estados: `OPEN` y `CANCELLED`. Retirar no borra la fila.
+Retirar no borra la fila. Una solicitud resuelta deja de participar en
+descubrimiento.
 
-**Publicar no modifica el cuadrante.** El turno sigue siendo de quien lo
-publicó hasta que exista un acuerdo, y los acuerdos son la fase siguiente.
+**Publicar no modifica el cuadrante.** El turno sigue siendo de quien lo publicó
+hasta que se acepta una propuesta.
 
 ### `Availability`
 
@@ -202,6 +203,20 @@ Sin descansos legales, sin solapes, sin ranking: eso es el matcher, y el matcher
 necesita antes los datos que esta fase produce. Ver
 [ADR 10](adr/0010-swap-requests-and-availability.md).
 
+### `SwapProposal` y `ExchangeBalance`
+
+`EXCHANGE` referencia dos turnos reales; `COVERAGE`, solo el solicitado; y
+`DEFERRED` puede guardar una `ReturnPreference`, nunca un turno ficticio. Al
+aceptar el diferido se crea un saldo nominal con minutos derivados del horario.
+Se puede reservar y consumir parcialmente; disponer de saldo nunca mueve por sí
+solo el calendario. Ver [ADR 11](adr/0011-real-shift-proposals-balances-and-rest-opportunities.md).
+
+### Oportunidades de descanso
+
+`RestBlockOpportunityFinder` elimina virtualmente un único turno y cuenta solo
+días `REST` confirmados a ambos lados. Ignora desconocidos, exige tres días
+resultantes y conserva score y razones explicables.
+
 ## SwapPool: el concepto que hay que entender
 
 **Dos personas del mismo hospital no pueden intercambiar turnos automáticamente.**
@@ -218,6 +233,13 @@ Organization ─── Servicio Andaluz de Salud
 
 El `SwapPool` es la frontera del matching: **el motor nunca propone un cambio
 entre personas que no comparten pool**. Una persona puede pertenecer a varios.
+
+`WorkerAssignment` y acceso a `SwapPool` no son intercambiables. El primero
+significa «trabajo aquí» y genera una tarjeta en «Mis lugares de trabajo»; el
+acceso principal y los accesos adicionales solo describen con qué grupos puede
+cambiar dentro de ese empleo. Por tanto, una asignación con un destino principal
+y dos compatibilidades sigue siendo un único lugar de trabajo, aunque alcance
+tres pools.
 
 Las reglas de compatibilidad dentro de un pool acabarán dependiendo de categoría
 profesional, unidad, puesto, experiencia, especialidad, formación, horarios,

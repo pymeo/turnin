@@ -71,7 +71,9 @@ final class ChangesFlowTest extends WebTestCase
         $this->signIn($client, 'maria');
         $page = $client->request('GET', '/app/changes/available');
         self::assertResponseIsSuccessful();
-        self::assertStringContainsString('Pedro quiere librar este turno', $page->html());
+        self::assertStringContainsString('Pedro quiere librarse', $page->html());
+        self::assertStringContainsString('10 H', $page->html());
+        self::assertStringContainsString('Me interesa', $page->html());
         self::assertStringContainsString('UCI', $page->html());
         // A card names a colleague and stops there.
         self::assertStringNotContainsString($this->workers['pedro']['email'], $page->html());
@@ -93,24 +95,41 @@ final class ChangesFlowTest extends WebTestCase
         self::assertIsArray($day['candidates']);
         self::assertIsArray($day['candidates'][0]);
         self::assertSame('María', $day['candidates'][0]['name']);
+        self::assertIsString($day['candidates'][0]['availabilityId']);
 
-        // ── And the roster has not moved ──────────────────────────────────
+        // ── María proposes coverage; availability itself did not create it ─
+        self::assertSame(0, $this->countRows('SELECT COUNT(*) FROM swap_proposals WHERE proposer_id = :worker', ['worker' => $this->workers['maria']['id']]));
+        $this->signIn($client, 'maria');
+        $client->request('POST', '/app/changes/'.$requestId.'/propuestas', ['_token' => $this->tokenFrom($client), 'kind' => 'coverage']);
+        self::assertResponseRedirects('/app/changes/proposals?sent=1');
+        $proposalId = $this->scalar('SELECT id FROM swap_proposals WHERE proposer_id = :worker', ['worker' => $this->workers['maria']['id']]);
+        self::assertSame('pending', $this->scalar('SELECT status FROM swap_proposals WHERE id = :id', ['id' => $proposalId]));
+        self::assertSame('working', $this->scalar('SELECT state FROM scheduling_roster_days WHERE worker_assignment_id = :assignment AND work_date = :date', ['assignment' => $this->workers['pedro']['assignment'], 'date' => self::SHIFT_DATE]));
+
+        // ── Pedro accepts; only now are both rosters changed ──────────────
+        $this->signIn($client, 'pedro');
+        $inbox = $client->request('GET', '/app/changes/proposals');
+        self::assertStringContainsString('MARÍA TE PROPONE', $inbox->html());
+        self::assertStringContainsString('No hay otro turno a cambio', $inbox->html());
+        $client->request('POST', '/app/changes/proposals/'.$proposalId.'/accept', ['_token' => $this->tokenFrom($client)]);
+        self::assertResponseRedirects('/app/changes/proposals');
         self::assertSame(
-            'working',
+            'rest',
             $this->scalar(
                 'SELECT state FROM scheduling_roster_days WHERE worker_assignment_id = :assignment AND work_date = :date',
                 ['assignment' => $this->workers['pedro']['assignment'], 'date' => self::SHIFT_DATE],
             ),
-            'Publishing a shift discovers a possibility; it does not hand the shift over.',
+            'An effective coverage frees the original worker.',
         );
         self::assertSame(
-            0,
+            1,
             $this->countRows(
                 'SELECT COUNT(*) FROM scheduling_roster_days WHERE worker_assignment_id = :assignment AND work_date = :date',
                 ['assignment' => $this->workers['maria']['assignment'], 'date' => self::SHIFT_DATE],
             ),
-            'Offering to cover a shift does not put it on the volunteer\'s calendar either.',
+            'The accepted worker receives exactly one copied shift snapshot.',
         );
+        self::assertSame('covered', $this->scalar('SELECT status FROM swap_requests WHERE id = :id', ['id' => $requestId]));
     }
 
     /** Same hospital, different pool. Antonio must not see any of it. */
@@ -127,7 +146,7 @@ final class ChangesFlowTest extends WebTestCase
         $page = $client->request('GET', '/app/changes');
 
         self::assertResponseIsSuccessful();
-        self::assertStringNotContainsString('Pedro quiere librar este turno', $page->html());
+        self::assertStringNotContainsString('Pedro quiere librarse', $page->html());
         self::assertStringContainsString('no hay turnos compatibles', $page->html());
 
         // And he cannot reach it by knowing its id either.
@@ -266,6 +285,45 @@ final class ChangesFlowTest extends WebTestCase
 
         self::assertResponseIsSuccessful();
         self::assertSelectorExists('a[href="/app/changes"]');
+    }
+
+    public function test_an_unnamed_legacy_pool_is_not_offered_as_a_valid_group(): void
+    {
+        $client = $this->world();
+        $invalidPool = Uuid::v7()->toRfc4122();
+        self::assertNotNull($this->connection);
+        $this->connection->insert('workforce_swap_pools', [
+            'id' => $invalidPool,
+            'workplace_id' => $this->workplaceId,
+            'staff_category_id' => $this->anyCategory(),
+            'specialty_id' => null,
+            'organizational_unit_id' => null,
+            'functional_area' => null,
+            'employer_id' => null,
+            'fingerprint' => $this->workplaceId.'|unnamed-legacy',
+            'active' => true,
+            'created_at' => '2026-09-10T00:00:00+00:00',
+            'updated_at' => '2026-09-10T00:00:00+00:00',
+        ], ['active' => 'boolean']);
+        $this->connection->insert('workforce_swap_pool_memberships', [
+            'id' => Uuid::v7()->toRfc4122(),
+            'swap_pool_id' => $invalidPool,
+            'worker_id' => $this->workers['maria']['id'],
+            'assignment_id' => $this->workers['maria']['assignment'],
+            'source' => 'self_declared',
+            'is_primary' => false,
+            'active' => true,
+            'created_at' => '2026-09-10T00:00:00+00:00',
+            'updated_at' => '2026-09-10T00:00:00+00:00',
+        ], ['is_primary' => 'boolean', 'active' => 'boolean']);
+
+        $this->signIn($client, 'maria');
+        $page = $client->request('GET', '/app/changes');
+        self::assertResponseIsSuccessful();
+        $groups = json_decode((string) $page->filter('[data-changes-groups-value]')->attr('data-changes-groups-value'), true, 512, \JSON_THROW_ON_ERROR);
+        self::assertIsArray($groups);
+        self::assertCount(1, $groups);
+        self::assertStringNotContainsString('nombre no disponible', $page->html());
     }
 
     /* ── fixture ──────────────────────────────────────────────────────── */

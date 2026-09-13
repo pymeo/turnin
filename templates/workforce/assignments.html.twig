@@ -3,11 +3,11 @@
 {% block body %}
 <main class="page flex flex-col gap-5" data-controller="worker-assignments" data-worker-assignments-csrf-value="{{ csrfToken }}">
 {% include 'identity/_authenticated_header.html.twig' %}
-<header><h1 class="text-2xl font-bold">Mis lugares de trabajo</h1><p class="text-ink-muted">Cada lugar conserva su propio calendario y sus propios turnos habituales.</p></header>
+<header><p class="eyebrow">Mi perfil laboral</p><h1 class="text-2xl font-bold">Mis lugares de trabajo</h1><p class="text-ink-muted">Centro, categoría y servicios que utiliza el matching. Puedes modificarlos después del onboarding.</p></header>
 <section class="flex flex-col gap-3">
 {% for assignment in assignments %}<article class="card flex flex-col gap-2" data-assignment-id="{{ assignment.id }}">
 {% if assignment.primary %}<span class="eyebrow">Principal</span>{% endif %}<strong class="text-lg">{{ assignment.workplace }}</strong><span class="text-ink-muted">{{ assignment.category }}{% if assignment.destination %} · {{ assignment.destination }}{% endif %}</span>
-<div class="flex flex-wrap gap-2"><a class="btn-secondary px-3 text-sm" href="{{ path('scheduling_calendar', {assignment: assignment.id}) }}">Ver calendario</a>{% if not assignment.primary %}<button class="btn-ghost px-3 text-sm" data-action="worker-assignments#primary">Hacer principal</button>{% endif %}<button class="btn-ghost px-3 text-sm" data-action="worker-assignments#deactivate">Ya no trabajo aquí</button></div>
+<div class="flex flex-wrap gap-2"><a class="btn-secondary px-3 text-sm" href="{{ path('scheduling_calendar', {assignment: assignment.id}) }}">Ver calendario</a><a class="btn-secondary px-3 text-sm" href="{{ path('workforce_onboarding', {assignment: assignment.id}) }}">Editar perfil laboral</a>{% if not assignment.primary %}<button class="btn-ghost px-3 text-sm" data-action="worker-assignments#primary">Hacer principal</button>{% endif %}<button class="btn-ghost px-3 text-sm" data-action="worker-assignments#deactivate">Ya no trabajo aquí</button></div>
 </article>{% endfor %}
 </section>
 <a class="btn-primary btn-block" href="{{ path('workforce_onboarding', {mode: 'add'}) }}">＋ Añadir otro lugar de trabajo</a>

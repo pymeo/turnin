@@ -11,6 +11,7 @@
 } %}
 <div class="calendar-grid" role="grid" aria-label="Calendario de turnos" data-calendar-target="grid" data-month="{{ month.month }}">
     {% for cell in month.cells %}
+        {% set personal = personalByDate[cell.date]|default([]) %}
         <button type="button"
                 role="gridcell"
                 class="calendar-cell {{ tones[cell.tone]|default('calendar-tone-unknown') }}"
@@ -19,10 +20,12 @@
                 data-outside="{{ cell.inMonth ? 'false' : 'true' }}"
                 data-today="{{ cell.isToday ? 'true' : 'false' }}"
                 data-weekend="{{ cell.isWeekend ? 'true' : 'false' }}"
+                data-personal-events="{{ personal|json_encode|e('html_attr') }}"
                 aria-pressed="false"
                 aria-label="{{ cell.ariaLabel }}{{ cell.isToday ? ', hoy' : '' }}">
             <span class="calendar-cell-number">{{ cell.dayNumber }}</span>
             <span class="calendar-cell-code" aria-hidden="true">{{ cell.abbreviation|default('·') }}</span>
+            {% if personal|length %}<span class="calendar-personal-indicators" aria-hidden="true">{% for event in personal|slice(0, 2) %}<i></i>{% endfor %}{% if personal|length > 2 %}<b>+{{ personal|length - 2 }}</b>{% endif %}</span>{% endif %}
         </button>
     {% endfor %}
 </div>
