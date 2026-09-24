@@ -647,6 +647,20 @@
 	}
 }
 
+/* A swap is part of the official roster, but it should never look as if it had
+   always been there. The double outline plus ↔ survives every shift colour,
+   dark mode and monochrome accessibility settings. */
+@utility calendar-cell-swapped {
+	border-color: var(--turnin-teal-dark);
+	box-shadow: inset 0 0 0 1px color-mix(in srgb, var(--turnin-teal) 72%, transparent);
+}
+
+@utility calendar-swap-mark {
+	@apply absolute right-0.5 bottom-0.5 grid size-4 place-items-center rounded-full text-[0.58rem] leading-none font-black;
+	background: var(--turnin-teal-dark);
+	color: white;
+}
+
 /* Tones. One muted fill plus a saturated letter: legible in both schemes and
    calm enough to look at a whole month of. */
 @utility calendar-tone-morning {
@@ -1020,7 +1034,11 @@
 @utility changes-shell {
 	@apply mx-auto flex w-full max-w-5xl flex-col gap-6 px-4 sm:px-6;
 	padding-top: max(1rem, env(safe-area-inset-top));
-	padding-bottom: max(2.5rem, env(safe-area-inset-bottom));
+	padding-bottom: calc(6rem + env(safe-area-inset-bottom));
+
+	@media (width >= 48rem) {
+		padding-bottom: max(2.5rem, env(safe-area-inset-bottom));
+	}
 }
 
 @utility changes-heading {
@@ -1236,7 +1254,7 @@
 	@apply mx-auto flex w-full max-w-6xl flex-col gap-5 px-4 sm:px-6;
 	padding-top: max(1rem, env(safe-area-inset-top));
 	/* Room for the fixed bottom navigation on a phone. */
-	padding-bottom: calc(6.5rem + env(safe-area-inset-bottom));
+	padding-bottom: calc(13rem + env(safe-area-inset-bottom));
 
 	@media (width >= 48rem) {
 		padding-bottom: calc(3rem + env(safe-area-inset-bottom));
@@ -1370,14 +1388,35 @@
 @utility composer-panel { @apply flex flex-col gap-3; }
 
 @utility composer-summary {
-	@apply flex flex-col gap-3 rounded-[var(--radius-card)] border border-line bg-surface p-4;
+	@apply flex flex-row flex-wrap items-center gap-2 rounded-[var(--radius-card)] border border-line bg-surface p-3;
 	box-shadow: 0 4px 18px rgb(15 76 92 / 4.5%);
+	position: fixed;
+	z-index: 20;
+	left: 0.75rem;
+	right: 0.75rem;
+	bottom: calc(5.25rem + env(safe-area-inset-bottom));
+	isolation: isolate;
+
+	& > .btn-block { @apply min-w-0 flex-1; width: auto; }
+	& > .composer-chosen { order: 3; flex-basis: 100%; }
 
 	@media (width >= 64rem) {
+		@apply flex-col items-stretch gap-3 p-4;
 		grid-area: summary;
 		position: sticky;
+		left: auto;
+		right: auto;
 		top: 1rem;
+		bottom: auto;
+		& > .btn-block { width: 100%; }
+		& > .composer-chosen { order: initial; flex-basis: auto; }
 	}
+}
+
+@utility composer-period-nav {
+	@apply w-auto gap-1 px-2 text-xs font-bold no-underline;
+
+	span { @apply hidden sm:inline; }
 }
 
 @utility composer-balance {
@@ -1428,16 +1467,30 @@
 
 	/* Colour is a second signal, never the only one: the token below says the
 	   same thing in words. */
-	&[data-state="working"] { background-color: color-mix(in srgb, var(--color-shift-oncall) 12%, var(--surface)); }
-	&[data-state="working"][data-tone="morning"] { background-color: color-mix(in srgb, var(--color-shift-morning) 15%, var(--surface)); }
-	&[data-state="working"][data-tone="evening"] { background-color: color-mix(in srgb, var(--color-shift-evening) 15%, var(--surface)); }
-	&[data-state="working"][data-tone="night"] { background-color: color-mix(in srgb, var(--color-shift-night) 16%, var(--surface)); }
+	&[data-state="offerable"] {
+		background-color: color-mix(in srgb, var(--color-positive) 7%, var(--surface));
+		border-color: color-mix(in srgb, var(--color-positive) 68%, var(--line));
+		border-width: 2px;
+	}
+	&[data-state="blocked"] {
+		background: repeating-linear-gradient(-45deg, color-mix(in srgb, var(--turnin-danger) 7%, var(--surface)) 0 5px, var(--surface) 5px 10px);
+		border-color: color-mix(in srgb, var(--turnin-danger) 55%, var(--line));
+	}
 	&[data-state="rest"] { background-color: color-mix(in srgb, var(--shift-rest) 13%, var(--surface)); }
 	&[data-state="unknown"] { @apply border-dashed bg-surface text-ink-muted; }
 	&[data-state="incoming"] {
-		background: color-mix(in srgb, var(--turnin-teal) 24%, var(--surface));
-		border-color: var(--turnin-teal-dark);
+		background: color-mix(in srgb, var(--color-brand-600) 18%, var(--surface));
+		border-color: var(--color-brand-700);
 		border-style: dashed;
+		border-width: 2px;
+	}
+	&[data-state="combined-offerable"] {
+		background: linear-gradient(to bottom, color-mix(in srgb, var(--color-brand-600) 16%, var(--surface)) 0 48%, color-mix(in srgb, var(--color-positive) 10%, var(--surface)) 48% 100%);
+		border: 2px solid color-mix(in srgb, var(--color-positive) 68%, var(--line));
+	}
+	&[data-state="combined-blocked"] {
+		background: linear-gradient(to bottom, color-mix(in srgb, var(--color-brand-600) 16%, var(--surface)) 0 48%, color-mix(in srgb, var(--turnin-danger) 9%, var(--surface)) 48% 100%);
+		border: 2px dashed color-mix(in srgb, var(--turnin-danger) 55%, var(--line));
 	}
 
 	&[data-past="true"] { @apply opacity-45; }
@@ -1445,9 +1498,16 @@
 	&[data-blocked] { @apply opacity-70; }
 
 	&[aria-pressed="true"] {
-		@apply ring-2 ring-offset-1;
-		--tw-ring-color: var(--turnin-teal-dark);
+		@apply ring-2 ring-offset-2;
+		background: var(--turnin-teal-dark);
+		border-color: var(--turnin-teal-dark);
+		color: white;
+		--tw-ring-color: color-mix(in srgb, var(--turnin-teal-dark) 55%, transparent);
 		--tw-ring-offset-color: var(--canvas);
+
+		.shift-day-weekday,
+		.shift-day-sub { color: color-mix(in srgb, white 78%, transparent); }
+		.shift-day-status { background: white; color: var(--turnin-teal-dark); }
 	}
 
 	&:is(button) { @apply cursor-pointer hover:border-brand-600 active:scale-[0.98]; }
@@ -1461,6 +1521,22 @@
 	@apply max-w-full text-[0.56rem] leading-[1.15] font-black tracking-wide uppercase;
 
 	@media (width >= 40rem) { @apply text-[0.68rem]; }
+}
+
+@utility shift-day-status {
+	@apply flex max-w-full items-center gap-0.5 rounded-full px-1 py-0.5 text-[0.48rem] leading-none font-black tracking-wide uppercase;
+
+	b { @apply text-[0.68rem] leading-none; }
+
+	[data-state="offerable"] & { background: color-mix(in srgb, var(--color-positive) 18%, var(--surface)); color: color-mix(in srgb, var(--color-positive) 82%, var(--ink)); }
+	[data-state="blocked"] & { background: color-mix(in srgb, var(--turnin-danger) 15%, var(--surface)); color: color-mix(in srgb, var(--turnin-danger) 82%, var(--ink)); }
+	[data-state="incoming"] & { background: color-mix(in srgb, var(--color-brand-600) 18%, var(--surface)); color: var(--color-brand-800); }
+	[data-state="combined-offerable"] &:not(.shift-day-status-own),
+	[data-state="combined-blocked"] &:not(.shift-day-status-own) { background: color-mix(in srgb, var(--color-brand-600) 18%, var(--surface)); color: var(--color-brand-800); }
+	[data-state="combined-offerable"] &.shift-day-status-own { background: color-mix(in srgb, var(--color-positive) 18%, var(--surface)); color: color-mix(in srgb, var(--color-positive) 82%, var(--ink)); }
+	[data-state="combined-blocked"] &.shift-day-status-own { background: color-mix(in srgb, var(--turnin-danger) 15%, var(--surface)); color: color-mix(in srgb, var(--turnin-danger) 82%, var(--ink)); }
+
+	@media (width >= 40rem) { @apply text-[0.58rem]; }
 }
 
 /* The hours only fit once the cell is wide enough to read them. */
@@ -1482,6 +1558,12 @@
 	}
 }
 
+@utility shift-day-advisory {
+	@apply absolute right-0.5 bottom-0.5 grid size-4 place-items-center rounded-full text-[0.62rem] leading-none;
+	background: color-mix(in srgb, var(--turnin-warning) 24%, var(--surface));
+	color: color-mix(in srgb, var(--turnin-warning) 74%, var(--ink));
+}
+
 @utility shift-day-lock { @apply absolute bottom-0.5 right-1 text-[0.6rem] font-black text-ink-muted; }
 
 @utility composer-legend {
@@ -1496,6 +1578,9 @@
 	&[data-state="working"] { background-color: color-mix(in srgb, var(--color-shift-morning) 45%, var(--surface)); }
 	&[data-state="rest"] { background-color: color-mix(in srgb, var(--shift-rest) 35%, var(--surface)); }
 	&[data-state="incoming"] { background: color-mix(in srgb, var(--turnin-teal) 45%, var(--surface)); border-style: dashed; }
+	&[data-state="offerable"] { background-color: color-mix(in srgb, var(--color-positive) 40%, var(--surface)); }
+	&[data-state="selected"] { background: var(--turnin-teal-dark); border-color: var(--turnin-teal-dark); color: white; }
+	&[data-state="blocked"] { background-color: color-mix(in srgb, var(--turnin-danger) 30%, var(--surface)); }
 	&[data-state="opportunity"] { @apply border-0 bg-transparent text-[0.8rem]; color: var(--turnin-teal-dark); }
 }
 
@@ -1506,7 +1591,36 @@
 	@apply flex flex-col gap-1 rounded-2xl border border-dashed border-line bg-surface-muted p-4 opacity-80;
 }
 
+@utility trade-option-add {
+	@apply flex items-center gap-1 self-start rounded-full px-2 py-1 text-xs font-black uppercase;
+	background: color-mix(in srgb, var(--color-positive) 15%, var(--surface));
+	color: color-mix(in srgb, var(--color-positive) 82%, var(--ink));
+}
+
+@utility trade-option-picked {
+	@apply hidden items-center gap-1 self-start rounded-full px-2 py-1 text-xs font-black uppercase text-white;
+	background: var(--turnin-teal-dark);
+}
+
+.trade-option > input:first-child:checked + .trade-option-body {
+	.trade-option-add { @apply hidden; }
+	.trade-option-picked { @apply flex; }
+}
+
+@utility trade-option-unavailable {
+	@apply flex items-center gap-1 self-start rounded-full px-2 py-1 text-xs font-black uppercase;
+	background: color-mix(in srgb, var(--turnin-danger) 13%, var(--surface));
+	color: color-mix(in srgb, var(--turnin-danger) 82%, var(--ink));
+}
+
 @utility composer-blocked-reason { @apply text-sm font-semibold text-ink-muted; }
+
+@utility compatibility-note {
+	@apply rounded-xl border px-3 py-2 text-sm font-semibold;
+	border-color: color-mix(in srgb, var(--turnin-warning) 38%, var(--line));
+	background: color-mix(in srgb, var(--turnin-warning) 12%, var(--surface));
+	color: var(--ink);
+}
 
 @utility composer-opportunity {
 	@apply rounded-xl px-2 py-1 text-sm font-bold;
@@ -1547,3 +1661,63 @@
 	& > summary { @apply cursor-pointer font-semibold text-brand-700 dark:text-brand-300; }
 	&[open] > summary { @apply mb-1; }
 }
+
+/* --- Can I do this one? -----------------------------------------------------
+   The verdict on a colleague's shift. Green and red are the second signal, not
+   the first: the sentence says it, the tick or the cross repeats it, and a
+   shift that cannot be done simply has no button to press.
+   -------------------------------------------------------------------------- */
+@utility verdict {
+	@apply flex items-center gap-2 rounded-xl px-3 py-2 text-sm font-bold;
+}
+
+@utility verdict-yes {
+	background: color-mix(in srgb, var(--color-positive) 14%, var(--surface));
+	color: color-mix(in srgb, var(--color-positive) 80%, var(--ink));
+}
+
+@utility verdict-no {
+	background: color-mix(in srgb, var(--turnin-danger) 12%, var(--surface));
+	color: color-mix(in srgb, var(--turnin-danger) 78%, var(--ink));
+}
+
+@utility verdict-hint { @apply text-sm text-ink-muted; }
+
+@utility colleague-list { @apply flex flex-col gap-3; }
+
+@utility colleague-name {
+	@apply mt-3 text-xs font-black tracking-[0.14em] text-ink-muted uppercase first:mt-0;
+}
+
+@utility composer-count {
+	@apply shrink-0 rounded-lg bg-surface px-1 py-0.5 text-sm font-bold;
+}
+
+@utility composer-chosen {
+	@apply flex gap-1 overflow-x-auto;
+
+	li { @apply flex shrink-0 items-center justify-between gap-2 rounded-xl bg-surface-muted px-3 py-2 text-xs font-semibold; }
+
+	@media (width >= 64rem) {
+		@apply flex-col overflow-visible;
+		li { @apply w-full text-sm; }
+	}
+}
+
+@utility composer-chosen-drop {
+	@apply grid size-6 shrink-0 place-items-center rounded-full text-base leading-none text-ink-muted hover:bg-surface;
+}
+
+@utility trade-option-chosen {
+	@apply opacity-100;
+	border-style: solid;
+	border-color: var(--turnin-teal);
+}
+
+/* A ticked day. The check is what says "chosen"; the ring only repeats it. */
+@utility shift-day-tick {
+	@apply absolute bottom-0.5 left-1 hidden text-[0.7rem] font-black;
+	color: var(--turnin-teal-dark);
+}
+
+[aria-pressed="true"] > .shift-day-tick { @apply block; }

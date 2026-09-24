@@ -59,4 +59,16 @@ final readonly class FixedAssignedWorkers implements AssignedWorkers
 
         return null;
     }
+
+    public function timeZonesFor(array $assignmentIds): array
+    {
+        $zones = [];
+        foreach ($this->workers as $worker) {
+            if (\in_array($worker->assignmentId, $assignmentIds, true)) {
+                $zones[$worker->assignmentId] = $worker->timeZone();
+            }
+        }
+
+        return $zones;
+    }
 }

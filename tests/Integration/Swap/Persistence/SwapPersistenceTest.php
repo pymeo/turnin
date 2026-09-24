@@ -168,7 +168,7 @@ final class SwapPersistenceTest extends KernelTestCase
         self::assertSame([$request->id() => 1], $this->requests->candidateCounts([$request->id()]));
     }
 
-    public function test_candidate_counts_also_require_the_same_shift_kind(): void
+    public function test_candidate_counts_do_not_treat_a_template_kind_as_professional_compatibility(): void
     {
         $request = $this->request($this->pedro, $this->pedroAssignment, $this->poolUci);
         $this->requests->save($request);
@@ -184,7 +184,7 @@ final class SwapPersistenceTest extends KernelTestCase
         );
         $this->availabilities->save($morning);
 
-        self::assertSame([$request->id() => 0], $this->requests->candidateCounts([$request->id()]));
+        self::assertSame([$request->id() => 1], $this->requests->candidateCounts([$request->id()]));
 
         $this->availabilities->save($this->availability($this->maria, $this->mariaAssignment, $this->poolUci, true));
         self::assertSame([$request->id() => 1], $this->requests->candidateCounts([$request->id()]));
@@ -240,8 +240,6 @@ final class SwapPersistenceTest extends KernelTestCase
             $this->maria,
             $this->mariaAssignment,
             SwapProposalKind::DEFERRED,
-            null,
-            null,
             new DateTimeImmutable(self::TODAY),
         );
 
@@ -250,8 +248,7 @@ final class SwapPersistenceTest extends KernelTestCase
         $stored = $this->proposals->byId($proposal->id());
         self::assertNotNull($stored);
         self::assertSame(SwapProposalKind::DEFERRED, $stored->kind());
-        self::assertNull($stored->offeredRosterDayId());
-        self::assertNull($stored->offeredWorkDate());
+        self::assertSame([], $stored->options());
     }
 
     private function request(string $workerId, string $assignmentId, string $poolId): SwapRequest

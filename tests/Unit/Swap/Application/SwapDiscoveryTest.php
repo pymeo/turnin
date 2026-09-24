@@ -10,6 +10,7 @@ use App\Swap\Application\Query\GetOpenSwapRequestsHandler;
 use App\Swap\Application\Query\GetSwapRequestCandidates;
 use App\Swap\Application\Query\GetSwapRequestCandidatesHandler;
 use App\Swap\Application\Query\OpenSwapRequestView;
+use App\Swap\Application\ShiftCompatibilityResolver;
 use App\Swap\Application\SwapAccessDenied;
 use App\Swap\Application\SwapWorkspace;
 use App\Swap\Domain\Availability;
@@ -149,10 +150,13 @@ final class SwapDiscoveryTest extends TestCase
 
     private function openRequests(?FixedRosteredDays $days = null): GetOpenSwapRequestsHandler
     {
+        $rosteredDays = $days ?? $this->rosteredDays();
+
         return new GetOpenSwapRequestsHandler(
             $this->workspace(),
             $this->requests,
-            $days ?? $this->rosteredDays(),
+            $rosteredDays,
+            new ShiftCompatibilityResolver($rosteredDays, new MockClock('2026-09-15T10:00:00+00:00')),
             $this->availabilities,
             $this->names(),
         );

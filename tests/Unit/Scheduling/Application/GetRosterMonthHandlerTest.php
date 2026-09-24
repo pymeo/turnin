@@ -69,6 +69,30 @@ final class GetRosterMonthHandlerTest extends TestCase
         self::assertSame('14 de septiembre, turno de noche, de 22:00 a 08:00', $cell->ariaLabel);
     }
 
+    public function test_a_calendar_marks_both_sides_of_an_executed_swap(): void
+    {
+        $roster = new InMemoryRosterDays();
+        $roster->apply('assignment-1', [
+            RosterDay::rest('released', 'assignment-1', WorkDate::fromString('2026-09-18'), RosterSource::SWAP, $this->createdAt()),
+            $this->night('2026-09-20', RosterSource::SWAP),
+        ], []);
+
+        $handler = new GetRosterMonthHandler(
+            new RosterWorkspace(FixedAssignedWorkers::inMadrid(), new InMemoryShiftPresets()),
+            $roster,
+            new RosterCalendar(new FrozenClock('2026-09-11T09:00:00+00:00')),
+            new RestStreakInsights(),
+        );
+        $view = $handler(new GetRosterMonth('worker-1', '2026-09'));
+
+        $released = $this->cellFor($view, '2026-09-18');
+        $received = $this->cellFor($view, '2026-09-20');
+        self::assertTrue($released->fromSwap);
+        self::assertTrue($received->fromSwap);
+        self::assertStringContainsString('libre tras un cambio', $released->ariaLabel);
+        self::assertStringContainsString('recibido mediante un cambio', $received->ariaLabel);
+    }
+
     public function test_today_is_marked_once(): void
     {
         $view = $this->month();
@@ -162,11 +186,11 @@ final class GetRosterMonthHandlerTest extends TestCase
         self::fail($date.' is not in the grid.');
     }
 
-    private function night(string $date): RosterDay
+    private function night(string $date, RosterSource $source = RosterSource::MANUAL): RosterDay
     {
         $segment = new ShiftSegment('s'.$date, 'night', 'Noche', 'N', ShiftWindow::fromStrings('22:00', '08:00'), ShiftKind::NIGHT, 0);
 
-        return RosterDay::working('d'.$date, 'assignment-1', WorkDate::fromString($date), [$segment], RosterSource::MANUAL, $this->createdAt());
+        return RosterDay::working('d'.$date, 'assignment-1', WorkDate::fromString($date), [$segment], $source, $this->createdAt());
     }
 
     private function createdAt(): DateTimeImmutable

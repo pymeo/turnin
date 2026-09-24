@@ -52,7 +52,11 @@ final class ChangesFlowTest extends WebTestCase
 
     public function test_the_whole_loop_from_publishing_a_shift_to_seeing_who_can_cover_it(): void
     {
+        $returnDate = '2027-03-20';
         $client = $this->world();
+        // Pedro already has a non-overlapping morning on the date of María's
+        // night. That is informative context, not a reason to reject the swap.
+        $this->seedShift($this->workers['pedro']['assignment'], $returnDate, '08:00', '15:00', 'Mañana', 'M', 'morning', 'amber');
 
         // ── Pedro publishes his night shift ───────────────────────────────
         $this->signIn($client, 'pedro');
@@ -65,61 +69,48 @@ final class ChangesFlowTest extends WebTestCase
         // His own screen shows it as looking for cover, with nobody yet.
         $mine = $client->request('GET', '/app/changes/mine');
         self::assertResponseIsSuccessful();
-        self::assertStringContainsString('Buscando compañero', $mine->html());
+        self::assertStringContainsString('Todavía nadie se ha ofrecido', $mine->html());
 
         // ── María sees it and offers ──────────────────────────────────────
         $this->signIn($client, 'maria');
         $page = $client->request('GET', '/app/changes/available');
         self::assertResponseIsSuccessful();
-        self::assertStringContainsString('Pedro quiere librarse', $page->html());
+        self::assertStringContainsString('Pedro quiere librar', $page->html());
         self::assertStringContainsString('10 H', $page->html());
-        self::assertStringContainsString('Me interesa', $page->html());
+        self::assertStringContainsString('Puedes hacer este turno', $page->html());
+        self::assertStringContainsString('Se lo hago', $page->html());
         self::assertStringContainsString('UCI', $page->html());
         // A card names a colleague and stops there.
         self::assertStringNotContainsString($this->workers['pedro']['email'], $page->html());
 
-        $offer = $this->json($client, 'POST', '/app/changes/'.$requestId.'/puedo', [], $this->tokenFrom($client));
-        self::assertSame(self::SHIFT_DATE, $offer['date']);
+        self::assertSame(0, $this->countRows('SELECT COUNT(*) FROM swap_availabilities WHERE worker_id = :worker', ['worker' => $this->workers['maria']['id']]), 'Availability is not required.');
 
-        // Tapping twice is one statement, not two.
-        $this->json($client, 'POST', '/app/changes/'.$requestId.'/puedo', [], $this->tokenFrom($client));
-        self::assertSame(1, $this->countRows('SELECT COUNT(*) FROM swap_availabilities WHERE worker_id = :worker', ['worker' => $this->workers['maria']['id']]));
-
-        // ── Pedro sees her ────────────────────────────────────────────────
-        $this->signIn($client, 'pedro');
-        $withCandidate = $client->request('GET', '/app/changes/mine');
-        self::assertStringContainsString('1 persona', $withCandidate->html());
-
-        $day = $this->json($client, 'GET', '/app/changes/dia?assignment='.$this->workers['pedro']['assignment'].'&date='.self::SHIFT_DATE, [], $this->tokenFrom($client));
-        self::assertSame(1, $day['candidateCount']);
-        self::assertIsArray($day['candidates']);
-        self::assertIsArray($day['candidates'][0]);
-        self::assertSame('María', $day['candidates'][0]['name']);
-        self::assertIsString($day['candidates'][0]['availabilityId']);
-
-        // ── María proposes coverage; availability itself did not create it ─
+        // ── María sends one real return option ───────────────────────────
         self::assertSame(0, $this->countRows('SELECT COUNT(*) FROM swap_proposals WHERE proposer_id = :worker', ['worker' => $this->workers['maria']['id']]));
-        $this->signIn($client, 'maria');
-        $client->request('POST', '/app/changes/'.$requestId.'/propuestas', ['_token' => $this->tokenFrom($client), 'kind' => 'coverage']);
-        self::assertResponseRedirects('/app/changes/proposals?sent=1');
+        $client->request('POST', '/app/changes/'.$requestId.'/propuestas', [
+            '_token' => $this->tokenFrom($client),
+            'offeredShifts' => [$this->workers['maria']['assignment'].'|'.$returnDate],
+        ]);
+        self::assertResponseRedirects('/app/changes/proposals?enviada=1');
         $proposalId = $this->scalar('SELECT id FROM swap_proposals WHERE proposer_id = :worker', ['worker' => $this->workers['maria']['id']]);
+        $optionId = $this->scalar('SELECT id FROM swap_proposal_options WHERE proposal_id = :proposal', ['proposal' => $proposalId]);
         self::assertSame('pending', $this->scalar('SELECT status FROM swap_proposals WHERE id = :id', ['id' => $proposalId]));
         self::assertSame('working', $this->scalar('SELECT state FROM scheduling_roster_days WHERE worker_assignment_id = :assignment AND work_date = :date', ['assignment' => $this->workers['pedro']['assignment'], 'date' => self::SHIFT_DATE]));
 
         // ── Pedro accepts; only now are both rosters changed ──────────────
         $this->signIn($client, 'pedro');
-        $inbox = $client->request('GET', '/app/changes/proposals');
-        self::assertStringContainsString('MARÍA TE PROPONE', $inbox->html());
-        self::assertStringContainsString('No hay otro turno a cambio', $inbox->html());
-        $client->request('POST', '/app/changes/proposals/'.$proposalId.'/accept', ['_token' => $this->tokenFrom($client)]);
-        self::assertResponseRedirects('/app/changes/proposals');
+        $decision = $client->request('GET', '/app/changes/proposals/'.$proposalId);
+        self::assertStringContainsString('María te hace el turno', $decision->html());
+        self::assertStringContainsString('Elige qué turno puedes hacerle tú', $decision->html());
+        $client->request('POST', '/app/changes/proposals/'.$proposalId.'/aceptar', ['_token' => $this->tokenFrom($client), 'optionId' => $optionId]);
+        self::assertResponseRedirects('/app/changes/proposals?hecho=1');
         self::assertSame(
             'rest',
             $this->scalar(
                 'SELECT state FROM scheduling_roster_days WHERE worker_assignment_id = :assignment AND work_date = :date',
                 ['assignment' => $this->workers['pedro']['assignment'], 'date' => self::SHIFT_DATE],
             ),
-            'An effective coverage frees the original worker.',
+            'The original worker is released from their shift.',
         );
         self::assertSame(
             1,
@@ -127,9 +118,51 @@ final class ChangesFlowTest extends WebTestCase
                 'SELECT COUNT(*) FROM scheduling_roster_days WHERE worker_assignment_id = :assignment AND work_date = :date',
                 ['assignment' => $this->workers['maria']['assignment'], 'date' => self::SHIFT_DATE],
             ),
-            'The accepted worker receives exactly one copied shift snapshot.',
+            'The proposer receives the published shift.',
         );
+        self::assertSame('working', $this->scalar('SELECT state FROM scheduling_roster_days WHERE worker_assignment_id = :assignment AND work_date = :date', ['assignment' => $this->workers['pedro']['assignment'], 'date' => $returnDate]));
+        self::assertSame(2, $this->countRows(
+            'SELECT COUNT(*) FROM scheduling_roster_segments s JOIN scheduling_roster_days d ON d.id = s.roster_day_id WHERE d.worker_assignment_id = :assignment AND d.work_date = :date',
+            ['assignment' => $this->workers['pedro']['assignment'], 'date' => $returnDate],
+        ), 'The existing non-overlapping shift is preserved beside the received shift.');
+        self::assertSame('rest', $this->scalar('SELECT state FROM scheduling_roster_days WHERE worker_assignment_id = :assignment AND work_date = :date', ['assignment' => $this->workers['maria']['assignment'], 'date' => $returnDate]));
+        self::assertSame('swap', $this->scalar('SELECT source FROM scheduling_roster_days WHERE worker_assignment_id = :assignment AND work_date = :date', ['assignment' => $this->workers['pedro']['assignment'], 'date' => $returnDate]));
+        self::assertSame('executed', $this->scalar('SELECT status FROM swap_proposals WHERE id = :id', ['id' => $proposalId]));
         self::assertSame('covered', $this->scalar('SELECT status FROM swap_requests WHERE id = :id', ['id' => $requestId]));
+    }
+
+    public function test_a_profile_edit_after_publishing_does_not_strand_the_agreement_on_the_old_team_assignment(): void
+    {
+        $client = $this->world();
+        $this->signIn($client, 'pedro');
+        $requestId = $this->publishedRequestId($this->json($client, 'POST', '/app/changes/publicar', [
+            'assignmentId' => $this->workers['pedro']['assignment'],
+            'date' => self::SHIFT_DATE,
+        ], $this->tokenFrom($client)));
+
+        $this->signIn($client, 'maria');
+        $client->request('POST', '/app/changes/'.$requestId.'/propuestas', [
+            '_token' => $this->tokenFrom($client),
+            'offeredShifts' => [$this->workers['maria']['assignment'].'|2027-03-20'],
+        ]);
+        self::assertResponseRedirects('/app/changes/proposals?enviada=1');
+        $proposalId = $this->scalar('SELECT id FROM swap_proposals WHERE request_id = :request', ['request' => $requestId]);
+        $optionId = $this->scalar('SELECT id FROM swap_proposal_options WHERE proposal_id = :proposal', ['proposal' => $proposalId]);
+
+        // Regression for the real failure: the request still names the old
+        // calendar, while the worker now reaches the same pool through a new
+        // active assignment.
+        $currentPedroCalendar = $this->replaceActiveAssignment($this->workers['pedro']['id'], $this->workers['pedro']['assignment'], $this->uciPool);
+        $this->seedNightShift($currentPedroCalendar, self::SHIFT_DATE);
+
+        $this->signIn($client, 'pedro');
+        $client->request('POST', '/app/changes/proposals/'.$proposalId.'/aceptar', ['_token' => $this->tokenFrom($client), 'optionId' => $optionId]);
+
+        self::assertResponseRedirects('/app/changes/proposals?hecho=1');
+        self::assertSame('executed', $this->scalar('SELECT status FROM swap_proposals WHERE id = :id', ['id' => $proposalId]));
+        self::assertSame('working', $this->scalar('SELECT state FROM scheduling_roster_days WHERE worker_assignment_id = :assignment AND work_date = :date', ['assignment' => $currentPedroCalendar, 'date' => '2027-03-20']));
+        self::assertSame('swap', $this->scalar('SELECT source FROM scheduling_roster_days WHERE worker_assignment_id = :assignment AND work_date = :date', ['assignment' => $currentPedroCalendar, 'date' => '2027-03-20']));
+        self::assertSame('rest', $this->scalar('SELECT state FROM scheduling_roster_days WHERE worker_assignment_id = :assignment AND work_date = :date', ['assignment' => $currentPedroCalendar, 'date' => self::SHIFT_DATE]), 'A copied source shift is also released from the current visible calendar.');
     }
 
     /** Same hospital, different pool. Antonio must not see any of it. */
@@ -143,18 +176,15 @@ final class ChangesFlowTest extends WebTestCase
         ], $this->tokenFrom($client)));
 
         $this->signIn($client, 'antonio');
-        $page = $client->request('GET', '/app/changes');
+        $page = $client->request('GET', '/app/changes/available');
 
         self::assertResponseIsSuccessful();
         self::assertStringNotContainsString('Pedro quiere librarse', $page->html());
-        self::assertStringContainsString('no hay turnos compatibles', $page->html());
+        self::assertStringContainsString('no hay turnos de compañeros', strtolower($page->html()));
 
         // And he cannot reach it by knowing its id either.
-        $client->request('POST', '/app/changes/'.$requestId.'/puedo', server: [
-            'CONTENT_TYPE' => 'application/json',
-            'HTTP_X_CSRF_TOKEN' => $this->tokenFrom($client),
-        ], content: '{}');
-        self::assertSame(422, $client->getResponse()->getStatusCode());
+        $client->request('GET', '/app/changes/'.$requestId.'/intercambio');
+        self::assertSame(404, $client->getResponse()->getStatusCode());
         self::assertSame(0, $this->countRows('SELECT COUNT(*) FROM swap_availabilities WHERE worker_id = :worker', ['worker' => $this->workers['antonio']['id']]));
     }
 
@@ -345,6 +375,7 @@ final class ChangesFlowTest extends WebTestCase
 
         // Pedro works that night; María does not, so she can offer to cover it.
         $this->seedNightShift($this->workers['pedro']['assignment'], self::SHIFT_DATE);
+        $this->seedNightShift($this->workers['maria']['assignment'], '2027-03-20');
 
         return $client;
     }
@@ -501,6 +532,36 @@ final class ChangesFlowTest extends WebTestCase
 
     private function seedNightShift(string $assignmentId, string $date): void
     {
+        $this->seedShift($assignmentId, $date, '22:00', '08:00', 'Noche', 'N', 'night', 'blue');
+    }
+
+    private function replaceActiveAssignment(string $workerId, string $previousAssignmentId, string $poolId): string
+    {
+        self::assertNotNull($this->connection);
+        $id = Uuid::v7()->toRfc4122();
+        $this->connection->executeStatement('UPDATE workforce_worker_assignments SET active = FALSE, primary_assignment = FALSE WHERE id = :id', ['id' => $previousAssignmentId]);
+        $this->connection->executeStatement('UPDATE workforce_swap_pool_memberships SET active = FALSE WHERE assignment_id = :id', ['id' => $previousAssignmentId]);
+        $this->connection->executeStatement(
+            'INSERT INTO workforce_worker_assignments (id, worker_id, workplace_id, staff_category_id, specialty_id, organizational_unit_id, functional_area, employer_id, primary_assignment, active, created_at, updated_at) SELECT :new, worker_id, workplace_id, staff_category_id, specialty_id, organizational_unit_id, functional_area, employer_id, TRUE, TRUE, created_at, updated_at FROM workforce_worker_assignments WHERE id = :old',
+            ['new' => $id, 'old' => $previousAssignmentId],
+        );
+        $this->connection->insert('workforce_swap_pool_memberships', [
+            'id' => Uuid::v7()->toRfc4122(),
+            'swap_pool_id' => $poolId,
+            'worker_id' => $workerId,
+            'assignment_id' => $id,
+            'source' => 'self_declared',
+            'is_primary' => true,
+            'active' => true,
+            'created_at' => '2026-09-10T00:00:00+00:00',
+            'updated_at' => '2026-09-10T00:00:00+00:00',
+        ], ['is_primary' => 'boolean', 'active' => 'boolean']);
+
+        return $id;
+    }
+
+    private function seedShift(string $assignmentId, string $date, string $startsAt, string $endsAt, string $label, string $abbreviation, string $kind, string $color): void
+    {
         self::assertNotNull($this->connection);
         $dayId = Uuid::v7()->toRfc4122();
         $this->connection->insert('scheduling_roster_days', [
@@ -516,13 +577,13 @@ final class ChangesFlowTest extends WebTestCase
             'id' => Uuid::v7()->toRfc4122(),
             'roster_day_id' => $dayId,
             'shift_preset_id' => null,
-            'label_snapshot' => 'Noche',
-            'abbreviation_snapshot' => 'N',
-            'starts_at' => '22:00',
-            'ends_at' => '08:00',
-            'kind' => 'night',
+            'label_snapshot' => $label,
+            'abbreviation_snapshot' => $abbreviation,
+            'starts_at' => $startsAt,
+            'ends_at' => $endsAt,
+            'kind' => $kind,
             'position' => 0,
-            'color_key_snapshot' => 'blue',
+            'color_key_snapshot' => $color,
         ]);
     }
 

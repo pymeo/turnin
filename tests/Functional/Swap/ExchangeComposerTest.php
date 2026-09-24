@@ -52,8 +52,8 @@ final class ExchangeComposerTest extends WebTestCase
 
         self::assertResponseIsSuccessful();
         $html = $page->html();
-        self::assertStringContainsString('¿Qué turno quieres que Pedro haga por ti?', $html);
-        self::assertStringContainsString('Te mostramos también qué días trabajas alrededor', $html);
+        self::assertStringContainsString('¿Qué turnos tuyos te gustaría que Pedro hiciera?', $html);
+        self::assertStringContainsString('Elige hasta 5', $html);
         self::assertStringContainsString('Tú harías a Pedro', $html);
         self::assertStringContainsString('24 H', $html, 'A 08:00 → 08:00 guardia must never read as zero.');
 
@@ -69,16 +69,15 @@ final class ExchangeComposerTest extends WebTestCase
         self::assertCount(1, $page->filter(\sprintf('.shift-day[data-date="%s"][data-state="incoming"]', $this->day(19))));
     }
 
-    /** The detector already in the codebase, surfaced where the choice is made. */
+    /** The detector helps quietly inside the calendar instead of adding a wizard. */
     public function test_the_shift_that_buys_a_rest_block_is_recommended_with_its_reason(): void
     {
         $client = $this->world();
         $this->signIn($client, 'maria');
         $page = $client->request('GET', $this->composerUrl());
 
-        self::assertStringContainsString('Mejor opción', $page->html());
-        self::assertStringContainsString('Conseguirías 4 días seguidos libres', $page->html());
-        self::assertCount(1, $page->filter('.reco-card'), 'One suggestion, not one per shift.');
+        self::assertStringContainsString('Te dejaría 4 días seguidos libres', $page->html());
+        self::assertCount(0, $page->filter('.reco-card'), 'The recommendation must not dominate the calendar.');
 
         $starred = $page->filter('.shift-day .shift-day-badge');
         self::assertCount(1, $starred);
@@ -97,16 +96,15 @@ final class ExchangeComposerTest extends WebTestCase
 
         $expected = $this->workers['maria']['assignment'].'|'.$this->day(10);
         self::assertSame($expected, $page->filter(\sprintf('.shift-day[data-date="%s"]', $this->day(10)))->attr('data-shift-key'));
-        self::assertCount(1, $page->filter(\sprintf('input[name="offeredShift"][value="%s"]', $expected)));
+        self::assertCount(1, $page->filter(\sprintf('input[name="offeredShifts[]"][value="%s"]', $expected)));
 
         $client->request('POST', '/app/changes/'.$this->requestId.'/propuestas', [
             '_token' => $this->tokenFrom($client),
-            'kind' => 'exchange',
-            'offeredShift' => $expected,
+            'offeredShifts' => [$expected],
         ]);
 
-        self::assertResponseRedirects('/app/changes/proposals?sent=1');
-        self::assertSame($this->day(10), $this->scalar('SELECT offered_work_date FROM swap_proposals WHERE proposer_id = :worker', ['worker' => $this->workers['maria']['id']]));
+        self::assertResponseRedirects('/app/changes/proposals?enviada=1');
+        self::assertSame($this->day(10), $this->scalar('SELECT o.work_date::text FROM swap_proposal_options o JOIN swap_proposals p ON p.id = o.proposal_id WHERE p.proposer_id = :worker', ['worker' => $this->workers['maria']['id']]));
         self::assertSame('exchange', $this->scalar('SELECT kind FROM swap_proposals WHERE proposer_id = :worker', ['worker' => $this->workers['maria']['id']]));
     }
 
@@ -129,22 +127,21 @@ final class ExchangeComposerTest extends WebTestCase
         $blocked = $this->workers['maria']['assignment'].'|'.$this->day(9);
 
         self::assertStringContainsString('Ya lo has publicado para que alguien lo cubra.', $page->html());
-        self::assertCount(0, $page->filter(\sprintf('input[name="offeredShift"][value="%s"]', $blocked)));
-        self::assertCount(1, $page->filter(\sprintf('.shift-day[data-date="%s"][data-state="working"]', $this->day(9))));
+        self::assertCount(0, $page->filter(\sprintf('input[name="offeredShifts[]"][value="%s"]', $blocked)));
+        self::assertCount(1, $page->filter(\sprintf('.shift-day[data-date="%s"][data-state="blocked"]', $this->day(9))));
         self::assertCount(1, $page->filter(\sprintf('.shift-day[data-date="%s"][data-blocked]', $this->day(9))));
     }
 
-    public function test_paging_a_week_keeps_the_shift_already_chosen(): void
+    public function test_paging_four_weeks_keeps_every_shift_already_chosen(): void
     {
         $client = $this->world();
         $this->signIn($client, 'maria');
         $chosen = $this->workers['maria']['assignment'].'|'.$this->day(10);
-        $page = $client->request('GET', $this->composerUrl().'?semana=2&turno='.urlencode($chosen));
+        $page = $client->request('GET', $this->composerUrl().'?semana=4&turnos%5B%5D='.urlencode($chosen));
 
         self::assertResponseIsSuccessful();
-        self::assertStringContainsString('Propones', $page->html());
-        self::assertCount(1, $page->filter(\sprintf('input[name="offeredShift"][value="%s"][checked]', $chosen)));
-        self::assertStringContainsString('+17 h', $page->html(), 'A 24 h guardia against a 7 h morning.');
+        self::assertCount(1, $page->filter(\sprintf('input[name="offeredShifts[]"][value="%s"][checked]', $chosen)));
+        self::assertStringNotContainsString('Diferencia para ti', $page->html());
     }
 
     /** This is her calendar. His other days are none of her business. */

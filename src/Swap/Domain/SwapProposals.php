@@ -15,6 +15,15 @@ interface SwapProposals
     /** @return list<SwapProposal> */
     public function involving(string $workerId): array;
 
+    /**
+     * Everything still able to win this request. Once one proposal executes the
+     * rest cannot, and leaving them "pending" would promise something the
+     * roster can no longer deliver.
+     *
+     * @return list<SwapProposal>
+     */
+    public function liveForRequest(string $requestId): array;
+
     /** @param list<string> $poolIds
      * @return list<SwapProposal>
      */

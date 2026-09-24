@@ -1,25 +1,26 @@
 import { Controller } from '@hotwired/stimulus';
 
 /*
- * "Which of my shifts do I want covered."
+ * "Which of my shifts could you do?" — picking between one and five of them.
  *
- * The list of radios is the real form and it is rendered by the server, so this
- * controller never builds a selection of its own: the calendar and the
- * recommendations tick one of those inputs and everything else follows from the
- * change event. That is what makes choosing from the calendar and choosing from
- * the list the same command, and it is why the page still works with the
- * calendar turned off.
+ * The checkboxes are rendered by the server and are the real form, so this
+ * controller never builds a selection of its own: the calendar ticks one of
+ * those inputs and everything else follows from the change event. That is what
+ * makes choosing from the calendar and choosing from the list the same thing,
+ * and it is why the page still works with the calendar turned off.
  *
- * Every number it writes was computed on the server. Nothing here recalculates
- * a duration, a balance or a rest block from a date.
+ * Every label it writes was computed on the server. Nothing here recalculates a
+ * duration, a compatibility or a rest block from a date.
  */
 export default class extends Controller {
 	static targets = [
 		'views', 'calendarTab', 'listTab', 'calendarPanel', 'listPanel',
-		'cell', 'option', 'weekLink',
-		'summary', 'offered', 'balance', 'recap', 'bridge', 'submit',
+		'cell', 'option', 'away', 'weekLink',
+		'summary', 'count', 'chosen', 'submit',
 		'sheet', 'sheetTitle', 'sheetKicker', 'sheetBody',
 	];
+
+	static values = { maximum: Number, author: String };
 
 	connect() {
 		// Progressive enhancement: the list ships visible, and the calendar only
@@ -44,60 +45,96 @@ export default class extends Controller {
 		if (this.hasListTabTarget) this.listTabTarget.setAttribute('aria-pressed', String(!calendar));
 	}
 
-	/** A day in the calendar: show what it is before anything is decided. */
+	/** A day in the calendar: tick it, and say what it is. */
 	pick(event) {
 		const cell = event.currentTarget;
-		const date = cell.dataset.date;
-		if (cell.dataset.selectable === 'true' && cell.dataset.shiftKey) this.select(cell.dataset.shiftKey);
-		this.openDetail(date);
+		if (cell.dataset.selectable === 'true' && cell.dataset.shiftKey) {
+			this.toggle(cell.dataset.shiftKey);
+			return;
+		}
+		this.openDetail(cell.dataset.date);
 	}
 
-	/** The button under a recommendation. It picks; it does not submit. */
-	choose(event) {
-		event.preventDefault();
-		this.select(event.currentTarget.dataset.shiftKey);
-		if (this.hasSummaryTarget) this.summaryTarget.scrollIntoView({ behavior: 'smooth', block: 'nearest' });
-	}
-
-	select(key) {
-		const radio = this.radioFor(key);
-		if (!radio) return;
-		radio.checked = true;
+	toggle(key) {
+		const box = this.boxFor(key);
+		if (!box) return;
+		if (!box.checked && this.selected().length >= this.limit()) {
+			this.announceLimit();
+			return;
+		}
+		box.checked = !box.checked;
 		this.sync();
 	}
 
 	sync() {
-		const radio = this.element.querySelector('input[name="offeredShift"]:checked');
-		const key = radio ? radio.value : '';
+		const keys = this.selected();
 		for (const cell of this.cellTargets) {
-			if (cell.hasAttribute('aria-pressed')) cell.setAttribute('aria-pressed', String(cell.dataset.shiftKey === key && key !== ''));
+			if (!cell.hasAttribute('aria-pressed')) continue;
+			const chosen = keys.includes(cell.dataset.shiftKey);
+			cell.setAttribute('aria-pressed', String(chosen));
+			const status = cell.querySelector('[data-swap-composer-target="cellStatus"]');
+			if (status) {
+				status.replaceChildren();
+				const symbol = document.createElement('b');
+				symbol.textContent = chosen ? '✓' : '+';
+				status.append(symbol, document.createTextNode(chosen ? ' ELEGIDO' : ' PUEDE'));
+			}
 		}
-		this.updateSummary(key ? this.optionFor(key) : null);
-		this.updateWeekLinks(key);
+		this.renderSummary(keys);
+		this.updateWeekLinks(keys);
 	}
 
-	updateSummary(option) {
-		if (this.hasSubmitTarget) this.submitTarget.disabled = !option;
-		if (!option) {
-			this.offeredTarget.textContent = '—';
-			this.balanceTarget.textContent = '—';
-			this.recapTarget.textContent = 'Todavía no has elegido ningún turno.';
-			this.bridgeTarget.classList.add('hidden');
-			return;
-		}
-		this.offeredTarget.textContent = option.dataset.duration || '';
-		this.balanceTarget.textContent = option.dataset.balance || '';
-		this.recapTarget.textContent = `Propones ${option.dataset.headline} · ${option.dataset.hours}`;
-		this.bridgeTarget.textContent = option.dataset.opportunity ? `✨ Conseguirías ${option.dataset.opportunity}` : '';
-		this.bridgeTarget.classList.toggle('hidden', !option.dataset.opportunity);
+	selected() {
+		return [...new Set(
+			[...this.element.querySelectorAll('input[name="offeredShifts[]"]:checked')].map((box) => box.value),
+		)];
 	}
 
-	/** Paging weeks is a link, so it has to carry the choice already made. */
-	updateWeekLinks(key) {
+	limit() {
+		return this.hasMaximumValue && this.maximumValue > 0 ? this.maximumValue : 5;
+	}
+
+	renderSummary(keys) {
+		if (this.hasCountTarget) this.countTarget.textContent = `${keys.length} de ${this.limit()} elegidos`;
+		if (this.hasSubmitTarget) {
+			this.submitTarget.disabled = keys.length === 0;
+			this.submitTarget.textContent = keys.length === 0
+				? 'Elige un turno'
+				: `Enviar ${keys.length} ${keys.length === 1 ? 'opción' : 'opciones'}`;
+		}
+		if (!this.hasChosenTarget) return;
+		this.chosenTarget.replaceChildren(...keys.map((key) => {
+			const option = this.optionFor(key);
+			const fallbackDate = key.includes('|') ? key.split('|').at(-1) : key;
+			const item = document.createElement('li');
+			item.textContent = option ? `${option.dataset.headline} · ${option.dataset.hours}` : fallbackDate;
+			const drop = document.createElement('button');
+			drop.type = 'button';
+			drop.className = 'composer-chosen-drop';
+			drop.setAttribute('aria-label', `Quitar ${option ? option.dataset.headline : fallbackDate}`);
+			drop.textContent = '×';
+			drop.addEventListener('click', () => this.toggle(key));
+			item.append(drop);
+			return item;
+		}));
+	}
+
+	announceLimit() {
+		if (!this.hasCountTarget) return;
+		this.countTarget.textContent = `Ya has elegido ${this.limit()}. Quita uno para añadir otro.`;
+	}
+
+	/** Paging weeks is a link, so it has to carry the choices already made. */
+	updateWeekLinks(keys) {
 		for (const link of this.weekLinkTargets) {
 			const url = new URL(link.href, window.location.origin);
-			if (key) url.searchParams.set('turno', key);
-			else url.searchParams.delete('turno');
+			// Twig serialises an array as turnos[0], turnos[1]… while this
+			// controller appends turnos[]. Remove every representation first or
+			// each trip to another month duplicates the selection.
+			for (const parameter of [...url.searchParams.keys()]) {
+				if (parameter === 'turnos' || parameter.startsWith('turnos[')) url.searchParams.delete(parameter);
+			}
+			for (const key of keys) url.searchParams.append('turnos[]', key);
 			link.href = `${url.pathname}${url.search}`;
 		}
 	}
@@ -109,18 +146,10 @@ export default class extends Controller {
 		const cell = cells[index];
 		if (!cell) return;
 
-		this.sheetKicker(cell);
+		this.sheetKickerTarget.textContent = cell.dataset.stateLabel || '';
 		this.sheetTitleTarget.textContent = cell.dataset.headline || date;
-		this.sheetBodyTarget.replaceChildren(
-			this.contextStrip(cells, index),
-			...this.shiftCards(date, cell),
-		);
+		this.sheetBodyTarget.replaceChildren(this.contextStrip(cells, index), ...this.shiftCards(date, cell));
 		this.sheetTarget.dispatchEvent(new CustomEvent('sheet:open'));
-	}
-
-	sheetKicker(cell) {
-		const opportunity = cell.dataset.opportunity;
-		this.sheetKickerTarget.textContent = opportunity ? `✨ ${opportunity}` : cell.dataset.stateLabel || '';
 	}
 
 	/**
@@ -153,9 +182,7 @@ export default class extends Controller {
 		if (rows.length === 0) {
 			const empty = document.createElement('p');
 			empty.className = 'composer-sheet-empty';
-			empty.textContent = cell.dataset.blocked
-				? cell.dataset.blocked
-				: `${cell.dataset.stateLabel}. No hay ningún turno tuyo que ofrecer este día.`;
+			empty.textContent = cell.dataset.blocked ?? `${cell.dataset.stateLabel}. No hay ningún turno tuyo este día.`;
 			return [empty];
 		}
 
@@ -168,18 +195,19 @@ export default class extends Controller {
 				this.line('shift-card-duration', (row.dataset.duration || '').toUpperCase()),
 				this.line('composer-sheet-kind', row.dataset.shiftLabel || ''),
 			);
-			if (row.dataset.opportunity) card.append(this.line('composer-opportunity', `★ ${row.dataset.opportunity}`));
+			if (row.dataset.recommendation) card.append(this.line('composer-opportunity', `★ ${row.dataset.recommendation}`));
+			if (row.dataset.compatibilityNote) card.append(this.line('compatibility-note', `⚠ ${row.dataset.compatibilityNote}`));
 			if (row.dataset.blockedReason) {
-				card.append(this.line('composer-blocked-reason', `No disponible para cambio · ${row.dataset.blockedReason}`));
+				card.append(this.line('composer-blocked-reason', row.dataset.blockedReason));
 				return card;
 			}
-			card.append(this.line('trade-balance', `Diferencia para ti: ${row.dataset.balance} · ${row.dataset.balanceHint}`));
+			const key = row.dataset.shiftKey;
 			const choose = document.createElement('button');
 			choose.type = 'button';
 			choose.className = 'btn-primary btn-block';
-			choose.textContent = 'Elegir este turno';
+			choose.textContent = this.selected().includes(key) ? 'Quitar de las opciones' : 'Añadir a las opciones';
 			choose.addEventListener('click', () => {
-				this.select(row.dataset.shiftKey);
+				this.toggle(key);
 				this.sheetTarget.dispatchEvent(new CustomEvent('sheet:close'));
 			});
 			card.append(choose);
@@ -194,8 +222,8 @@ export default class extends Controller {
 		return node;
 	}
 
-	radioFor(key) {
-		return this.element.querySelector(`input[name="offeredShift"][value="${CSS.escape(key)}"]`);
+	boxFor(key) {
+		return this.element.querySelector(`input[name="offeredShifts[]"][value="${CSS.escape(key)}"]`);
 	}
 
 	optionFor(key) {

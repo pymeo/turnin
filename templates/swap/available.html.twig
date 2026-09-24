@@ -1,31 +1,29 @@
 {% extends 'base.html.twig' %}
 
-{% block title %}Turnin — Turnos disponibles{% endblock %}
+{% block title %}Turnin — Turnos de compañeros{% endblock %}
 
 {% block body %}
-<main class="changes-shell" data-controller="changes" data-changes-csrf-value="{{ csrfToken }}">
+<main class="changes-shell">
     {% include 'identity/_authenticated_header.html.twig' %}
     <header class="changes-heading">
         <a class="text-sm text-ink-muted no-underline" href="{{ path('swap_changes') }}">‹ Cambios</a>
-        <h1>Turnos disponibles para ti</h1>
-        <p>Solo ves turnos de compañeros compatibles contigo.</p>
+        <h1>Turnos de compañeros</h1>
+        <p>Solo ves turnos de gente con la que puedes cambiar. Te decimos cuáles puedes hacer tú.</p>
     </header>
-    <section class="available-grid" aria-label="Turnos disponibles">
+
+    {# Already ordered by colleague and then by date, so "¿qué días está
+       intentando librar David?" is one glance and not a scan of the list. #}
+    {% set shownAuthor = '' %}
+    <div class="colleague-list">
         {% for request in openRequests %}
-            <article class="activity-card shift-trading-card" data-request-id="{{ request.requestId }}">
-                <p class="changes-kicker">{{ request.authorName }} quiere librarse</p>
-                <p class="swap-card-date">{{ request.dateHeadline }}</p>
-                <p class="shift-card-hours">{{ request.hours }}{% if request.endsNextDay %} <small>· termina al día siguiente</small>{% endif %}</p>
-                <p class="shift-card-duration">{{ request.durationLabel|upper }}</p>
-                <h2>{{ request.shiftLabel }}</h2>
-                <p><strong>{{ request.groupLabel }}</strong><br><span class="text-ink-muted">{{ request.workplaceName }}</span></p>
-                {% if request.alreadyAvailable %}<p class="swap-card-done">Sugerido · Marcaste que podrías trabajar este día</p>{% endif %}
-                <a class="btn-primary btn-block" href="{{ path('swap_proposal_new_exchange', {requestId: request.requestId}) }}">Me interesa</a>
-            </article>
+            {% if request.authorName != shownAuthor %}
+                <h2 class="colleague-name">{{ request.authorName }}</h2>
+                {% set shownAuthor = request.authorName %}
+            {% endif %}
+            {% include 'swap/_colleague_shift_card.html.twig' with {request: request} only %}
         {% else %}
-            <div class="empty-state"><strong>Ahora mismo no hay turnos compatibles disponibles.</strong><span>Cuando aparezca alguno que encaje contigo lo verás aquí.</span></div>
+            <div class="empty-state"><strong>Ahora mismo no hay turnos de compañeros.</strong><span>Cuando alguien de tu grupo quiera librar un turno lo verás aquí.</span></div>
         {% endfor %}
-    </section>
-    <p class="field-error hidden" data-changes-target="error" role="alert"></p>
+    </div>
 </main>
 {% endblock %}

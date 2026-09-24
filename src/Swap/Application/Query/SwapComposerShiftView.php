@@ -5,17 +5,18 @@ declare(strict_types=1);
 namespace App\Swap\Application\Query;
 
 /**
- * One shift on the composer screen: a cell in the calendar, a row in the list
- * and, for the shift being taken, the summary at the top.
+ * One of my shifts on the composer screen, already judged.
  *
- * A shift that cannot be offered still gets one of these. Hiding it would take
- * away the one thing the screen exists to give — whether that day is worked —
- * so it travels with the reason it is unavailable instead.
+ * `selectable` is not "is it mine and in the future": it is the answer to
+ * whether the colleague who published the request can actually work it, decided
+ * against real shift intervals. A shift they cannot do stays on the calendar
+ * with the reason, because taking it away would take away the context the
+ * calendar exists to give.
  */
 final readonly class SwapComposerShiftView
 {
     public function __construct(
-        /** assignmentId|date, the pair CreateSwapProposal takes */
+        /** assignmentId|date, the pair the form posts back */
         public string $key,
         public string $assignmentId,
         public string $date,
@@ -33,11 +34,10 @@ final readonly class SwapComposerShiftView
         public string $workplaceName,
         public bool $selectable,
         public ?string $blockedReason,
-        public int $balanceMinutes,
-        public string $balanceLabel,
-        public string $balanceHint,
-        public ?SwapComposerOpportunityView $opportunity,
-        public int $score,
+        /** A quiet nudge, never a decision: "Te dejaría 4 días seguidos libres". */
+        public ?string $recommendation,
+        /** Helpful context that never prevents selecting the shift. */
+        public ?string $compatibilityNote = null,
     ) {
     }
 }

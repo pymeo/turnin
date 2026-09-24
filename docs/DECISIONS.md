@@ -18,6 +18,8 @@ con el motivo al lado.
 | [8](adr/0008-roster-and-calendar-model.md) | Calendario personal: RosterDay, snapshots y un único escritor |
 | [9](adr/0009-multiple-worker-assignments-and-exact-shift-intervals.md) | Varias asignaciones y horarios reales |
 | [10](adr/0010-swap-requests-and-availability.md) | Publicar un turno y declararse disponible |
+| [11](adr/0011-real-shift-proposals-balances-and-rest-opportunities.md) | Propuestas sobre turnos reales, saldos y descansos |
+| [12](adr/0012-direct-exchange-options-and-real-interval-compatibility.md) | Opciones de retorno y compatibilidad temporal real |
 
 ## 2026-09-10 — No persistir tokens de Google
 
@@ -401,3 +403,24 @@ anterior no se podía leer.
 
 La pantalla de cobertura (`swap/proposal_composer.html.twig`) se queda como
 estaba, reducida a lo suyo: confirmar un turno no necesita un calendario.
+
+## 2026-09-13 — El intercambio directo ofrece 1–5 turnos y compara intervalos reales
+
+La decisión anterior de usar el calendario se mantiene, pero la lista ya no
+contiene radios ni manda sobre una selección única. Calendario y lista operan
+sobre los mismos checkboxes y permiten construir de una a cinco opciones. La
+selección permanece al avanzar cuatro semanas y el resumen móvil queda por
+encima de la navegación inferior sin tapar las opciones.
+
+La pertenencia al pool sigue siendo la frontera profesional, no la regla
+temporal completa. `ShiftCompatibility` compara intervalos reales y bloquea los
+solapes, también overnight. Un descanso inferior a doce horas se muestra con
+las horas concretas entre ambos turnos, pero no bloquea: Turnin no convierte un
+umbral genérico en normativa de una organización que aún no lo ha configurado.
+`Availability` solo destaca; no autoriza ni impide.
+
+Una propuesta directa guarda 1–5 opciones reales. Quien publicó el turno elige
+una, y el backend revalida solicitud, pertenencia, propiedad y compatibilidad
+antes de ejecutar. Los turnos movidos conservan `RosterSource::SWAP` para que el
+calendario los marque con `↔`. Los detalles y alternativas se recogen en
+[ADR 12](adr/0012-direct-exchange-options-and-real-interval-compatibility.md).

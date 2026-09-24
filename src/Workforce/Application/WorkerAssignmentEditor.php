@@ -24,7 +24,7 @@ final readonly class WorkerAssignmentEditor
     }
 
     /** @param list<string> $additionalDestinationIds */
-    public function prepare(string $workerId, string $workplace, string $categoryId, string $primaryDestinationId, array $additionalDestinationIds, ?string $specialtyId = null, ?string $functionalArea = null, ?string $employerId = null, bool $primary = false): WorkerAssignmentPlan
+    public function prepare(string $workerId, string $workplace, string $categoryId, string $primaryDestinationId, array $additionalDestinationIds, ?string $specialtyId = null, ?string $functionalArea = null, ?string $employerId = null, bool $primary = false, ?WorkerAssignment $replacing = null): WorkerAssignmentPlan
     {
         $workplaceId = new WorkplaceId($workplace);
         $foundWorkplace = $this->workplaces->byId($workplaceId);
@@ -37,7 +37,10 @@ final readonly class WorkerAssignmentEditor
         }
 
         $unit = $this->units->resolveSelection($workplaceId, $primaryDestinationId);
-        $assignment = WorkerAssignment::create($this->ids->next(), $workerId, $workplaceId, $category->id(), $specialtyId, $unit->id(), $functionalArea, $employerId, $primary, $this->clock->now());
+        $now = $this->clock->now();
+        $assignment = null === $replacing
+            ? WorkerAssignment::create($this->ids->next(), $workerId, $workplaceId, $category->id(), $specialtyId, $unit->id(), $functionalArea, $employerId, $primary, $now)
+            : WorkerAssignment::restore($replacing->id(), $workerId, $workplaceId, $category->id(), $specialtyId, $unit->id(), $functionalArea, $employerId, $primary, true, $replacing->createdAt(), $now);
         $accesses = [new SwapPoolAccess($this->resolver->resolve($assignment), $this->ids->next(), $this->ids->next(), MembershipSource::SELF_DECLARED, true)];
         $seen = [$unit->id() => true];
         foreach (array_values(array_unique($additionalDestinationIds)) as $selectionId) {

@@ -14,17 +14,19 @@
         {% set personal = personalByDate[cell.date]|default([]) %}
         <button type="button"
                 role="gridcell"
-                class="calendar-cell {{ tones[cell.tone]|default('calendar-tone-unknown') }}"
+                class="calendar-cell {{ tones[cell.tone]|default('calendar-tone-unknown') }}{{ cell.fromSwap ? ' calendar-cell-swapped' : '' }}"
                 data-day="{{ cell.date }}"
                 data-state="{{ cell.state }}"
                 data-outside="{{ cell.inMonth ? 'false' : 'true' }}"
                 data-today="{{ cell.isToday ? 'true' : 'false' }}"
                 data-weekend="{{ cell.isWeekend ? 'true' : 'false' }}"
+                data-from-swap="{{ cell.fromSwap ? 'true' : 'false' }}"
                 data-personal-events="{{ personal|json_encode|e('html_attr') }}"
                 aria-pressed="false"
                 aria-label="{{ cell.ariaLabel }}{{ cell.isToday ? ', hoy' : '' }}">
             <span class="calendar-cell-number">{{ cell.dayNumber }}</span>
             <span class="calendar-cell-code" aria-hidden="true">{{ cell.abbreviation|default('·') }}</span>
+            {% if cell.fromSwap %}<span class="calendar-swap-mark" aria-label="{{ cell.state == 'rest' ? 'Libre tras un cambio de turno' : 'Turno recibido mediante un cambio' }}">↔</span>{% endif %}
             {% if personal|length %}<span class="calendar-personal-indicators" aria-hidden="true">{% for event in personal|slice(0, 2) %}<i></i>{% endfor %}{% if personal|length > 2 %}<b>+{{ personal|length - 2 }}</b>{% endif %}</span>{% endif %}
         </button>
     {% endfor %}

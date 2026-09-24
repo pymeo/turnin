@@ -2,7 +2,7 @@ import type { Page } from '@playwright/test';
 import { expect, onboardWorker, openAddSheet, openCalendar, test } from './support/worker';
 
 /*
- * "Me interesa" → which of my own shifts do I want covered.
+ * "Se lo hago" → I send several real return shifts; the owner picks one.
  *
  * The screen this replaced was a vertical list of near-identical cards, so the
  * assertions here are about the things a list cannot show: the days around a
@@ -69,13 +69,18 @@ async function paintDay(page: Page, date: string, label: string, expected: 'work
 	await expect(cell).toHaveAttribute('data-state', expected);
 }
 
-async function publish(page: Page, date: string): Promise<void> {
+async function publish(page: Page, date: string): Promise<string> {
 	await page.goto('/app/changes?flow=release');
 	const sheet = page.locator('[data-changes-target="sheet"]');
 	await expect(sheet).toBeVisible();
 	await sheet.locator('.shift-choice').filter({ hasText: String(Number(date.slice(8))) }).first().click();
+	const published = page.waitForResponse((response) => response.url().endsWith('/app/changes/publicar') && response.request().method() === 'POST');
 	await sheet.getByRole('button', { name: 'Buscar compañero' }).click();
+	const payload = await (await published).json() as { result?: { requestId?: string } };
 	await expect(sheet).toContainText('Estamos buscando a alguien');
+	if (!payload.result?.requestId) throw new Error('Publishing did not return the new request id.');
+
+	return payload.result.requestId;
 }
 
 test.describe('choosing what to ask for in return', () => {
@@ -100,13 +105,13 @@ test.describe('choosing what to ask for in return', () => {
 			await paintRota(maria, [7, 8, 9, 10].map(day), [11, 12, 13].map(day));
 
 			await paintDay(pedro, day(19), 'Noche', 'working');
-			await publish(pedro, day(19));
+			const requestId = await publish(pedro, day(19));
 
 			await maria.goto('/app/changes/available');
-			await maria.getByRole('link', { name: 'Me interesa' }).first().click();
+			await maria.locator(`a[href="/app/changes/${requestId}/intercambio"]`).click();
 
 			// ── The question, and the calendar that answers it ──────────────
-			await expect(maria.getByRole('heading', { name: /¿Qué turno quieres que .* haga por ti\?/ })).toBeVisible();
+			await expect(maria.getByRole('heading', { name: /¿Qué turnos tuyos te gustaría que .* hiciera\?/ })).toBeVisible();
 			const calendar = maria.locator('[data-swap-composer-target="calendarPanel"]');
 			await expect(calendar).toBeVisible();
 			await expect(maria.locator('[data-swap-composer-target="listPanel"]')).toBeHidden();
@@ -115,9 +120,8 @@ test.describe('choosing what to ask for in return', () => {
 			await expect(maria.locator('.shift-day[data-state="unknown"]').first()).toContainText('Sin datos');
 			await expect(maria.locator(`.shift-day[data-date="${day(19)}"][data-state="incoming"]`)).toHaveCount(1);
 
-			// ── The suggestion, and why ─────────────────────────────────────
-			await expect(maria.locator('.reco-card')).toHaveCount(1);
-			await expect(maria.locator('.reco-card')).toContainText('4 días seguidos libres');
+			// ── The suggestion helps inside the calendar, without another card ──
+			await expect(maria.locator('.reco-card')).toHaveCount(0);
 			await expect(maria.locator(`.shift-day[data-date="${day(10)}"] .shift-day-badge`)).toBeVisible();
 
 			// Nothing scrolls sideways on either layout.
@@ -125,49 +129,60 @@ test.describe('choosing what to ask for in return', () => {
 			expect(overflow).toBeLessThanOrEqual(1);
 			await maria.screenshot({ path: testInfo.outputPath(`composer-${testInfo.project.name}.png`), fullPage: true });
 
-			// ── Choosing a day opens its detail; it does not send anything ──
-			await maria.locator(`.shift-day[data-date="${day(10)}"]`).click();
-			const sheet = maria.locator('[data-swap-composer-target="sheet"]');
-			await expect(sheet).toBeVisible();
-			await expect(sheet).toContainText('Diferencia para ti');
-			await sheet.screenshot({ path: testInfo.outputPath(`composer-sheet-${testInfo.project.name}.png`) });
-			await sheet.getByRole('button', { name: 'Elegir este turno' }).click();
-			await expect(sheet).not.toBeVisible();
-			await expect(maria.locator('[data-swap-composer-target="recap"]')).toContainText('Propones');
+			// ── One tap selects directly; three taps build the visible list ──
+			const selectedDates = [day(8), day(9), day(10)];
+			for (const date of selectedDates) {
+				const cell = maria.locator(`.shift-day[data-date="${date}"]`);
+				await cell.click();
+				await expect(cell).toHaveAttribute('aria-pressed', 'true');
+				await expect(cell).toContainText('ELEGIDO');
+			}
+			await expect(maria.locator('[data-swap-composer-target="count"]')).toHaveText('3 de 5 elegidos');
+			await expect(maria.locator('[data-swap-composer-target="chosen"] li')).toHaveCount(3);
+			await expect(maria.locator('input[name="offeredShifts[]"]:checked')).toHaveCount(3);
+			await expect(maria.getByRole('button', { name: /Enviar 3 opciones/ })).toBeEnabled();
 
-			// ── The list is the same choice, not a second one ───────────────
-			const chosen = await maria.locator(`.shift-day[data-date="${day(10)}"]`).getAttribute('data-shift-key');
-			expect(chosen).toBeTruthy();
+			// Moving between months keeps the choices and never exposes the
+			// internal assignment UUID while their cards are outside the window.
+			await maria.getByRole('link', { name: 'Ver el mes siguiente' }).click();
+			await expect(maria).toHaveURL(/semana=4/);
+			await expect(maria.locator('[data-swap-composer-target="count"]')).toHaveText('3 de 5 elegidos');
+			await expect(maria.locator('[data-swap-composer-target="chosen"] li')).toHaveCount(3);
+			await expect(maria.locator('[data-swap-composer-target="chosen"]')).not.toContainText(/01[a-z0-9-]{20,}/);
+			await maria.getByRole('link', { name: 'Ver el mes anterior' }).click();
+			await expect(maria).not.toHaveURL(/semana=4/);
+			await expect(maria.locator('[data-swap-composer-target="count"]')).toHaveText('3 de 5 elegidos');
+
+			// ── Calendar and list are two views of the same three choices ───
 			await maria.getByRole('button', { name: 'Lista' }).click();
 			await expect(maria.locator('[data-swap-composer-target="listPanel"]')).toBeVisible();
-			await expect(maria.locator(`input[name="offeredShift"][value="${chosen}"]`)).toBeChecked();
+			await expect(maria.locator('input[name="offeredShifts[]"]:checked')).toHaveCount(3);
 			await maria.screenshot({ path: testInfo.outputPath(`composer-list-${testInfo.project.name}.png`), fullPage: true });
 
-			// Choosing from the list drives exactly the same state, and moving
-			// back to the calendar shows the new day pressed.
-			const fromList = await maria.locator(`.shift-day[data-date="${day(8)}"]`).getAttribute('data-shift-key');
-			// The label, not the radio: the input is screen-reader-only, which is
-			// also how a person picks it.
-			await maria.locator(`.trade-option[data-shift-key="${fromList}"]`).click();
-			await expect(maria.locator(`input[name="offeredShift"][value="${fromList}"]`)).toBeChecked();
-			await expect(maria.locator('[data-swap-composer-target="recap"]')).toContainText('Propones');
-			await maria.getByRole('button', { name: 'Calendario' }).click();
-			await expect(maria.locator(`.shift-day[data-date="${day(8)}"]`)).toHaveAttribute('aria-pressed', 'true');
-			await expect(maria.locator(`.shift-day[data-date="${day(10)}"]`)).toHaveAttribute('aria-pressed', 'false');
-
-			// Back to the one with the rest block before continuing.
-			await maria.locator(`.shift-day[data-date="${day(10)}"]`).click();
-			await sheet.getByRole('button', { name: 'Elegir este turno' }).click();
-			await expect(sheet).not.toBeVisible();
-
-			// ── And the existing confirmation flow still follows ────────────
-			await maria.getByRole('button', { name: 'Continuar con este intercambio' }).click();
+			// ── María sends; Pedro chooses one; no third negotiation round ──
+			await maria.getByRole('button', { name: /Enviar 3 opciones/ }).click();
 			await maria.waitForURL(/\/app\/changes\/proposals/);
-			await expect(maria.locator('body')).toContainText('Tú entregas');
-			await expect(maria.locator('.proposal-card').first()).toContainText('08:00–15:00');
+
+			await pedro.goto('/app/changes/mine');
+			await pedro.getByRole('link', { name: 'Ver y elegir' }).click();
+			await expect(pedro.getByRole('heading', { name: /te hace el turno/ })).toBeVisible();
+			await expect(pedro.locator('input[name="optionId"]')).toHaveCount(3);
+			await pedro.locator('.trade-option').nth(1).click({ timeout: 10_000 });
+			await expect(pedro.locator('input[name="optionId"]').nth(1)).toBeChecked();
+			await pedro.getByRole('button', { name: 'Confirmar intercambio' }).click({ timeout: 10_000 });
+			await pedro.waitForURL(/\/app\/changes\/proposals\?hecho=1/);
+
+			await openCalendar(pedro, day(9).slice(0, 7));
+			await expect(pedro.locator(`[data-day="${day(9)}"]`)).toHaveAttribute('data-state', 'working');
+			await expect(pedro.locator(`[data-day="${day(9)}"]`)).toHaveAttribute('data-from-swap', 'true');
+			await expect(pedro.locator(`[data-day="${day(19)}"]`)).toHaveAttribute('data-from-swap', 'true');
+			await openCalendar(maria, day(19).slice(0, 7));
+			await expect(maria.locator(`[data-day="${day(19)}"]`)).toHaveAttribute('data-state', 'working');
+			await expect(maria.locator(`[data-day="${day(19)}"]`)).toHaveAttribute('data-from-swap', 'true');
 		} finally {
-			await pedroContext.close();
-			await mariaContext.close();
+			// Do not let teardown hide the precise failed interaction when the
+			// browser has already been closed by a test timeout.
+			await Promise.allSettled([pedroContext.close(), mariaContext.close()]);
 		}
 	});
 });

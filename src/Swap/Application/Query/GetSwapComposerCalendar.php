@@ -5,20 +5,20 @@ declare(strict_types=1);
 namespace App\Swap\Application\Query;
 
 /**
- * "Somebody wants to give a shift away and I am interested — show me my own
- * rota so I can decide which of mine to ask for in return.".
+ * "I will do your shift — now which of mine could you do for me?".
  *
- * The week offset and the selected shift travel in the query so the screen is
- * usable with the browser alone: navigating weeks and choosing a shift are both
- * links, and JavaScript only makes them feel quicker.
+ * The week being shown and the shifts already ticked travel in the query so the
+ * screen works with nothing but a browser: paging is a link and every selection
+ * survives it.
  */
 final readonly class GetSwapComposerCalendar
 {
+    /** @param list<string> $selectedKeys assignmentId|date pairs already chosen */
     public function __construct(
         public string $workerId,
         public string $requestId,
         public int $weekOffset = 0,
-        public ?string $selectedShiftKey = null,
+        public array $selectedKeys = [],
     ) {
     }
 }

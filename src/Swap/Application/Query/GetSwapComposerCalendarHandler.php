@@ -4,18 +4,21 @@ declare(strict_types=1);
 
 namespace App\Swap\Application\Query;
 
+use App\Swap\Application\ShiftCompatibilityResolver;
 use App\Swap\Application\SwapAccessDenied;
 use App\Swap\Application\SwapWorkspace;
-use App\Swap\Domain\ExchangeBalances;
-use App\Swap\Domain\OpportunityScoreWeights;
 use App\Swap\Domain\RestBlockOpportunity;
 use App\Swap\Domain\RestBlockOpportunityFinder;
-use App\Swap\Domain\ReturnPreference;
 use App\Swap\Domain\RosteredDay;
 use App\Swap\Domain\RosteredDays;
 use App\Swap\Domain\RosteredDayState;
-use App\Swap\Domain\ShiftBalance;
+use App\Swap\Domain\RosteredShift;
+use App\Swap\Domain\ShiftCompatibility;
+use App\Swap\Domain\ShiftDuration;
+use App\Swap\Domain\ShiftObstacle;
 use App\Swap\Domain\SwapGroup;
+use App\Swap\Domain\SwapGroups;
+use App\Swap\Domain\SwapProposal;
 use App\Swap\Domain\SwapRequest;
 use App\Swap\Domain\SwapRequests;
 use App\Swap\Domain\WorkDate;
@@ -24,41 +27,36 @@ use App\Swap\Domain\WorkerDisplayNames;
 use InvalidArgumentException;
 
 /**
- * The whole "choose what to ask for in return" screen, in one read.
+ * "I will do your shift. Which of mine could you do?" — the whole screen, once.
  *
- * The old screen listed the worker's next shifts as identical cards, which is
- * the one shape that cannot answer the question people actually ask: do I work
- * the day before, do I work the day after, and does giving this one away buy me
- * a run of days off. So the read model is a calendar — rest days included,
- * because a blank cell means "I have not filled that in" and never "libre" —
- * and every derived number arrives already computed.
+ * The question this answers changed: it used to ask whether a shift of mine was
+ * mine, future and in the right pool, which is not the same thing at all. What
+ * decides now is whether **the colleague who published the request can work it**,
+ * measured against real shift intervals. Their rota is read to answer that and
+ * never rendered: the calendar on screen is mine, with a verdict on each of my
+ * shifts and a reason when the answer is no.
  *
- * Four weeks, one range query, one pass of RestBlockOpportunityFinder per
- * calendar. Nothing here grows a query per day or per shift, and the template
- * never runs the detector.
+ * Four weeks, two range reads, one pass of RestBlockOpportunityFinder. Nothing
+ * here grows a query per day or per shift, and the template decides nothing.
  */
 final readonly class GetSwapComposerCalendarHandler
 {
     private const int WEEKS = 4;
 
-    /** As far ahead as GetChangesSetup will offer a shift; paging stops there. */
+    /** As far ahead as a shift can be offered; paging stops there. */
     private const int HORIZON_DAYS = 120;
 
-    /**
-     * Days loaded either side of the window. A rest block that starts before
-     * the first cell still counts, so the detector has to see those days even
-     * though they are never drawn.
-     */
+    /** Loaded either side of the window so a rest block that starts before the
+     * first cell still counts, and the rest rule can see the neighbouring day. */
     private const int CONTEXT_PADDING_DAYS = 7;
-
-    private const int RECOMMENDATION_LIMIT = 2;
 
     public function __construct(
         private SwapWorkspace $workspace,
         private RosteredDays $rosteredDays,
         private SwapRequests $requests,
+        private SwapGroups $groups,
+        private ShiftCompatibilityResolver $compatibility,
         private RestBlockOpportunityFinder $finder,
-        private ExchangeBalances $balances,
         private WorkerDisplayNames $names,
     ) {
     }
@@ -73,87 +71,87 @@ final readonly class GetSwapComposerCalendarHandler
             throw SwapAccessDenied::notYours();
         }
 
-        // The membership is what says which of *my* calendars reaches that pool.
         $poolGroup = $this->workspace->requireGroup($query->workerId, $request->swapPoolId());
-        $groups = $this->workspace->requireGroups($query->workerId);
+        $myGroups = $this->workspace->requireGroups($query->workerId);
         $today = $this->workspace->today($poolGroup);
+        $authorName = $this->names->forWorkers([$request->workerId()])[$request->workerId()] ?? 'Un compañero';
 
-        $requestedDay = $this->rosteredDays->dayFor($request->workerAssignmentId(), (string) $request->workDate());
-        if (!$requestedDay->isWorking()) {
+        $requestedShifts = $this->rosteredDays->shiftsFor([[$request->workerAssignmentId(), (string) $request->workDate()]]);
+        if ([] === $requestedShifts) {
             throw new InvalidArgumentException('Este turno ya no está disponible.');
         }
+        $requestedKey = RosteredDay::keyFor($request->workerAssignmentId(), (string) $request->workDate());
 
-        $groupsByAssignment = [];
-        $reachesPool = [];
-        foreach ($groups as $group) {
-            if (!isset($groupsByAssignment[$group->assignmentId]) || $group->primary) {
-                $groupsByAssignment[$group->assignmentId] = $group;
-            }
-            if ($group->poolId === $request->swapPoolId()) {
-                $reachesPool[$group->assignmentId] = true;
-            }
-        }
+        // Can I do their shift at all? If not there is nothing to compose.
+        $mine = $this->assignmentsOf($myGroups);
+        $canTakeIt = $this->compatibility->assess(array_keys($mine), $requestedShifts, [$requestedKey => true])[$requestedKey] ?? ShiftCompatibility::allowed();
 
         [$rangeStart, $rangeEnd, $offset, $maxOffset] = $this->window($today, $query->weekOffset);
         $from = $rangeStart->plusDays(-self::CONTEXT_PADDING_DAYS);
         $to = $rangeEnd->plusDays(self::CONTEXT_PADDING_DAYS);
 
-        $calendar = $this->rosteredDays->inRangeForAssignments(array_keys($groupsByAssignment), (string) $from, (string) $to);
+        $calendar = $this->rosteredDays->inRangeForAssignments(array_keys($mine), (string) $from, (string) $to);
+        $myShifts = $this->rosteredDays->shiftsInRange(array_keys($mine), (string) $from, (string) $to);
 
-        $byAssignment = [];
-        foreach ($calendar as $day) {
-            $byAssignment[$day->assignmentId][] = $day;
-        }
-        $opportunities = [];
-        foreach ($byAssignment as $days) {
-            foreach ($this->finder->find($days) as $opportunity) {
-                $opportunities[$opportunity->shiftToRelease->key()] = $opportunity;
+        // Which of my shifts could *they* work? One question, asked in bulk.
+        $theirGroups = $this->groups->activeFor($request->workerId());
+        $theirPools = array_fill_keys(array_map(static fn (SwapGroup $group): string => $group->poolId, $theirGroups), true);
+        $sharedAssignments = [];
+        foreach ($myGroups as $group) {
+            if (isset($theirPools[$group->poolId])) {
+                $sharedAssignments[$group->assignmentId] = true;
             }
         }
+        $reachable = [];
+        foreach ($myShifts as $shift) {
+            $reachable[$shift->dayKey()] = isset($sharedAssignments[$shift->assignmentId]);
+        }
+        $theirAssignments = array_values(array_unique(array_map(static fn (SwapGroup $group): string => $group->assignmentId, $theirGroups)));
+        $verdicts = $this->compatibility->assess($theirAssignments, $myShifts, $reachable, [$requestedKey => true]);
 
         $openKeys = [];
         foreach ($this->requests->openByWorker($query->workerId, $today) as $open) {
             $openKeys[RosteredDay::keyFor($open->workerAssignmentId(), (string) $open->workDate())] = true;
         }
 
-        // A favour already owed between these two is the strongest reason to
-        // pick one shift over another, and what the creditor asked for is the
-        // second. Two queries, both bounded by the pair of workers.
-        $owedToMe = $this->balances->openBetween($query->workerId, $request->workerId());
-        $owedByMe = $this->balances->openBetween($request->workerId(), $query->workerId);
-        $pendingBonus = [] === $owedToMe && [] === $owedByMe ? 0 : OpportunityScoreWeights::PENDING_EXCHANGE;
-        $preference = null;
-        foreach ($owedByMe as $balance) {
-            $preference = $balance->preference() ?? $preference;
+        $opportunities = [];
+        $byAssignment = [];
+        foreach ($calendar as $day) {
+            $byAssignment[$day->assignmentId][] = $day;
+        }
+        foreach ($byAssignment as $days) {
+            foreach ($this->finder->find($days) as $opportunity) {
+                $opportunities[$opportunity->shiftToRelease->key()] = $opportunity;
+            }
         }
 
-        $working = [];
         $restDates = [];
+        $shiftsByDay = [];
         foreach ($calendar as $day) {
-            if ($day->isWorking()) {
-                $working[$day->date][] = $day;
-                continue;
-            }
             if (RosteredDayState::REST === $day->state) {
                 $restDates[$day->date] = true;
             }
         }
+        foreach ($myShifts as $shift) {
+            $shiftsByDay[$shift->dayKey()][] = $shift;
+        }
 
-        $requestedMinutes = $requestedDay->durationMinutes();
+        $selected = array_fill_keys($query->selectedKeys, true);
         $dayViews = [];
         $shifts = [];
-        for ($cursor = $from; !$cursor->isAfter($to); $cursor = $cursor->plusDays(1)) {
+        for ($cursor = $rangeStart; !$cursor->isAfter($rangeEnd); $cursor = $cursor->plusDays(1)) {
             $date = (string) $cursor;
-            $inWindow = $date >= (string) $rangeStart && $date <= (string) $rangeEnd;
             $dayShifts = [];
-            foreach ($working[$date] ?? [] as $day) {
-                $shift = $this->shiftView($day, $cursor, $today, $request, $requestedMinutes, $reachesPool, $openKeys, $opportunities, $groupsByAssignment, $pendingBonus, $preference);
-                $dayShifts[] = $shift;
-                if ($inWindow) {
-                    $shifts[] = $shift;
+            foreach ($mine as $assignmentId => $group) {
+                $key = RosteredDay::keyFor($assignmentId, $date);
+                if (!isset($shiftsByDay[$key])) {
+                    continue;
                 }
+                $shift = $this->shiftView($shiftsByDay[$key], $group, $cursor, $today, $request, $verdicts[$key] ?? null, isset($openKeys[$key]), $opportunities[$key] ?? null, $authorName);
+                $dayShifts[] = $shift;
+                $shifts[] = $shift;
             }
-            $dayViews[$date] = $this->dayView($cursor, $today, $dayShifts, isset($restDates[$date]));
+            $dayViews[$date] = $this->dayView($cursor, $today, $dayShifts, isset($restDates[$date]), $selected);
         }
 
         $weeks = [];
@@ -165,12 +163,10 @@ final readonly class GetSwapComposerCalendarHandler
             $weeks[] = new SwapComposerWeekView($this->rangeLabel($rangeStart->plusDays($week * 7), $rangeStart->plusDays($week * 7 + 6)), $days);
         }
 
-        $names = $this->names->forWorkers([$request->workerId()]);
-
         return new SwapComposerCalendarView(
             $request->id(),
-            $names[$request->workerId()] ?? 'Un compañero',
-            $this->requestedShiftView($requestedDay, $request, $poolGroup),
+            $authorName,
+            $this->requestedShiftView($requestedShifts, $request, $poolGroup),
             (string) $rangeStart,
             (string) $rangeEnd,
             $this->rangeLabel($rangeStart, $rangeEnd),
@@ -179,11 +175,9 @@ final readonly class GetSwapComposerCalendarHandler
             $offset < $maxOffset,
             $weeks,
             $shifts,
-            $this->recommendations($shifts, $dayViews),
-            $this->selected($query->selectedShiftKey, $shifts, $today, $request, $requestedMinutes, $reachesPool, $openKeys, $opportunities, $groupsByAssignment, $pendingBonus, $preference),
-            $this->rosteredDays->dayFor($poolGroup->assignmentId, (string) $request->workDate())->isWorking()
-                ? 'Ya trabajas ese día, así que de momento no puedes coger este turno.'
-                : null,
+            array_values(array_filter($query->selectedKeys, static fn (string $key): bool => '' !== $key)),
+            SwapProposal::MAXIMUM_OPTIONS,
+            $canTakeIt->compatible ? null : $canTakeIt->explanation,
         );
     }
 
@@ -206,98 +200,85 @@ final readonly class GetSwapComposerCalendarHandler
     }
 
     /**
-     * @param array<string, true>                 $reachesPool
-     * @param array<string, true>                 $openKeys
-     * @param array<string, RestBlockOpportunity> $opportunities
-     * @param array<string, SwapGroup>            $groupsByAssignment
+     * @param non-empty-list<RosteredShift> $dayShifts every stretch of that day
      */
-    private function shiftView(
-        RosteredDay $day,
-        WorkDate $date,
-        WorkDate $today,
-        SwapRequest $request,
-        int $requestedMinutes,
-        array $reachesPool,
-        array $openKeys,
-        array $opportunities,
-        array $groupsByAssignment,
-        int $pendingBonus,
-        ?ReturnPreference $preference,
-    ): SwapComposerShiftView {
+    private function shiftView(array $dayShifts, SwapGroup $group, WorkDate $date, WorkDate $today, SwapRequest $request, ?ShiftCompatibility $verdict, bool $alreadyOpen, ?RestBlockOpportunity $opportunity, string $authorName): SwapComposerShiftView
+    {
+        $first = $dayShifts[0];
+        $minutes = 0;
+        $hours = [];
+        foreach ($dayShifts as $shift) {
+            $minutes += $shift->durationMinutes();
+            $hours[] = $shift->hours();
+        }
+
         $blockedReason = match (true) {
-            !$date->isAfter($today) => 'Solo puedes ofrecer turnos futuros.',
-            $date->equals($request->workDate()) => 'Es el mismo día que vas a cubrir.',
-            !isset($reachesPool[$day->assignmentId]) => 'Este turno es de otro grupo y no entra en este cambio.',
-            isset($openKeys[$day->key()]) => 'Ya lo has publicado para que alguien lo cubra.',
-            default => null,
+            !$date->isAfter($today) => 'Ya ha pasado.',
+            $alreadyOpen => 'Ya lo has publicado para que alguien lo cubra.',
+            null === $verdict || $verdict->compatible => null,
+            default => $this->thirdPerson($verdict->obstacle, $authorName),
         };
         $selectable = null === $blockedReason;
-        $opportunity = $selectable && isset($opportunities[$day->key()]) ? $this->opportunityView($opportunities[$day->key()]) : null;
-        $balance = ShiftBalance::forProposer($requestedMinutes, $day->durationMinutes());
-        $group = $groupsByAssignment[$day->assignmentId] ?? null;
-        $groupLabel = null === $group ? '' : $group->label();
-        $workplaceName = null === $group ? '' : $group->workplaceName;
 
         return new SwapComposerShiftView(
-            $day->key(),
-            $day->assignmentId,
-            $day->date,
+            RosteredDay::keyFor($first->assignmentId, $first->date),
+            $first->assignmentId,
+            $first->date,
             WorkDateLabel::headline($date),
             WorkDateLabel::compact($date),
-            $day->shiftLabel,
-            $day->abbreviation,
-            $day->hours(),
-            $day->durationMinutes(),
-            $day->durationLabel(),
-            $day->endsNextDay,
-            $day->shiftKind->value,
-            $day->shiftKind->tone(),
-            $groupLabel,
-            $workplaceName,
+            $first->label,
+            $first->abbreviation,
+            implode(' · ', $hours),
+            $minutes,
+            ShiftDuration::label($minutes),
+            $first->endsNextDay,
+            $first->shiftKind->value,
+            $first->shiftKind->tone(),
+            $group->label(),
+            $group->workplaceName,
             $selectable,
             $blockedReason,
-            $balance->minutes,
-            $balance->label(),
-            $balance->hint(),
-            $opportunity,
-            $selectable ? $this->score($opportunity, $balance->minutes, $date, $today, $day, $pendingBonus, $preference) : 0,
+            $selectable && null !== $opportunity ? \sprintf('Te dejaría %d días seguidos libres', $opportunity->resultingConsecutiveRestDays) : null,
+            $selectable && null !== $verdict && '' !== $verdict->explanation ? $verdict->explanation : null,
         );
     }
 
     /**
-     * The priorities of the brief as one number: the rest block the exchange
-     * would create first, then a favour already pending with this colleague and
-     * what they asked for, then how close the two shifts are in length, then how
-     * soon it is. See docs/DECISIONS.md.
+     * The reason, without publishing anybody's rota. What the other person is
+     * doing on a given day is theirs; that they cannot take a shift is the only
+     * part of it this screen is entitled to say.
      */
-    private function score(?SwapComposerOpportunityView $opportunity, int $balanceMinutes, WorkDate $date, WorkDate $today, RosteredDay $day, int $pendingBonus, ?ReturnPreference $preference): int
+    private function thirdPerson(?ShiftObstacle $obstacle, string $name): string
     {
-        $score = (null === $opportunity ? 0 : $opportunity->score) + $pendingBonus;
-        if (null !== $preference) {
-            [$preferenceScore] = $preference->match($date, $day->shiftKind, $day->durationMinutes());
-            $score += $preferenceScore;
-        }
-        $score += max(0, OpportunityScoreWeights::CLOSE_DURATION - 5 * intdiv(abs($balanceMinutes), 60));
-
-        return $score + max(0, OpportunityScoreWeights::NEARBY_DATE - intdiv(max(0, $date->dayNumber() - $today->dayNumber()), 7));
+        return match ($obstacle) {
+            ShiftObstacle::SHIFT_OVERLAP => \sprintf('%s ya trabaja ese día.', $name),
+            ShiftObstacle::INSUFFICIENT_REST => \sprintf('%s no descansaría lo suficiente.', $name),
+            ShiftObstacle::NOT_IN_GROUP => \sprintf('%s no trabaja en ese servicio.', $name),
+            default => \sprintf('%s no puede hacer este turno.', $name),
+        };
     }
 
-    /** @param list<SwapComposerShiftView> $shifts */
-    private function dayView(WorkDate $date, WorkDate $today, array $shifts, bool $isRest): SwapComposerDayView
+    /**
+     * @param list<SwapComposerShiftView> $shifts
+     * @param array<string, true>         $selected
+     */
+    private function dayView(WorkDate $date, WorkDate $today, array $shifts, bool $isRest, array $selected): SwapComposerDayView
     {
         $selectable = array_values(array_filter($shifts, static fn (SwapComposerShiftView $shift): bool => $shift->selectable));
         $working = [] !== $shifts;
-
-        $best = null;
+        $recommended = false;
         foreach ($selectable as $shift) {
-            if (null !== $shift->opportunity && (null === $best || $shift->opportunity->score > $best->score)) {
-                $best = $shift->opportunity;
-            }
+            $recommended = $recommended || null !== $shift->recommendation;
         }
 
         $detail = $working
             ? implode(' y ', array_map(static fn (SwapComposerShiftView $shift): string => \sprintf('%s de %s, %s', $shift->shiftLabel, str_replace('–', ' a ', $shift->hours), $shift->durationLabel), $shifts))
             : ($isRest ? 'libre' : 'sin datos en tu cuadrante');
+        $verdict = match (true) {
+            !$working => '',
+            [] !== $selectable => '. Puede hacerlo'.(null !== $selectable[0]->compatibilityNote ? '. Aviso: '.$selectable[0]->compatibilityNote : ''),
+            default => '. '.($shifts[0]->blockedReason ?? ''),
+        };
 
         return new SwapComposerDayView(
             (string) $date,
@@ -312,166 +293,65 @@ final readonly class GetSwapComposerCalendarHandler
             $shifts,
             [] !== $selectable,
             1 === \count($selectable) ? $selectable[0]->key : null,
-            $best,
-            \sprintf(
-                '%s: %s%s%s',
-                WorkDateLabel::headline($date),
-                $detail,
-                $date->equals($today) ? ', hoy' : '',
-                null === $best ? '' : \sprintf('. Cederlo te dejaría %s', $best->summaryLabel),
-            ),
-        );
-    }
-
-    private function opportunityView(RestBlockOpportunity $opportunity): SwapComposerOpportunityView
-    {
-        return new SwapComposerOpportunityView(
-            $opportunity->resultingConsecutiveRestDays,
-            $opportunity->gainedRestDays,
-            $opportunity->restStartsAt,
-            $opportunity->restEndsAt,
-            WorkDateLabel::compact(WorkDate::fromString($opportunity->restStartsAt)).' → '.WorkDateLabel::compact(WorkDate::fromString($opportunity->restEndsAt)),
-            $opportunity->resultingConsecutiveRestDays.' días',
-            $opportunity->resultingConsecutiveRestDays.' días seguidos libres',
-            $opportunity->reasons,
-            $opportunity->score,
+            $recommended,
+            \sprintf('%s: %s%s%s', WorkDateLabel::headline($date), $detail, $date->equals($today) ? ', hoy' : '', $verdict),
         );
     }
 
     /**
-     * One suggestion, or two when the second buys a different rest block that is
-     * at least as long. Marking every shift as an opportunity is the same as
-     * marking none.
-     *
-     * @param list<SwapComposerShiftView>        $shifts
-     * @param array<string, SwapComposerDayView> $dayViews
-     *
-     * @return list<SwapComposerRecommendationView>
+     * @param non-empty-list<RosteredShift> $shifts
      */
-    private function recommendations(array $shifts, array $dayViews): array
+    private function requestedShiftView(array $shifts, SwapRequest $request, SwapGroup $group): SwapComposerShiftView
     {
-        $ranked = array_values(array_filter($shifts, static fn (SwapComposerShiftView $shift): bool => $shift->selectable && null !== $shift->opportunity));
-        usort($ranked, static fn (SwapComposerShiftView $a, SwapComposerShiftView $b): int => $b->score <=> $a->score);
-
-        $recommendations = [];
-        foreach ($ranked as $shift) {
-            $opportunity = $shift->opportunity;
-            if (null === $opportunity || \count($recommendations) >= self::RECOMMENDATION_LIMIT) {
-                break;
-            }
-            $first = $recommendations[0] ?? null;
-            if (null !== $first && ($opportunity->restStartsAt === $first->opportunity->restStartsAt || $opportunity->resultingRestDays < $first->opportunity->resultingRestDays)) {
-                continue;
-            }
-            $recommendations[] = new SwapComposerRecommendationView($shift, $opportunity, 'Conseguirías '.$opportunity->summaryLabel, $this->timeline($dayViews, $opportunity));
-        }
-
-        return $recommendations;
-    }
-
-    /**
-     * @param array<string, SwapComposerDayView> $dayViews
-     *
-     * @return list<SwapComposerDayView>
-     */
-    private function timeline(array $dayViews, SwapComposerOpportunityView $opportunity): array
-    {
-        $to = WorkDate::fromString($opportunity->restEndsAt)->plusDays(1);
-        $days = [];
-        for ($cursor = WorkDate::fromString($opportunity->restStartsAt)->plusDays(-1); !$cursor->isAfter($to); $cursor = $cursor->plusDays(1)) {
-            $day = $dayViews[(string) $cursor] ?? null;
-            if (null !== $day) {
-                $days[] = $day;
-            }
-        }
-
-        return $days;
-    }
-
-    /**
-     * A selection survives paging to another week, so it has to be resolvable
-     * outside the window too — and it arrives from a browser, so the assignment
-     * is checked against the worker's own calendars before anything is read.
-     *
-     * @param list<SwapComposerShiftView>         $shifts
-     * @param array<string, true>                 $reachesPool
-     * @param array<string, true>                 $openKeys
-     * @param array<string, RestBlockOpportunity> $opportunities
-     * @param array<string, SwapGroup>            $groupsByAssignment
-     */
-    private function selected(
-        ?string $key,
-        array $shifts,
-        WorkDate $today,
-        SwapRequest $request,
-        int $requestedMinutes,
-        array $reachesPool,
-        array $openKeys,
-        array $opportunities,
-        array $groupsByAssignment,
-        int $pendingBonus,
-        ?ReturnPreference $preference,
-    ): ?SwapComposerShiftView {
-        if (null === $key || '' === $key) {
-            return null;
-        }
+        $first = $shifts[0];
+        $minutes = 0;
+        $hours = [];
         foreach ($shifts as $shift) {
-            if ($shift->key === $key && $shift->selectable) {
-                return $shift;
+            $minutes += $shift->durationMinutes();
+            $hours[] = $shift->hours();
+        }
+
+        return new SwapComposerShiftView(
+            RosteredDay::keyFor($first->assignmentId, $first->date),
+            $first->assignmentId,
+            $first->date,
+            WorkDateLabel::headline($request->workDate()),
+            WorkDateLabel::compact($request->workDate()),
+            $first->label,
+            $first->abbreviation,
+            implode(' · ', $hours),
+            $minutes,
+            ShiftDuration::label($minutes),
+            $first->endsNextDay,
+            $first->shiftKind->value,
+            $first->shiftKind->tone(),
+            $group->label(),
+            $group->workplaceName,
+            false,
+            null,
+            null,
+        );
+    }
+
+    /**
+     * @param non-empty-list<SwapGroup> $groups
+     *
+     * @return array<string, SwapGroup> the primary group of each of my calendars
+     */
+    private function assignmentsOf(array $groups): array
+    {
+        $mine = [];
+        foreach ($groups as $group) {
+            if (!isset($mine[$group->assignmentId]) || $group->primary) {
+                $mine[$group->assignmentId] = $group;
             }
         }
 
-        $parts = explode('|', $key, 2);
-        if (2 !== \count($parts) || !isset($groupsByAssignment[$parts[0]])) {
-            return null;
-        }
-        try {
-            $date = WorkDate::fromString($parts[1]);
-        } catch (InvalidArgumentException) {
-            return null;
-        }
-        $day = $this->rosteredDays->dayFor($parts[0], (string) $date);
-        if (!$day->isWorking()) {
-            return null;
-        }
-        $shift = $this->shiftView($day, $date, $today, $request, $requestedMinutes, $reachesPool, $openKeys, $opportunities, $groupsByAssignment, $pendingBonus, $preference);
-
-        return $shift->selectable ? $shift : null;
+        return $mine;
     }
 
     private function rangeLabel(WorkDate $from, WorkDate $to): string
     {
         return WorkDateLabel::short($from).' – '.WorkDateLabel::short($to);
-    }
-
-    /** The shift being taken. No balance and no opportunity: it is not a choice. */
-    private function requestedShiftView(RosteredDay $day, SwapRequest $request, SwapGroup $group): SwapComposerShiftView
-    {
-        $date = $request->workDate();
-
-        return new SwapComposerShiftView(
-            $day->key(),
-            $day->assignmentId,
-            $day->date,
-            WorkDateLabel::headline($date),
-            WorkDateLabel::compact($date),
-            $day->shiftLabel,
-            $day->abbreviation,
-            $day->hours(),
-            $day->durationMinutes(),
-            $day->durationLabel(),
-            $day->endsNextDay,
-            $day->shiftKind->value,
-            $day->shiftKind->tone(),
-            $group->label(),
-            $group->workplaceName,
-            false,
-            null,
-            0,
-            '',
-            '',
-            null,
-            0,
-        );
     }
 }

@@ -198,14 +198,24 @@ veces es una declaración y no dos. Retirar pone `active = false`.
 
 ### Candidatos
 
-Quien publica ve quién se ha ofrecido ese día en ese pool, y nadie más lo ve.
-Sin descansos legales, sin solapes, sin ranking: eso es el matcher, y el matcher
-necesita antes los datos que esta fase produce. Ver
-[ADR 10](adr/0010-swap-requests-and-availability.md).
+Las solicitudes profesionalmente incompatibles no se muestran. Las que
+pertenecen al mismo pool pero chocan con el cuadrante sí se muestran, sin acción
+y con el conflicto concreto. `Availability` puede destacar una oportunidad,
+pero no es autorización ni requisito para decir «Se lo hago».
+
+La compatibilidad temporal usa los intervalos efectivos de todos los segmentos,
+incluidos los que cruzan medianoche. Trabajar el mismo `WorkDate` no bloquea por
+sí solo: dos segmentos sin solape pueden intercambiarse. Una separación corta se
+explica como aviso, pero en esta fase no se trata como una norma laboral que
+Turnin no tenga modelada por organización. Ver
+[ADR 12](adr/0012-direct-exchange-options-and-real-interval-compatibility.md).
 
 ### `SwapProposal` y `ExchangeBalance`
 
-`EXCHANGE` referencia dos turnos reales; `COVERAGE`, solo el solicitado; y
+`EXCHANGE` contiene entre una y cinco opciones de retorno, todas turnos reales
+del proponente. El propietario de la solicitud elige exactamente una al aceptar;
+esa elección y las dos compatibilidades se revalidan antes de modificar los
+cuadrantes. `COVERAGE` referencia solo el solicitado; y
 `DEFERRED` puede guardar una `ReturnPreference`, nunca un turno ficticio. Al
 aceptar el diferido se crea un saldo nominal con minutos derivados del horario.
 Se puede reservar y consumir parcialmente; disponer de saldo nunca mueve por sí
@@ -222,6 +232,16 @@ Es **el único detector**. Lo usan tanto «Encuéntrame un puente»
 a cambio (`GetSwapComposerCalendar`): esta última lo ejecuta una vez por
 calendario sobre el rango ya cargado, y la plantilla no vuelve a llamarlo. Si
 algún día cambia el umbral, cambia en los dos sitios a la vez.
+
+### Ejecución del intercambio directo
+
+Scheduling conserva la propiedad final de los cuadrantes. Al ejecutar, los
+segmentos elegidos se trasladan a las asignaciones activas actuales de ambas
+personas y se marcan con `RosterSource::SWAP`; la UI los distingue con `↔`.
+Editar el perfil laboral no crea una identidad de calendario nueva: actualiza la
+asignación primaria conservando su UUID. Para datos históricos que sí contienen
+una asignación sustituida, la ejecución resuelve la pertenencia activa por pool
+en vez de rechazar un acuerdo válido por comparar el identificador obsoleto.
 
 ## SwapPool: el concepto que hay que entender
 

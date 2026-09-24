@@ -4,6 +4,7 @@ declare(strict_types=1);
 
 namespace App\Swap\Infrastructure\Http;
 
+use App\Swap\Application\Command\AcceptSwapProposal;
 use App\Swap\Application\Command\CancelSwapRequest;
 use App\Swap\Application\Command\ChangeAvailabilityDay;
 use App\Swap\Application\Command\CreateSwapProposal;
@@ -16,19 +17,17 @@ use App\Swap\Application\Query\DayExchangeView;
 use App\Swap\Application\Query\FindRestBlockOpportunities;
 use App\Swap\Application\Query\GetChangesSetup;
 use App\Swap\Application\Query\GetDayExchange;
-use App\Swap\Application\Query\GetExchangeBalances;
 use App\Swap\Application\Query\GetMonthExchangeMarks;
 use App\Swap\Application\Query\GetMyAvailability;
 use App\Swap\Application\Query\GetMySwapRequests;
-use App\Swap\Application\Query\GetOfferContext;
 use App\Swap\Application\Query\GetOpenSwapRequests;
 use App\Swap\Application\Query\GetSwapComposerCalendar;
 use App\Swap\Application\Query\GetSwapGroups;
 use App\Swap\Application\Query\GetSwapProposalBoard;
+use App\Swap\Application\Query\GetSwapProposalDecision;
 use App\Swap\Application\Query\MonthExchangeMarksView;
-use App\Swap\Application\Query\OfferContext;
-use App\Swap\Application\Query\OpenSwapRequestView;
 use App\Swap\Application\Query\SwapComposerCalendarView;
+use App\Swap\Application\Query\SwapProposalDecisionView;
 use App\Swap\Application\SwapAccessDenied;
 use InvalidArgumentException;
 use Symfony\Component\HttpFoundation\JsonResponse;
@@ -41,7 +40,8 @@ use Throwable;
 use Twig\Environment;
 
 /**
- * "Cambios": what my groups need covering, and what I have offered.
+ * "Cambios": I want to give a shift away, and these are the ones my colleagues
+ * want to give away.
  *
  * Thin on purpose. Which pools a worker may see is decided in SwapWorkspace,
  * not here, so there is no path through this class that can widen it.
@@ -57,7 +57,7 @@ final readonly class ChangesController
     }
 
     #[Route('/app/changes', name: 'swap_changes', methods: ['GET'])]
-    public function changes(Request $request): Response
+    public function changes(): Response
     {
         $workerId = $this->session->workerId();
         if (null === $workerId) {
@@ -80,12 +80,14 @@ final readonly class ChangesController
             'groups' => $groups,
             'openRequests' => $open,
             'myRequests' => $this->session->handled($this->queryBus, new GetMySwapRequests($workerId)),
+            'proposals' => $this->session->handled($this->queryBus, new GetSwapProposalBoard($workerId)),
             'myAvailability' => $this->session->handled($this->queryBus, new GetMyAvailability($workerId)),
             'setup' => $setup instanceof ChangesSetupView ? $setup : new ChangesSetupView([], [], '', ''),
             'csrfToken' => $this->session->token(),
         ]));
     }
 
+    /** "Mis turnos publicados": what I am trying to give away, and who answered. */
     #[Route('/app/changes/mine', name: 'swap_changes_mine', methods: ['GET'])]
     public function mine(): Response
     {
@@ -97,11 +99,13 @@ final readonly class ChangesController
         return new Response($this->twig->render('swap/activity.html.twig', [
             'groups' => $this->session->handled($this->queryBus, new GetSwapGroups($workerId)),
             'myRequests' => $this->session->handled($this->queryBus, new GetMySwapRequests($workerId)),
+            'proposals' => $this->session->handled($this->queryBus, new GetSwapProposalBoard($workerId)),
             'myAvailability' => $this->session->handled($this->queryBus, new GetMyAvailability($workerId)),
             'csrfToken' => $this->session->token(),
         ]));
     }
 
+    /** "Turnos de compañeros", with the verdict on each one already decided. */
     #[Route('/app/changes/available', name: 'swap_changes_available', methods: ['GET'])]
     public function available(): Response
     {
@@ -116,7 +120,7 @@ final readonly class ChangesController
         ]));
     }
 
-    /** "Quiero quitarme este turno", from the calendar's day sheet. */
+    /** "Quiero librar este turno", from the calendar's day sheet or the guide. */
     #[Route('/app/changes/publicar', name: 'swap_request_open', methods: ['POST'])]
     public function publish(Request $request): JsonResponse
     {
@@ -144,11 +148,10 @@ final readonly class ChangesController
     }
 
     /**
-     * "Me interesa": choose which of my own shifts to ask for in return.
+     * "Se lo hago": my own calendar, with the shifts this colleague could do.
      *
-     * The whole screen is one read model, so the week being shown and the shift
-     * already chosen travel in the query string and the page works with nothing
-     * but a browser.
+     * The week being shown and the shifts already ticked travel in the query
+     * string so the page works with nothing but a browser.
      */
     #[Route('/app/changes/{requestId}/intercambio', name: 'swap_proposal_new_exchange', methods: ['GET'])]
     public function newExchange(Request $request, string $requestId): Response
@@ -163,7 +166,7 @@ final readonly class ChangesController
                 $workerId,
                 $requestId,
                 $request->query->getInt('semana'),
-                $request->query->getString('turno') ?: null,
+                array_values(array_filter($request->query->all('turnos'), static fn (mixed $value): bool => \is_string($value) && '' !== trim($value))),
             ));
         } catch (Throwable $exception) {
             $cause = SwapSession::rootCause($exception);
@@ -183,12 +186,7 @@ final readonly class ChangesController
         ]));
     }
 
-    #[Route('/app/changes/{requestId}/cobertura', name: 'swap_proposal_new_coverage', methods: ['GET'])]
-    public function newCoverage(string $requestId): Response
-    {
-        return $this->proposalComposer($requestId, 'coverage');
-    }
-
+    /** "Enviar N opciones": one proposal carrying one to five return shifts. */
     #[Route('/app/changes/{requestId}/propuestas', name: 'swap_proposal_create', methods: ['POST'])]
     public function createProposal(Request $request, string $requestId): Response
     {
@@ -200,17 +198,16 @@ final readonly class ChangesController
             return new Response('La sesión ha caducado.', 419);
         }
         try {
-            $offered = explode('|', $request->request->getString('offeredShift'), 2);
-            $preferredDuration = $request->request->getString('preferredDuration');
-            $preferredWeekdays = array_values(array_map('intval', array_filter($request->request->all('preferredWeekdays'), 'is_string')));
-            $this->session->handled($this->commandBus, new CreateSwapProposal($workerId, $requestId, $request->request->getString('kind'), $offered[0] ?? null, $offered[1] ?? null, $request->request->getString('preferredMonth') ?: null, $request->request->getString('preferredShiftKind') ?: null, '' === $preferredDuration ? null : (int) $preferredDuration, $preferredWeekdays));
+            $offered = array_values(array_filter($request->request->all('offeredShifts'), static fn (mixed $value): bool => \is_string($value) && '' !== trim($value)));
+            $this->session->handled($this->commandBus, new CreateSwapProposal($workerId, $requestId, $offered));
         } catch (Throwable $exception) {
             return new Response(SwapSession::rootCause($exception)->getMessage(), Response::HTTP_UNPROCESSABLE_ENTITY);
         }
 
-        return new RedirectResponse('/app/changes/proposals?sent=1');
+        return new RedirectResponse('/app/changes/proposals?enviada=1');
     }
 
+    /** "Mis intercambios": everything proposed to me and by me. */
     #[Route('/app/changes/proposals', name: 'swap_proposals', methods: ['GET'])]
     public function proposals(): Response
     {
@@ -219,32 +216,61 @@ final readonly class ChangesController
             return new RedirectResponse('/login');
         }
 
-        return new Response($this->twig->render('swap/proposals.html.twig', ['proposals' => $this->session->handled($this->queryBus, new GetSwapProposalBoard($workerId)), 'csrfToken' => $this->session->token()]));
+        return new Response($this->twig->render('swap/proposals.html.twig', [
+            'proposals' => $this->session->handled($this->queryBus, new GetSwapProposalBoard($workerId)),
+            'csrfToken' => $this->session->token(),
+        ]));
     }
 
-    #[Route('/app/changes/balances', name: 'swap_balances', methods: ['GET'])]
-    public function balances(): Response
+    /** "¿Cuál de estos le puedes hacer tú?" */
+    #[Route('/app/changes/proposals/{proposalId}', name: 'swap_proposal_decision', methods: ['GET'])]
+    public function proposalDecision(string $proposalId): Response
     {
         $workerId = $this->session->workerId();
         if (null === $workerId) {
             return new RedirectResponse('/login');
         }
 
-        return new Response($this->twig->render('swap/balances.html.twig', ['balances' => $this->session->handled($this->queryBus, new GetExchangeBalances($workerId))]));
+        try {
+            $decision = $this->session->handled($this->queryBus, new GetSwapProposalDecision($workerId, $proposalId));
+        } catch (Throwable $exception) {
+            $cause = SwapSession::rootCause($exception);
+            if ($cause instanceof SwapAccessDenied || $cause instanceof InvalidArgumentException) {
+                return new Response('Esa propuesta ya no está disponible.', Response::HTTP_NOT_FOUND);
+            }
+
+            throw $exception;
+        }
+        if (!$decision instanceof SwapProposalDecisionView) {
+            return new Response('Esa propuesta ya no está disponible.', Response::HTTP_NOT_FOUND);
+        }
+
+        return new Response($this->twig->render('swap/proposal_decision.html.twig', [
+            'decision' => $decision,
+            'csrfToken' => $this->session->token(),
+        ]));
     }
 
-    #[Route('/app/changes/bridge', name: 'swap_bridge_finder', methods: ['GET'])]
-    public function bridgeFinder(): Response
+    #[Route('/app/changes/proposals/{proposalId}/aceptar', name: 'swap_proposal_accept', methods: ['POST'])]
+    public function acceptProposal(Request $request, string $proposalId): Response
     {
         $workerId = $this->session->workerId();
         if (null === $workerId) {
             return new RedirectResponse('/login');
         }
+        if (!$this->session->isValid($request)) {
+            return new Response('La sesión ha caducado.', 419);
+        }
+        try {
+            $this->session->handled($this->commandBus, new AcceptSwapProposal($workerId, $proposalId, $request->request->getString('optionId')));
+        } catch (Throwable $exception) {
+            return new Response(SwapSession::rootCause($exception)->getMessage(), Response::HTTP_UNPROCESSABLE_ENTITY);
+        }
 
-        return new Response($this->twig->render('swap/bridges.html.twig', ['opportunities' => $this->session->handled($this->queryBus, new FindRestBlockOpportunities($workerId))]));
+        return new RedirectResponse('/app/changes/proposals?hecho=1');
     }
 
-    #[Route('/app/changes/proposals/{proposalId}/{decision}', name: 'swap_proposal_decide', requirements: ['decision' => 'accept|reject|withdraw'], methods: ['POST'])]
+    #[Route('/app/changes/proposals/{proposalId}/{decision}', name: 'swap_proposal_decide', requirements: ['decision' => 'reject|withdraw'], methods: ['POST'])]
     public function decideProposal(Request $request, string $proposalId, string $decision): Response
     {
         $workerId = $this->session->workerId();
@@ -261,6 +287,17 @@ final readonly class ChangesController
         }
 
         return new RedirectResponse('/app/changes/proposals');
+    }
+
+    #[Route('/app/changes/bridge', name: 'swap_bridge_finder', methods: ['GET'])]
+    public function bridgeFinder(): Response
+    {
+        $workerId = $this->session->workerId();
+        if (null === $workerId) {
+            return new RedirectResponse('/login');
+        }
+
+        return new Response($this->twig->render('swap/bridges.html.twig', ['opportunities' => $this->session->handled($this->queryBus, new FindRestBlockOpportunities($workerId))]));
     }
 
     /** "Puedo trabajar este día", optionally narrowed to some of my groups. */
@@ -297,25 +334,6 @@ final readonly class ChangesController
             }
 
             return ['dates' => $dates, 'pools' => $pools];
-        });
-    }
-
-    /**
-     * "Puedo hacerlo" on somebody else's card. It declares availability for
-     * that request's group and day — no proposal, no agreement, nothing that
-     * moves a shift. The author will see one more person available.
-     */
-    #[Route('/app/changes/{requestId}/puedo', name: 'swap_request_offer', methods: ['POST'])]
-    public function offer(Request $request, string $requestId): JsonResponse
-    {
-        return $this->session->respond($request, function (string $workerId) use ($requestId): array {
-            $view = $this->session->handled($this->queryBus, new GetOfferContext($workerId, $requestId));
-            if (!$view instanceof OfferContext) {
-                throw new InvalidArgumentException('No hemos podido encontrar ese turno.');
-            }
-            $this->commandBus->dispatch(new DeclareAvailability($workerId, $view->assignmentId, $view->date, [$view->swapPoolId], [$view->shiftKind]));
-
-            return ['date' => $view->date, 'alreadyAvailable' => $view->alreadyAvailable];
         });
     }
 
@@ -377,27 +395,5 @@ final readonly class ChangesController
         }
 
         return new JsonResponse(['ok' => true, 'result' => $view instanceof DayExchangeView ? $view : null]);
-    }
-
-    /** Coverage has nothing to choose: it only confirms which shift is taken. */
-    private function proposalComposer(string $requestId, string $kind): Response
-    {
-        $workerId = $this->session->workerId();
-        if (null === $workerId) {
-            return new RedirectResponse('/login');
-        }
-        $requests = $this->session->handled($this->queryBus, new GetOpenSwapRequests($workerId));
-        $target = null;
-        foreach (\is_array($requests) ? $requests : [] as $candidate) {
-            if ($candidate instanceof OpenSwapRequestView && $candidate->requestId === $requestId) {
-                $target = $candidate;
-                break;
-            }
-        }
-        if (null === $target) {
-            return new Response('Este turno ya no está disponible.', Response::HTTP_NOT_FOUND);
-        }
-
-        return new Response($this->twig->render('swap/proposal_composer.html.twig', ['request' => $target, 'kind' => $kind, 'csrfToken' => $this->session->token()]));
     }
 }

@@ -26,9 +26,9 @@ final readonly class SwapComposerDayView
         public string $stateLabel,
         public array $shifts,
         public bool $isSelectable,
-        /** Set only when the day has exactly one offerable shift. */
+        /** Set only when the day holds exactly one shift the colleague can do. */
         public ?string $selectableKey,
-        public ?SwapComposerOpportunityView $opportunity,
+        public bool $isRecommended,
         public string $ariaLabel,
     ) {
     }

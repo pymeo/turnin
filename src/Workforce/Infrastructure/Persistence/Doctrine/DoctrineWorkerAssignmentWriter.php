@@ -28,10 +28,16 @@ final readonly class DoctrineWorkerAssignmentWriter implements WorkerAssignmentW
             $now = $assignment->updatedAt();
             $previousId = $this->connection->fetchOne('SELECT id FROM workforce_worker_assignments WHERE worker_id = :worker AND active = TRUE AND primary_assignment = TRUE', ['worker' => $assignment->workerId()]);
             if (\is_string($previousId)) {
-                $this->connection->executeStatement('UPDATE workforce_worker_assignments SET active = FALSE, primary_assignment = FALSE, updated_at = :now WHERE id = :id', ['now' => $now, 'id' => $previousId], ['now' => 'datetime_immutable']);
                 $this->connection->executeStatement('UPDATE workforce_swap_pool_memberships SET active = FALSE, updated_at = :now WHERE assignment_id = :id AND active = TRUE', ['now' => $now, 'id' => $previousId], ['now' => 'datetime_immutable']);
+                if ($previousId === $assignment->id()) {
+                    $this->updateAssignment($assignment);
+                } else {
+                    $this->connection->executeStatement('UPDATE workforce_worker_assignments SET active = FALSE, primary_assignment = FALSE, updated_at = :now WHERE id = :id', ['now' => $now, 'id' => $previousId], ['now' => 'datetime_immutable']);
+                }
             }
-            $this->insertAssignment($assignment, true);
+            if ($previousId !== $assignment->id()) {
+                $this->insertAssignment($assignment, true);
+            }
             foreach ($accesses as $access) {
                 $this->persistAccess($assignment, $access);
             }
@@ -107,6 +113,15 @@ final readonly class DoctrineWorkerAssignmentWriter implements WorkerAssignmentW
     private function insertAssignment(WorkerAssignment $assignment, bool $primary): void
     {
         $this->connection->executeStatement('INSERT INTO workforce_worker_assignments (id, worker_id, workplace_id, staff_category_id, specialty_id, organizational_unit_id, functional_area, employer_id, primary_assignment, active, created_at, updated_at) VALUES (:id, :worker, :workplace, :category, :specialty, :unit, :area, :employer, :primary, TRUE, :created, :updated)', ['id' => $assignment->id(), 'worker' => $assignment->workerId(), 'workplace' => (string) $assignment->workplaceId(), 'category' => $assignment->staffCategoryId(), 'specialty' => $assignment->specialtyId(), 'unit' => $assignment->organizationalUnitId(), 'area' => $assignment->functionalArea(), 'employer' => $assignment->employerId(), 'primary' => $primary, 'created' => $assignment->createdAt(), 'updated' => $assignment->updatedAt()], ['primary' => 'boolean', 'created' => 'datetime_immutable', 'updated' => 'datetime_immutable']);
+    }
+
+    private function updateAssignment(WorkerAssignment $assignment): void
+    {
+        $this->connection->executeStatement(
+            'UPDATE workforce_worker_assignments SET workplace_id = :workplace, staff_category_id = :category, specialty_id = :specialty, organizational_unit_id = :unit, functional_area = :area, employer_id = :employer, primary_assignment = TRUE, active = TRUE, updated_at = :updated WHERE id = :id AND worker_id = :worker',
+            ['workplace' => (string) $assignment->workplaceId(), 'category' => $assignment->staffCategoryId(), 'specialty' => $assignment->specialtyId(), 'unit' => $assignment->organizationalUnitId(), 'area' => $assignment->functionalArea(), 'employer' => $assignment->employerId(), 'updated' => $assignment->updatedAt(), 'id' => $assignment->id(), 'worker' => $assignment->workerId()],
+            ['updated' => 'datetime_immutable'],
+        );
     }
 
     /** @param array<string, mixed> $row */

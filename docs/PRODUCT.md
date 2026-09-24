@@ -29,11 +29,14 @@ modelo tiene que soportarlas sin reescribirse. Por eso el `SwapPool`
   —implementado—;
 * indicar su disponibilidad para un día y un grupo —implementado; los grados
   «quiero» / «podría», todavía no—;
-* publicar un turno suyo buscando quien pueda hacerlo, y ver quién se ha
-  ofrecido —implementado—;
-* recibir propuestas —y solo las relevantes;
-* aceptar propuestas;
-* pedir intercambios;
+* publicar un turno suyo buscando quien pueda hacerlo y ver qué compañeros se
+  ofrecen —implementado—;
+* revisar turnos de compañeros con «Puedes hacerlo» o el conflicto horario
+  concreto —implementado—;
+* decir «Se lo hago», escoger de uno a cinco turnos propios en un calendario y
+  dejar que el compañero elija uno —implementado—;
+* confirmar el intercambio y reconocer después ambos turnos con `↔` en el
+  calendario —implementado—;
 * decir «quiero librar este día»;
 * decir «quiero coger turnos»;
 * ceder un turno sin recibir otro a cambio;

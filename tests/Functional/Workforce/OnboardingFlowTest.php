@@ -105,6 +105,7 @@ final class OnboardingFlowTest extends WebTestCase
         $places = $this->client->request('GET', '/app/workplaces');
         self::assertResponseIsSuccessful();
         self::assertCount(1, $places->filter('article[data-assignment-id]'), 'Additional pool access never becomes another workplace card.');
+        $assignmentId = $this->scalar('SELECT id FROM workforce_worker_assignments WHERE worker_id = :worker AND active = TRUE AND primary_assignment = TRUE', ['worker' => $this->userId]);
         self::assertNotSame('600123123', $this->scalar('SELECT phone_encrypted FROM identity_personal_profiles WHERE user_id = :worker', ['worker' => $this->userId]));
         self::assertNotSame('12345678Z', $this->scalar('SELECT identity_document_fingerprint FROM identity_usage_identities WHERE user_id = :worker', ['worker' => $this->userId]));
 
@@ -116,6 +117,7 @@ final class OnboardingFlowTest extends WebTestCase
         $this->post('/onboarding/complete');
 
         self::assertSame(1, $this->countRows('SELECT COUNT(*) FROM workforce_worker_assignments WHERE worker_id = :worker AND active = TRUE', ['worker' => $this->userId]));
+        self::assertSame($assignmentId, $this->scalar('SELECT id FROM workforce_worker_assignments WHERE worker_id = :worker AND active = TRUE AND primary_assignment = TRUE', ['worker' => $this->userId]), 'Editing the labour profile keeps the calendar identity and its existing shifts.');
         self::assertSame(1, $this->countRows('SELECT COUNT(*) FROM workforce_swap_pool_memberships WHERE worker_id = :worker AND active = TRUE', ['worker' => $this->userId]));
         self::assertSame(1, $this->countRows('SELECT COUNT(*) FROM workforce_swap_pool_memberships WHERE worker_id = :worker AND active = TRUE AND is_primary = TRUE', ['worker' => $this->userId]));
     }

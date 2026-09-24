@@ -120,7 +120,11 @@ export default class extends Controller {
 		this.renderCalendar();
 		this.showPanel('availabilityDates', 'Paso 1 de 4', '¿Cuándo puedes trabajar?');
 		this.openSheet();
-		if (editDate) this.continueToKinds();
+		// Opening from `?edit=` happens while the nested bottom-sheet controller
+		// is still connecting. Move the edit step after that microtask so the
+		// sheet cannot finish opening on the date picker and hide the preloaded
+		// shift kinds.
+		if (editDate) queueMicrotask(() => this.continueToKinds());
 	}
 
 	renderCalendar() {
@@ -260,11 +264,6 @@ export default class extends Controller {
 		finally { this.busy(event.currentTarget, false); }
 	}
 
-	async offer(event) {
-		const button = event.currentTarget; this.busy(button, true);
-		try { await this.post(`/app/changes/${button.dataset.requestId}/puedo`); const done = document.createElement('p'); done.className = 'swap-card-done'; done.textContent = '✓ Encaja con tu disponibilidad'; button.replaceWith(done); }
-		catch (error) { this.showError(error.message); this.busy(button, false); }
-	}
 	async cancelRequest(event) {
 		const button = event.currentTarget; this.busy(button, true);
 		try { await this.post(`/app/changes/${button.dataset.requestId}/retirar`); window.location.reload(); }

@@ -69,7 +69,7 @@ test.describe('guided changes', () => {
 		expect(ids[0]).toBe(ids[1]);
 		await page.goto('/app/changes/mine');
 		await expect(page.locator('.activity-card[data-request-id]')).toHaveCount(1);
-		await expect(page.locator('.activity-card[data-request-id]')).toContainText('Buscando compañero');
+		await expect(page.locator('.activity-card[data-request-id]')).toContainText('Todavía nadie se ha ofrecido');
 	});
 
 	test('B/C — María saves two days grouped and edits one without duplicated cards', async ({ browser }, testInfo) => {
@@ -157,8 +157,10 @@ test.describe('guided changes', () => {
 
 test('changes dashboard remains readable across the viewport matrix', async ({ page }, testInfo) => {
 	await page.goto('/app/changes');
-	await expect(page.getByRole('heading', { name: '¿Qué necesitas?' })).toBeVisible();
+	await expect(page.getByRole('heading', { name: 'Cambios', exact: true })).toBeVisible();
+	await expect(page.getByRole('heading', { name: 'Para ti' })).toBeVisible();
 	await expect(page.getByRole('button', { name: /Quiero librar un turno/ })).toBeVisible();
+	await page.getByText('Más opciones', { exact: true }).click();
 	await expect(page.getByRole('button', { name: /Puedo trabajar/ })).toBeVisible();
 	await expect(page.locator('body')).not.toHaveCSS('overflow-x', 'scroll');
 	await page.screenshot({ path: testInfo.outputPath(`changes-${testInfo.project.name}.png`), fullPage: true });

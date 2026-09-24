@@ -1,41 +1,54 @@
 {% extends 'base.html.twig' %}
 
-{% block title %}Turnin — Mi actividad{% endblock %}
+{% block title %}Turnin — Mis turnos publicados{% endblock %}
 
 {% block body %}
 <main class="changes-shell" data-controller="changes" data-changes-csrf-value="{{ csrfToken }}">
     {% include 'identity/_authenticated_header.html.twig' %}
     <header class="changes-heading">
         <a class="text-sm text-ink-muted no-underline" href="{{ path('swap_changes') }}">‹ Cambios</a>
-        <h1>Mi actividad</h1>
-        <p>Lo que quieres librar y los días en los que puedes trabajar.</p>
+        <h1>Mis turnos publicados</h1>
+        <p>Los turnos que quieres librar y quién se ha ofrecido.</p>
     </header>
 
     <section class="activity-section" aria-labelledby="release-title">
-        <h2 id="release-title" class="changes-section-title">Quiero librar</h2>
+        <h2 id="release-title" class="sr-only">Turnos que quiero librar</h2>
         {% for request in myRequests %}
+            {% set answers = proposals|filter(proposal => proposal.incoming and proposal.decidable and proposal.requestId == request.requestId) %}
             <article class="activity-card" data-request-id="{{ request.requestId }}">
-                <p class="swap-card-date">{{ request.dateHeadline }}</p>
-                <div><h3>{{ request.shiftLabel }}</h3><p class="shift-card-hours">{{ request.hours }}</p><p class="shift-card-duration">{{ request.durationLabel|upper }}</p><p><strong>{{ request.workplaceName }}</strong><br><span class="text-ink-muted">{{ request.groupLabel }}</span></p></div>
+                <p class="swap-card-date">{{ request.dateHeadline|upper }}</p>
+                <p class="shift-card-hours">{{ request.hours }}</p>
+                <p class="shift-card-duration">{{ request.durationLabel|upper }}</p>
+                <h3>{{ request.shiftLabel }}</h3>
+                <p class="text-sm"><strong>{{ request.groupLabel }}</strong><br><span class="text-ink-muted">{{ request.workplaceName }}</span></p>
                 <p class="activity-status">
-                    {% if request.candidateCount > 0 %}<strong>{{ request.candidateCount }} {{ request.candidateCount == 1 ? 'persona disponible' : 'personas disponibles' }}</strong>{% else %}Buscando compañero · 0 personas disponibles{% endif %}
+                    {% if answers|length %}
+                        <strong>{{ answers|length }} {{ answers|length == 1 ? 'compañero se ofrece' : 'compañeros se ofrecen' }}</strong>
+                    {% else %}
+                        Todavía nadie se ha ofrecido.
+                    {% endif %}
                 </p>
                 <div class="activity-actions">
-                    <a class="btn-secondary" href="{{ path('scheduling_calendar', {month: request.date|slice(0, 7)}) }}">Ver</a>
+                    {% if answers|length %}
+                        <a class="btn-primary" href="{{ path('swap_proposal_decision', {proposalId: answers[0].proposalId}) }}">Ver y elegir</a>
+                    {% else %}
+                        <a class="btn-secondary" href="{{ path('scheduling_calendar', {month: request.date|slice(0, 7)}) }}">Ver en el calendario</a>
+                    {% endif %}
                     <button class="btn-ghost" type="button" data-action="changes#cancelRequest" data-request-id="{{ request.requestId }}">Dejar de buscar</button>
                 </div>
             </article>
         {% else %}
-            <div class="empty-state"><span>No estás buscando cambio para ningún turno.</span><a class="btn-primary" href="{{ path('swap_changes', {flow: 'release'}) }}">Quiero librar un turno</a></div>
+            <div class="empty-state"><strong>No estás intentando librar ningún turno.</strong><a class="btn-primary" href="{{ path('swap_changes', {flow: 'release'}) }}">Quiero librar un turno</a></div>
         {% endfor %}
     </section>
-    <a class="btn-secondary btn-block" href="{{ path('swap_proposals') }}">Ver propuestas</a>
+
+    <a class="btn-secondary btn-block" href="{{ path('swap_proposals') }}">Mis intercambios</a>
 
     <section class="activity-section" aria-labelledby="availability-title">
         <h2 id="availability-title" class="changes-section-title">Puedo trabajar</h2>
         {% for day in myAvailability %}
             <article class="activity-card" data-availability-date="{{ day.date }}">
-                <p class="swap-card-date">{{ day.dateHeadline }}</p>
+                <p class="swap-card-date">{{ day.dateHeadline|upper }}</p>
                 <h3>{{ day.shiftLabels|join(' · ') }}</h3>
                 {% for place in day.places %}
                     <p><strong>{{ place.workplaceName }}</strong><br><span class="text-ink-muted">{{ place.destinations|join(' · ') }}</span></p>
@@ -43,9 +56,14 @@
                 <a class="btn-secondary self-start" href="{{ path('swap_changes', {edit: day.date}) }}">Editar</a>
             </article>
         {% else %}
-            <div class="empty-state"><strong>¿Te vendría bien trabajar algún día?</strong><span>Indica cuándo puedes y te enseñaremos turnos compatibles.</span><a class="btn-primary" href="{{ path('swap_changes', {flow: 'availability'}) }}">Añadir disponibilidad</a></div>
+            <div class="empty-state">
+                <strong>¿Te vendría bien trabajar algún día?</strong>
+                <span>Indica cuándo puedes y te enseñaremos turnos compatibles.</span>
+                <a class="btn-primary" href="{{ path('swap_changes', {flow: 'availability'}) }}">Añadir disponibilidad</a>
+            </div>
         {% endfor %}
     </section>
+
     <p class="field-error hidden" data-changes-target="error" role="alert"></p>
 </main>
 {% endblock %}

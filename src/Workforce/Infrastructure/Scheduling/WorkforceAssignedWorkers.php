@@ -7,6 +7,8 @@ namespace App\Workforce\Infrastructure\Scheduling;
 use App\Scheduling\Domain\AssignedWorker;
 use App\Scheduling\Domain\AssignedWorkers;
 use App\Workforce\Domain\WorkplaceTimeZone;
+use DateTimeZone;
+use Doctrine\DBAL\ArrayParameterType;
 use Doctrine\DBAL\Connection;
 
 /**
@@ -46,6 +48,28 @@ final readonly class WorkforceAssignedWorkers implements AssignedWorkers
         }
 
         return null;
+    }
+
+    public function timeZonesFor(array $assignmentIds): array
+    {
+        if ([] === $assignmentIds) {
+            return [];
+        }
+
+        $rows = $this->connection->fetchAllAssociative(
+            'SELECT a.id, w.autonomous_community FROM workforce_worker_assignments a JOIN workforce_workplaces w ON w.id = a.workplace_id WHERE a.id IN (:ids)',
+            ['ids' => array_values(array_unique($assignmentIds))],
+            ['ids' => ArrayParameterType::STRING],
+        );
+
+        $zones = [];
+        foreach ($rows as $row) {
+            $zones[$this->text($row['id'] ?? null)] = new DateTimeZone(
+                WorkplaceTimeZone::forAutonomousCommunity($this->nullable($row['autonomous_community'] ?? null)),
+            );
+        }
+
+        return $zones;
     }
 
     /** @return list<AssignedWorker> */

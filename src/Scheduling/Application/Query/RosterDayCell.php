@@ -24,6 +24,8 @@ final readonly class RosterDayCell
         public array $segments,
         public string $ariaLabel,
         public bool $isWeekend,
+        /** Both the received shift and the newly freed day keep this trace. */
+        public bool $fromSwap = false,
     ) {
     }
 

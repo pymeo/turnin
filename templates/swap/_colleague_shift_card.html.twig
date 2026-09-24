@@ -1,0 +1,22 @@
+{# One colleague's shift, with the answer already on it.
+
+   Green or red is never the only signal: the verdict is a sentence, and a shift
+   that cannot be done simply has no button. Parameter: request. #}
+<article class="swap-card shift-trading-card" data-request-id="{{ request.requestId }}" data-can-cover="{{ request.canCover ? 'true' : 'false' }}">
+    <p class="changes-kicker">{{ request.authorName }} quiere librar</p>
+    <p class="swap-card-date">{{ request.dateHeadline|upper }}</p>
+    <p class="shift-card-hours">{{ request.hours }}{% if request.endsNextDay %} <small>termina al día siguiente</small>{% endif %}</p>
+    <p class="shift-card-duration">{{ request.durationLabel|upper }}</p>
+    <h3>{{ request.shiftLabel }}</h3>
+    <p class="text-sm"><strong>{{ request.groupLabel }}</strong><br><span class="text-ink-muted">{{ request.workplaceName }}</span></p>
+
+    {% if request.canCover %}
+        <p class="verdict verdict-yes"><span aria-hidden="true">✓</span> Puedes hacer este turno</p>
+        {% if request.obstacleMessage %}<p class="compatibility-note"><span aria-hidden="true">⚠</span> {{ request.obstacleMessage }}</p>{% endif %}
+        {% if request.alreadyAvailable %}<p class="verdict-hint">Además habías indicado que este día te venía bien trabajar.</p>{% endif %}
+        <a class="btn-primary btn-block" href="{{ path('swap_proposal_new_exchange', {requestId: request.requestId}) }}">Se lo hago</a>
+    {% else %}
+        <p class="verdict verdict-no"><span aria-hidden="true">✕</span> No puedes hacer este turno</p>
+        <p class="verdict-hint">{{ request.obstacleMessage }}</p>
+    {% endif %}
+</article>

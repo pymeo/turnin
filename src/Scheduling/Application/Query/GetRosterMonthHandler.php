@@ -12,6 +12,7 @@ use App\Scheduling\Domain\RosterDay;
 use App\Scheduling\Domain\RosterDays;
 use App\Scheduling\Domain\RosterMonth;
 use App\Scheduling\Domain\RosterMonthSummary;
+use App\Scheduling\Domain\RosterSource;
 use App\Scheduling\Domain\ShiftSegment;
 use App\Scheduling\Domain\WorkDate;
 
@@ -87,7 +88,9 @@ final readonly class GetRosterMonthHandler
         }
 
         if ($day->isRest()) {
-            return new RosterDayCell((string) $date, $date->day, $inMonth, $isToday, 'rest', 'L', 'rest', 'Libre', [], $spoken.', libre', $weekend);
+            $fromSwap = RosterSource::SWAP === $day->source();
+
+            return new RosterDayCell((string) $date, $date->day, $inMonth, $isToday, 'rest', 'L', 'rest', 'Libre', [], $spoken.', libre'.($fromSwap ? ' tras un cambio de turno' : ''), $weekend, $fromSwap);
         }
 
         $segments = array_map(static fn (ShiftSegment $segment): string => $segment->describe(), $day->segments());
@@ -106,8 +109,9 @@ final readonly class GetRosterMonthHandler
             $tone,
             $label,
             $segments,
-            \sprintf('%s, turno de %s%s', $spoken, mb_strtolower($label), $hours),
+            \sprintf('%s, turno de %s%s%s', $spoken, mb_strtolower($label), $hours, RosterSource::SWAP === $day->source() ? ', recibido mediante un cambio' : ''),
             $weekend,
+            RosterSource::SWAP === $day->source(),
         );
     }
 

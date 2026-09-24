@@ -123,6 +123,14 @@ un día trabajado y «Puedo trabajar este día» sobre uno libre o sin indicar.
 * comparador por horas reales y saldo parcial sin dinero;
 * preferencias futuras opcionales;
 * detector determinista de puentes con umbral, score y razones explicables.
+* flujo directo reducido a «Quiero librar» → «Se lo hago» → enviar 1–5
+  opciones reales → elegir una → ejecutar;
+* compatibilidad por intervalos reales, con solapes bloqueantes y descanso corto
+  informativo;
+* calendario combinado multiselección, navegación mensual que conserva las
+  opciones y turnos recibidos/cedidos identificados con `↔`;
+* edición del perfil laboral sin romper la identidad del cuadrante, y
+  compatibilidad con solicitudes históricas ligadas a una asignación anterior.
 
 Esta pantalla de consulta es un andamio deliberado para validar la red y
 producir los datos que consumirá el matcher. El producto final no es un tablón.

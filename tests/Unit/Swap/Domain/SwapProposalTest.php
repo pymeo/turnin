@@ -7,6 +7,7 @@ namespace App\Tests\Unit\Swap\Domain;
 use App\Swap\Domain\ReturnPreference;
 use App\Swap\Domain\SwapProposal;
 use App\Swap\Domain\SwapProposalKind;
+use App\Swap\Domain\SwapProposalOption;
 use App\Swap\Domain\SwapProposalStatus;
 use App\Swap\Domain\WorkDate;
 use DateTimeImmutable;
@@ -15,63 +16,89 @@ use PHPUnit\Framework\TestCase;
 
 final class SwapProposalTest extends TestCase
 {
-    public function test_exchange_references_a_real_return_shift(): void
+    public function test_exchange_accepts_one_or_five_real_return_options(): void
     {
-        $proposal = $this->exchange();
+        $one = $this->exchange([$this->option(1)]);
+        self::assertCount(1, $one->options());
+        self::assertSame(SwapProposalStatus::PENDING, $one->status());
 
-        self::assertSame('roster-ana-22', $proposal->offeredRosterDayId());
-        self::assertSame('2026-09-22', (string) $proposal->offeredWorkDate());
-        self::assertSame(SwapProposalStatus::PENDING, $proposal->status());
+        $five = $this->exchange(array_map(fn (int $number): SwapProposalOption => $this->option($number), range(1, 5)));
+        self::assertCount(5, $five->options());
     }
 
-    public function test_coverage_has_no_return_shift(): void
+    public function test_exchange_rejects_zero_more_than_five_and_duplicate_options(): void
     {
-        $proposal = SwapProposal::propose('proposal', 'request', 'pedro', 'ana', 'assignment-ana', SwapProposalKind::COVERAGE, null, null, $this->now());
+        try {
+            /* @phpstan-ignore argument.type */
+            SwapProposal::proposeExchange('empty', 'request', 'pedro', 'ana', 'assignment-ana', [], $this->now());
+            self::fail('An empty exchange should have been rejected.');
+        } catch (InvalidArgumentException) {
+            self::addToAssertionCount(1);
+        }
 
-        self::assertNull($proposal->offeredRosterDayId());
-        self::assertNull($proposal->offeredWorkDate());
+        foreach ([array_map(fn (int $number): SwapProposalOption => $this->option($number), range(1, 6)), [$this->option(1), $this->option(1, 'another-id')]] as $options) {
+            try {
+                $this->exchange($options);
+                self::fail('The invalid options should have been rejected.');
+            } catch (InvalidArgumentException) {
+                self::addToAssertionCount(1);
+            }
+        }
     }
 
-    public function test_deferred_exchange_can_store_a_preference_or_leave_it_empty(): void
+    public function test_owner_chooses_exactly_one_offered_shift(): void
     {
-        $preference = new ReturnPreference('2026-10', null, 720, [5, 6]);
-        $withPreference = SwapProposal::propose('proposal', 'request', 'pedro', 'ana', 'assignment-ana', SwapProposalKind::DEFERRED, null, null, $this->now(), $preference);
-        $withoutPreference = SwapProposal::propose('proposal-2', 'request', 'pedro', 'ana', 'assignment-ana', SwapProposalKind::DEFERRED, null, null, $this->now());
+        $proposal = $this->exchange([$this->option(1), $this->option(2)]);
+        $proposal->chooseOption('pedro', 'option-2', $this->now());
 
-        self::assertSame($preference, $withPreference->returnPreference());
-        self::assertNull($withoutPreference->returnPreference());
-    }
+        self::assertSame('option-2', $proposal->chosenOptionId());
+        self::assertSame('2026-09-22', (string) $proposal->chosenOption()?->workDate);
 
-    public function test_exchange_without_real_shift_is_rejected(): void
-    {
         $this->expectException(InvalidArgumentException::class);
-        SwapProposal::propose('proposal', 'request', 'pedro', 'ana', 'assignment-ana', SwapProposalKind::EXCHANGE, null, null, $this->now());
+        $proposal->chooseOption('pedro', 'not-offered', $this->now());
     }
 
-    public function test_owner_accepts_or_rejects_and_proposer_withdraws(): void
+    public function test_non_exchange_kinds_keep_their_existing_contract_without_return_options(): void
     {
-        $accepted = $this->exchange();
-        $accepted->accept('pedro', $this->now());
-        self::assertSame(SwapProposalStatus::ACCEPTED, $accepted->status());
+        $coverage = SwapProposal::propose('coverage', 'request', 'pedro', 'ana', 'assignment-ana', SwapProposalKind::COVERAGE, $this->now());
+        $preference = new ReturnPreference('2026-10', null, 720, [5, 6]);
+        $deferred = SwapProposal::propose('deferred', 'request', 'pedro', 'ana', 'assignment-ana', SwapProposalKind::DEFERRED, $this->now(), $preference);
 
-        $rejected = $this->exchange();
+        self::assertSame([], $coverage->options());
+        self::assertSame($preference, $deferred->returnPreference());
+    }
+
+    public function test_owner_rejects_and_proposer_withdraws(): void
+    {
+        $rejected = $this->exchange([$this->option(1)]);
         $rejected->reject('pedro', $this->now());
         self::assertSame(SwapProposalStatus::REJECTED, $rejected->status());
 
-        $withdrawn = $this->exchange();
+        $withdrawn = $this->exchange([$this->option(1)]);
         $withdrawn->withdraw('ana', $this->now());
         self::assertSame(SwapProposalStatus::WITHDRAWN, $withdrawn->status());
     }
 
-    public function test_wrong_professional_cannot_decide(): void
+    public function test_wrong_professional_cannot_choose(): void
     {
         $this->expectException(InvalidArgumentException::class);
-        $this->exchange()->accept('ana', $this->now());
+        $this->exchange([$this->option(1)])->chooseOption('ana', 'option-1', $this->now());
     }
 
-    private function exchange(): SwapProposal
+    /** @param non-empty-list<SwapProposalOption> $options */
+    private function exchange(array $options): SwapProposal
     {
-        return SwapProposal::propose('proposal', 'request', 'pedro', 'ana', 'assignment-ana', SwapProposalKind::EXCHANGE, 'roster-ana-22', WorkDate::fromString('2026-09-22'), $this->now());
+        return SwapProposal::proposeExchange('proposal', 'request', 'pedro', 'ana', 'assignment-ana', $options, $this->now());
+    }
+
+    private function option(int $number, ?string $id = null): SwapProposalOption
+    {
+        return new SwapProposalOption(
+            $id ?? 'option-'.$number,
+            'assignment-ana',
+            'roster-ana-'.$number,
+            WorkDate::fromString('2026-09-'.str_pad((string) (20 + $number), 2, '0', \STR_PAD_LEFT)),
+        );
     }
 
     private function now(): DateTimeImmutable
