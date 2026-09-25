@@ -27,6 +27,9 @@ final readonly class NotifySwapAgreementReachedHandler
         ] as [$recipient, $other]) {
             $this->notifications->deliver($event->eventId(), $recipient, NotificationType::SWAP_AGREEMENT, 'Cambio acordado con '.$other, $body, $target);
         }
+        foreach ($event->approverIds as $approver) {
+            $this->notifications->deliver($event->eventId(), $approver, NotificationType::SWAP_APPROVAL_REQUESTED, 'Cambio pendiente de revisar', $event->requestOwnerName.' y '.$event->proposerName.' han acordado un cambio para el '.$this->shortDate($event->requestedDate).'.', '/app/responsable');
+        }
     }
 
     private function shortDate(string $date): string

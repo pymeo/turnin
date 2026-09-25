@@ -41,6 +41,6 @@ final class PostAuthenticationSuccessHandlerTest extends TestCase
 
         $response = (new PostAuthenticationSuccessHandler(new PostAuthenticationDestinationResolver()))->redirectFor($request, $token, 'main');
 
-        self::assertSame('/supervisor', $response->getTargetUrl());
+        self::assertSame('/app', $response->getTargetUrl());
     }
 }

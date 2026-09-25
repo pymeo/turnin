@@ -12,11 +12,9 @@ final class PostAuthenticationDestinationResolver
             return $targetPath;
         }
 
-        if ($worker) {
-            return '/app';
-        }
-
-        return $supervisor ? '/supervisor' : '/onboarding';
+        // One home for both capabilities: it shows the worker's shifts and,
+        // separately, any team this account supervises or is asking to.
+        return $worker || $supervisor ? '/app' : '/onboarding';
     }
 
     private function isSafeInternalPath(string $path): bool

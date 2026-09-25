@@ -26,6 +26,9 @@ final class SwapWorldSeed
     /** @var list<string> */
     private array $poolIds = [];
 
+    /** @var list<string> */
+    private array $assignmentIds = [];
+
     public function __construct(private readonly Connection $connection)
     {
     }
@@ -84,6 +87,7 @@ final class SwapWorldSeed
         $assignmentId = Uuid::v7()->toRfc4122();
         $email = $userId.'@example.test';
         $this->userIds[] = $userId;
+        $this->assignmentIds[] = $assignmentId;
 
         $this->connection->insert('identity_users', [
             'id' => $userId,
@@ -176,6 +180,12 @@ final class SwapWorldSeed
 
     public function cleanUp(): void
     {
+        // Assignments have no foreign key to the account yet (ROADMAP), so
+        // deleting the user alone would leave their rota behind for the next
+        // test that counts rows by date.
+        foreach ($this->assignmentIds as $assignmentId) {
+            $this->connection->delete('workforce_worker_assignments', ['id' => $assignmentId]);
+        }
         foreach ($this->userIds as $userId) {
             $this->connection->delete('identity_users', ['id' => $userId]);
         }

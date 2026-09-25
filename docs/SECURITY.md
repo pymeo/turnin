@@ -184,6 +184,27 @@ privadas. Solo admite GET y responde con `noindex,nofollow`, `no-store`,
 `no-referrer` y `nosniff`. Rechazo, expiración o revocación conservan la URL para
 explicar lo sucedido, pero la muestran inequívocamente como no vigente.
 
+### Enlaces de responsable
+
+Hay dos enlaces y ninguno concede permisos por conocerlo
+(→ [ADR 14](adr/0014-team-verified-supervisors.md)):
+
+* `/invitacion/responsable/{token}` permite a quien lo abre *pedir* ser
+  responsable de ese pool. 32 bytes aleatorios en base64url; solo se guarda el
+  hash; caduca a los 7 días; una vez respondido no se reutiliza. Anónimo solo
+  ve centro y equipo.
+* `/app/equipo/responsable/verificar/{token}` identifica una solicitud. El
+  token es un HMAC-SHA256 del id con `APP_SECRET`, guardado como hash: no es el
+  UUID ni se puede enumerar. Quien lo abre tiene que haber iniciado sesión y ser
+  miembro activo del pool; si no, recibe 403 y un mensaje sin nombre, email ni
+  equipo de la candidata.
+
+Toda acción de responsable (`/app/responsable`, aprobar, rechazar) vuelve a
+comprobar en servidor un `SupervisorAssignment` `VERIFIED` para el pool de ese
+cambio concreto. El flag de perfil, la página de origen, un query string o un
+token de invitación no cuentan. Un voto por compañero lo garantiza un índice
+único; un assignment activo por persona y pool, otro.
+
 Las suscripciones Web Push guardan endpoint y claves del navegador. Las claves
 VAPID privadas y la clave que cifra el token compartible entran solo por entorno;
 no se versionan. Pedir permiso push requiere el gesto explícito sobre «Activar

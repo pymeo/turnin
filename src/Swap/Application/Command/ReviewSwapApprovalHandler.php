@@ -5,6 +5,7 @@ declare(strict_types=1);
 namespace App\Swap\Application\Command;
 
 use App\Swap\Application\ExecuteSwapAgreement;
+use App\Swap\Application\SwapAccessDenied;
 use App\Swap\Application\SwapNotificationOutcome;
 use App\Swap\Domain\Event\SwapAgreementApproved;
 use App\Swap\Domain\Event\SwapAgreementRejected;
@@ -28,7 +29,14 @@ final readonly class ReviewSwapApprovalHandler
     public function __invoke(ReviewSwapApproval $command): void
     {
         $result = $this->transaction->run(function () use ($command): ?SwapNotificationOutcome {
-            $proposal = $this->proposals->byIdForUpdate($command->proposalId) ?? throw new InvalidArgumentException('La propuesta no existe.');
+            $proposal = $this->proposals->byIdForUpdate($command->proposalId) ?? throw SwapAccessDenied::notASupervisor();
+            $request = $this->requests->byIdForUpdate($proposal->requestId()) ?? throw SwapAccessDenied::notASupervisor();
+            // Authority first, re-read on every call: a VERIFIED supervisor of
+            // this exact pool. Nothing the browser sends can widen it, and a
+            // supervisor who stepped down a second ago is already outside.
+            if (!$this->governance->canApprove($command->supervisorUserId, $request->swapPoolId())) {
+                throw SwapAccessDenied::notASupervisor();
+            }
             if ('approve' === $command->decision && SwapProposalStatus::EXECUTED === $proposal->status()) {
                 return null;
             }
@@ -37,10 +45,6 @@ final readonly class ReviewSwapApprovalHandler
             }
             if (SwapProposalStatus::PENDING_APPROVAL !== $proposal->status()) {
                 throw new InvalidArgumentException('Este cambio ya no espera aprobación.');
-            }
-            $request = $this->requests->byIdForUpdate($proposal->requestId()) ?? throw new InvalidArgumentException('La solicitud ya no existe.');
-            if (!$this->governance->canApprove($command->supervisorUserId, $request->swapPoolId())) {
-                throw new InvalidArgumentException('No puedes aprobar cambios de este equipo.');
             }
             $now = $this->clock->now();
             if ('reject' === $command->decision) {

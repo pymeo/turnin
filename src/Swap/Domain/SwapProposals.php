@@ -29,6 +29,13 @@ interface SwapProposals
      */
     public function awaitingApprovalInPools(array $poolIds): array;
 
+    /**
+     * @param list<string> $poolIds
+     *
+     * @return array<string, int> pool id → agreements waiting for a supervisor
+     */
+    public function countAwaitingApprovalByPool(array $poolIds): array;
+
     public function activeRedemption(string $balanceId, string $requestId, string $proposerId): ?SwapProposal;
 
     public function pendingApprovalForRequest(string $requestId): ?SwapProposal;

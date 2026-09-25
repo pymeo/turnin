@@ -21,10 +21,14 @@ final readonly class SwapAgreementViewFactory
 
     public function create(SwapAgreementSnapshot $snapshot, SwapProposal $proposal): SwapAgreementView
     {
-        $names = $this->names->forWorkers([$proposal->requestOwnerId(), $proposal->proposerId()]);
+        $names = $this->names->forWorkers(array_values(array_filter([$proposal->requestOwnerId(), $proposal->proposerId(), $proposal->approvedBy()])));
         $owner = $names[$proposal->requestOwnerId()] ?? 'Un compañero';
         $proposer = $names[$proposal->proposerId()] ?? 'Un compañero';
         [$statusTitle, $statusDetail, $cancelled] = $this->status($proposal->status(), null !== $snapshot->revokedAt());
+        $approvedBy = null === $proposal->approvedBy() ? null : ($names[$proposal->approvedBy()] ?? 'el responsable');
+        if (null !== $approvedBy && SwapProposalStatus::EXECUTED === $proposal->status()) {
+            $statusDetail = 'Aprobado por '.$approvedBy.' y registrado en Turnin.';
+        }
         $requestedMinutes = array_sum(array_map(static fn (AgreementSegment $segment): int => $segment->durationMinutes, $snapshot->requestedSegments()));
         $returnMinutes = array_sum(array_map(static fn (AgreementSegment $segment): int => $segment->durationMinutes, $snapshot->returnSegments()));
 
@@ -35,6 +39,7 @@ final readonly class SwapAgreementViewFactory
             $this->difference($owner, $proposer, $requestedMinutes, $returnMinutes),
             $proposal->status()->value, $statusTitle, $statusDetail, SwapProposalStatus::PENDING_APPROVAL === $proposal->status(), $cancelled,
             $snapshot->reachedAt()->setTimezone(new DateTimeZone('Europe/Madrid'))->format('d/m/Y · H:i'), $snapshot->reference(), $snapshot->publicToken(), null !== $snapshot->revokedAt(),
+            $approvedBy,
         );
     }
 

@@ -1,0 +1,64 @@
+{% extends 'base.html.twig' %}
+{% block title %}Turnin — ¿Es vuestro responsable?{% endblock %}
+{% block body %}
+<main class="supervisor-shell">
+    {% include 'identity/_authenticated_header.html.twig' %}
+    {% if verification.state == 'forbidden' %}
+        <section class="supervisor-card supervisor-card-muted" role="alert">
+            <p class="supervisor-state">Verificar responsable</p>
+            <h1 class="text-2xl font-bold">No perteneces a este equipo y no puedes verificar a su responsable.</h1>
+            <a class="btn-secondary btn-block" href="{{ path('identity_app') }}">Volver al inicio</a>
+        </section>
+    {% elseif verification.state == 'inactive' %}
+        <section class="supervisor-card supervisor-card-muted" role="alert">
+            <p class="supervisor-state">Verificar responsable</p>
+            <h1 class="text-2xl font-bold">Esta solicitud de responsable ya no está activa.</h1>
+            <a class="btn-secondary btn-block" href="{{ path('identity_app') }}">Volver al inicio</a>
+        </section>
+    {% else %}
+        <section class="supervisor-card{{ verification.state == 'verified' ? '' : ' supervisor-card-pending' }}" data-testid="supervisor-verification">
+            <p class="supervisor-state">{{ verification.state == 'verified' ? 'Responsable verificado ✓' : '¿Es vuestro responsable?' }}</p>
+            <div class="supervisor-person">
+                <span class="supervisor-avatar" aria-hidden="true">{{ verification.candidateName|first|upper }}</span>
+                <div><strong>{{ verification.candidateName }}</strong>{% if verification.maskedEmail != verification.candidateName %}<span>Cuenta: {{ verification.maskedEmail }}</span>{% endif %}</div>
+            </div>
+            <div class="supervisor-team"><strong>{{ verification.teamLabel }}</strong><span>{{ verification.workplaceName }}</span></div>
+            <div class="supervisor-progress">
+                <p>{{ verification.confirmations }} de {{ verification.requiredConfirmations }} confirmaciones</p>
+                <div class="supervisor-progress-bar" role="progressbar" aria-valuemin="0" aria-valuemax="{{ verification.requiredConfirmations }}" aria-valuenow="{{ verification.confirmations }}"><span style="width: {{ verification.requiredConfirmations ? min(100, (100 * verification.confirmations / verification.requiredConfirmations)|round) : 0 }}%"></span></div>
+            </div>
+            {% if verification.state == 'candidate' %}
+                <p class="text-ink-muted">Esta es la pantalla que verán tus compañeros. No puedes confirmarte a ti mismo.</p>
+                <a class="btn-secondary btn-block" href="{{ path('identity_app') }}">Volver al inicio</a>
+            {% elseif verification.myDecision == 'confirmed' %}
+                <p class="alert-success">Has confirmado que es vuestro responsable. Gracias.</p>
+                <a class="btn-secondary btn-block" href="{{ path('identity_app') }}">Volver al inicio</a>
+            {% elseif verification.state == 'verified' %}
+                <p class="alert-success">El equipo ya ha verificado a {{ verification.candidateName }}.</p>
+                <a class="btn-secondary btn-block" href="{{ path('workforce_team') }}">Ver mi equipo</a>
+            {% else %}
+                <p class="text-ink-muted">{{ verification.candidateName }} indica que es la persona encargada de gestionar los cambios de este equipo.</p>
+                {% if not verification.quorumReachable %}
+                    <p class="alert-info">Necesitamos al menos {{ verification.requiredConfirmations }} miembros del equipo en Turnin para verificar al responsable.</p>
+                {% endif %}
+                {% if verification.myDecision == 'cannot_confirm' %}
+                    <p class="alert-info">Indicaste que no podías confirmarlo. Si ya lo sabes, puedes cambiar tu respuesta.</p>
+                {% endif %}
+                <form method="post" action="{{ path('workforce_supervisor_verify', {token: token}) }}">
+                    <input type="hidden" name="_token" value="{{ csrfToken }}">
+                    <input type="hidden" name="decision" value="confirmed">
+                    <button class="btn-primary btn-block" type="submit">Sí, es nuestro responsable</button>
+                </form>
+                {% if verification.myDecision is null %}
+                    <form method="post" action="{{ path('workforce_supervisor_verify', {token: token}) }}">
+                        <input type="hidden" name="_token" value="{{ csrfToken }}">
+                        <input type="hidden" name="decision" value="cannot_confirm">
+                        <button class="btn-ghost btn-block" type="submit">No puedo confirmarlo</button>
+                    </form>
+                {% endif %}
+                <p class="text-xs text-ink-muted">Es una verificación del propio equipo, no una certificación oficial del centro.</p>
+            {% endif %}
+        </section>
+    {% endif %}
+</main>
+{% endblock %}

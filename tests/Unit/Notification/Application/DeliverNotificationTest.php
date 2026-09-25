@@ -40,6 +40,18 @@ final class DeliverNotificationTest extends TestCase
         self::assertSame(1, $notifications->unreadCount('david'));
     }
 
+    public function test_team_news_stays_in_the_bell_and_never_reaches_the_phone(): void
+    {
+        $notifications = new MemoryNotifications();
+        $push = new RecordingPushGateway();
+
+        $this->delivery($notifications, new MemorySubscriptions([$this->subscription('phone', 'https://push.example/phone')]), $push)
+            ->deliver('supervisor:1:verified', 'eva', NotificationType::SUPERVISOR_TEAM_UPDATE, 'Ya tenéis responsable en Turnin', 'El equipo de UCI ha verificado a Laura García como responsable.', '/app/equipo', false);
+
+        self::assertCount(1, $notifications->rows);
+        self::assertSame([], $push->deliveries);
+    }
+
     public function test_expired_subscription_is_removed_and_push_failure_does_not_remove_the_notification(): void
     {
         $notifications = new MemoryNotifications();

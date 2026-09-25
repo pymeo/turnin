@@ -42,12 +42,42 @@ modelo tiene que soportarlas sin reescribirse. Por eso el `SwapPool`
   —implementado—;
 * recibir el aviso en la campanita y, si se activa expresamente, mediante Web
   Push con enlace directo a la propuesta o al cambio —implementado—;
+* invitar al responsable que suele validar los cambios del equipo, confirmar
+  que una persona es de verdad vuestro responsable y ver quién lo es
+  —implementado—;
 * decir «quiero librar este día»;
 * decir «quiero coger turnos»;
 * ceder un turno sin recibir otro a cambio;
 * registrar que un compañero le debe un turno, y devolverlo más adelante;
 * recibir contrapropuestas;
 * participar en cambios encadenados de tres o más personas.
+
+## Responsables del equipo
+
+Un responsable (supervisora, coordinador…) entra con la misma cuenta Turnin,
+con Google, sin contraseñas ni emails de activación. Lo es de **un equipo**
+(`SwapPool`) y solo cuando ese equipo lo ha confirmado:
+
+1. un compañero pulsa «Invitar responsable» y comparte el enlace por WhatsApp,
+   el menú de compartir o copiándolo;
+2. la responsable entra con Google y acepta: queda **pendiente de verificación**,
+   sin poder aprobar ni ver nada del equipo;
+3. los compañeros reciben «Comprueba a tu responsable» y responden «Sí, es
+   nuestro responsable» o «No puedo confirmarlo». Quien invitó ya cuenta;
+4. con 2 confirmaciones (3 si el equipo tiene 5 o más personas) queda
+   **verificada**, y su panel muestra ya los cambios que estaban esperando;
+5. puede dejarlo cuando quiera; su historial («Aprobado por Laura») se conserva
+   y los cambios pendientes siguen esperando a otra persona.
+
+Mientras está pendiente, su inicio muestra el progreso («1 de 2
+confirmaciones») y un botón para pedir confirmación por WhatsApp. Puede haber
+varios responsables por equipo; cualquiera puede aprobar y la primera decisión
+cierra el cambio.
+
+«Verificado» es una comprobación **del propio equipo**, no una certificación
+del hospital. Turnin no se presenta como autoridad oficial. Cuando un centro
+quiera asignar responsables directamente, el modelo ya lo admite
+(→ [ADR 14](adr/0014-team-verified-supervisors.md)).
 
 ## Funciones futuras que condicionan el diseño
 

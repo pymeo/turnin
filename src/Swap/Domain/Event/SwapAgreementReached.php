@@ -14,6 +14,9 @@ final readonly class SwapAgreementReached implements SwapEvent
         public string $proposerName,
         public string $requestedDate,
         public bool $requiresApproval,
+        public string $swapPoolId = '',
+        /** @var list<string> verified supervisors to notify when approval is required */
+        public array $approverIds = [],
     ) {
     }
 

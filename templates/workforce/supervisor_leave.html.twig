@@ -1,0 +1,21 @@
+{% extends 'base.html.twig' %}
+{% block title %}Turnin — Dejar de ser responsable{% endblock %}
+{% block body %}
+<main class="supervisor-shell">
+    {% include 'identity/_authenticated_header.html.twig' %}
+    <section class="supervisor-card supervisor-card-muted">
+        <p class="supervisor-state">Dejar de ser responsable</p>
+        <h1 class="text-2xl font-bold">¿Quieres dejar de ser responsable de {{ supervision.teamLabel }}?</h1>
+        <p class="text-ink-muted">{{ supervision.workplaceName }}</p>
+        <p>Dejarás de recibir cambios para aprobar y perderás el acceso al cuadrante del equipo.</p>
+        <p class="text-ink-muted">Tu historial de acciones anteriores se conservará.</p>
+        <div class="supervisor-actions">
+            <a class="btn-secondary" href="{{ path('identity_app') }}">Cancelar</a>
+            <form method="post" action="{{ path('workforce_supervisor_leave', {assignmentId: supervision.assignmentId}) }}" class="flex">
+                <input type="hidden" name="_token" value="{{ csrfToken }}">
+                <button class="btn-primary btn-block" type="submit">Sí, dejar de ser responsable</button>
+            </form>
+        </div>
+    </section>
+</main>
+{% endblock %}

@@ -1,0 +1,19 @@
+{% extends 'base.html.twig' %}
+{% block title %}Turnin — Invitar responsable{% endblock %}
+{% block body %}
+<main class="supervisor-shell">
+    {% include 'identity/_authenticated_header.html.twig' %}
+    <a class="text-sm text-ink-muted no-underline" href="{{ path('workforce_team') }}">‹ Mi equipo</a>
+    <section class="supervisor-card">
+        <p class="supervisor-state">Invitar responsable</p>
+        <div class="supervisor-team"><strong>{{ invitation.teamLabel }}</strong><span>{{ invitation.workplaceName }}</span></div>
+        <p class="text-ink-muted">Envía este enlace a la persona que normalmente valida vuestros cambios. Entrará con su cuenta de Google.</p>
+        {% if invitation.verifiedSupervisors > 0 %}
+            <p class="alert-info">Este equipo ya tiene {{ invitation.verifiedSupervisors }} {{ invitation.verifiedSupervisors == 1 ? 'responsable verificado' : 'responsables verificados' }}. Puedes invitar a otra persona si también gestiona vuestros cambios.</p>
+        {% endif %}
+        {% include 'workforce/_supervisor_share.html.twig' with {url: url, message: message, title: 'Responsable en Turnin', whatsappLabel: 'Compartir por WhatsApp'} only %}
+        <label class="field"><span class="field-label">Enlace</span><input class="input" readonly value="{{ url }}" data-testid="supervisor-invitation-url"></label>
+        <p class="text-sm text-ink-muted">Caduca el {{ invitation.expiresAt|date('d/m/Y', 'Europe/Madrid') }}. Tener el enlace no da permisos: el resto del equipo tendrá que confirmar a esa persona.</p>
+    </section>
+</main>
+{% endblock %}

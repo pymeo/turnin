@@ -1,0 +1,25 @@
+{% extends 'base.html.twig' %}
+{% block title %}Te han invitado como responsable — TURNIN{% endblock %}
+{% block body %}
+<main class="auth-shell">
+    <section class="auth-panel">
+        <img class="brand-lockup" src="/brand/turnin-logo.svg" alt="TURNIN" width="230" height="64">
+        {% if invitation.state == 'open' %}
+            <header class="flex flex-col gap-2">
+                <p class="eyebrow">Te han invitado como responsable</p>
+                <h1 class="text-3xl font-bold tracking-tight">{{ invitation.teamLabel }}</h1>
+                <p class="text-lg font-semibold">{{ invitation.workplaceName }}</p>
+            </header>
+            <p class="text-ink-muted">Turnin permitirá que revises los cambios acordados por este equipo.</p>
+            {% include 'identity/_google_button.html.twig' %}
+        {% elseif invitation.state == 'expired' %}
+            <h1 class="text-2xl font-bold">Esta invitación ha caducado</h1>
+            <p class="text-ink-muted">Pide a quien te la envió que genere una nueva desde Turnin.</p>
+        {% else %}
+            <h1 class="text-2xl font-bold">Esta invitación ya no está disponible</h1>
+            <p class="text-ink-muted">Si ya la aceptaste, entra en Turnin para ver cómo va tu verificación.</p>
+            {% include 'identity/_google_button.html.twig' %}
+        {% endif %}
+    </section>
+</main>
+{% endblock %}

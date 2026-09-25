@@ -35,6 +35,11 @@ con tests: media funcionalidad sin pantalla no es media funcionalidad, es deuda.
   capacidad y calendario semántico para ambas partes.
 * **10. Notificaciones.** Campanita in-app, contador ligero, lectura individual
   o global y Web Push multi-dispositivo con deep-link a propuesta o acuerdo.
+* **10b. Responsables verificados por su equipo.** Invitación compartible,
+  aceptación con Google, verificación por quórum de compañeros del pool, panel
+  `/app/responsable` con los cambios pendientes (también los anteriores a la
+  verificación), aprobación por pool y renuncia sin perder historial
+  (→ [ADR 14](adr/0014-team-verified-supervisors.md)).
 
 ## Siguiente
 
@@ -64,7 +69,8 @@ Problemas reales, no una lista de deseos.
 | Sin `Content-Security-Policy` | **Vencida.** La pantalla autenticada ya existe y el origen está ahora en Internet (`dev.turnin.es`). Ya se sabe qué carga la app: ninguna plantilla tiene `<script>` ni `style=` en línea, y el flujo OAuth es redirect de servidor —sin SDK de Google en el navegador—, así que la política puede ser estricta. El único inline es el `importmap` de AssetMapper, que necesita nonce | La próxima iteración; no se metió en la del entorno público para no arriesgar el flujo que había que demostrar |
 | Sin transporte asíncrono | Redis está levantado, pero nada es lo bastante lento aún | Slice 9 o 10 |
 | Sin copias de seguridad | No hay datos | Antes del primer usuario real |
-| Perfiles de supervisor aún sin alta administrativa | La identidad ya soporta la capacidad, pero no se auto-concede permisos | Slice responsable |
+| Sin pantalla para exigir aprobación en un pool | `workforce_shift_exchange_policies` solo se rellena a mano; por eso el E2E de responsables no puede crear un cambio pendiente de aprobación y esa parte la cubre el test funcional | Con la verificación organizativa (`ORGANIZATION_VERIFIED`) o la primera configuración de pool |
+| Responsable sin vista del cuadrante del equipo | El panel lista y decide cambios; «consultar el cuadrante operativo» aún no existe | Siguiente slice de responsable |
 | E2E solo en Chromium | La imagen de Playwright trae los tres motores; falta activarlos | Cuando haya UI que merezca la matriz |
 | `graft/` no versionado | Se aparta de Pymeo; ver [GRAPH.md](GRAPH.md#qué-no-versionamos) | Si CI llega a depender del grafo |
 | Rehacer el onboarding esconde el calendario | `CompleteWorkerOnboarding` desactiva la asignación e inserta una nueva con otro id, y el calendario cuelga de la asignación. Los datos siguen ahí, pero dejan de mostrarse | Con la primera edición real de perfil: o la asignación conserva su id cuando la clave de pool no cambia, o el calendario se traslada a la nueva |
@@ -85,8 +91,10 @@ Problemas reales, no una lista de deseos.
 * **Editar las horas de un segmento sin tocar el preset.** Hoy un turno se
   cambia eligiendo otro preset; un horario excepcional se resuelve creando un
   preset. Basta mientras no aparezca alguien con turnos irrepetibles.
-* **Alta administrativa de supervisores.** El gobierno, la espera y la decisión
-  ya existen; falta el backoffice con el que un centro asignará responsables.
+* **Verificación organizativa de responsables (`ORGANIZATION_VERIFIED`).** El
+  equipo ya puede verificar a su responsable; falta el backoffice con el que un
+  centro los asignará directamente, sin quórum, y resolverá impugnaciones
+  («Esta persona no es nuestra responsable»).
 * **Motor de reglas por pool.** Hoy la compatibilidad se preguntará al `SwapPool`
   con reglas mínimas. El motor completo llega cuando haya varios centros reales
   con reglas contradictorias, no antes.
@@ -110,7 +118,7 @@ un día trabajado y «Puedo trabajar este día» sobre uno libre o sin indicar.
 
 **Pendiente**
 
-* alta administrativa de supervisores;
+* verificación organizativa de responsables;
 * consumo de saldo mediante solicitud posterior;
 * matching automático avanzado y cadenas;
 * grados de disponibilidad.

@@ -1,0 +1,56 @@
+{% extends 'base.html.twig' %}
+{% block title %}Turnin — Mi equipo{% endblock %}
+{% block body %}
+<main class="supervisor-shell" data-supervision-csrf-value="{{ csrfToken }}">
+    {% include 'identity/_authenticated_header.html.twig' %}
+    <header>
+        <a class="text-sm text-ink-muted no-underline" href="{{ path('identity_app') }}">‹ Inicio</a>
+        <h1 class="text-3xl font-bold">Mi equipo</h1>
+        <p class="text-ink-muted">Quién revisa los cambios de cada grupo con el que puedes cambiar.</p>
+    </header>
+
+    {% for team in overview.teams %}
+        <section class="supervisor-card{{ team.verifiedSupervisors|length ? '' : ' supervisor-card-muted' }}" data-testid="team-card">
+            <div class="supervisor-team"><strong>{{ team.teamLabel }}</strong><span>{{ team.workplaceName }}</span></div>
+            <p class="supervisor-state">Responsable</p>
+            {% for name in team.verifiedSupervisors %}
+                <div class="supervisor-person">
+                    <span class="supervisor-avatar" aria-hidden="true">{{ name|first|upper }}</span>
+                    <div><strong>{{ name }} ✓</strong><span>Responsable verificado por el equipo</span></div>
+                </div>
+            {% endfor %}
+            {% if team.viewerIsSupervisor %}
+                <p class="text-ink-muted">Tú también eres responsable de este equipo.</p>
+            {% endif %}
+            {% for pending in team.pendingSupervisors %}
+                <div class="supervisor-person">
+                    <span class="supervisor-avatar" aria-hidden="true">{{ pending.candidateName|first|upper }}</span>
+                    <div><strong>{{ pending.candidateName }}</strong><span>Pendiente de verificación · {{ pending.confirmations }} de {{ pending.requiredConfirmations }}</span></div>
+                </div>
+                {% if not pending.answeredByViewer %}<a class="btn-primary btn-block" href="{{ pending.verificationPath }}">Revisar</a>{% endif %}
+            {% endfor %}
+            {% if team.verifiedSupervisors is empty and not team.viewerIsSupervisor %}
+                <p class="font-semibold" data-testid="team-without-supervisor">Sin responsable verificado.</p>
+                <p class="text-ink-muted">Los cambios que necesiten aprobación esperarán hasta que el equipo verifique a alguien. Nunca se aprueban solos.</p>
+            {% endif %}
+            <form method="post" action="{{ path('workforce_supervisor_invite', {swapPoolId: team.swapPoolId}) }}">
+                <input type="hidden" name="_token" value="{{ csrfToken }}">
+                <button class="{{ team.verifiedSupervisors is empty and team.pendingSupervisors is empty ? 'btn-primary' : 'btn-secondary' }} btn-block" type="submit">Invitar responsable</button>
+            </form>
+        </section>
+    {% else %}
+        <div class="empty-state"><strong>Todavía no perteneces a ningún equipo.</strong><span>Completa tu perfil laboral para ver a tu equipo.</span></div>
+    {% endfor %}
+
+    {% for supervision in overview.mySupervisions %}
+        <section class="supervisor-card{{ supervision.verified ? '' : ' supervisor-card-pending' }}">
+            <p class="supervisor-state">{{ supervision.verified ? 'Eres responsable ✓' : 'Tu solicitud de responsable' }}</p>
+            <div class="supervisor-team"><strong>{{ supervision.teamLabel }}</strong><span>{{ supervision.workplaceName }}</span></div>
+            {% if not supervision.verified %}<p>{{ supervision.confirmations }} de {{ supervision.requiredConfirmations }} confirmaciones</p>{% endif %}
+            <a class="btn-ghost btn-block" href="{{ path('workforce_supervisor_leave_confirm', {assignmentId: supervision.assignmentId}) }}">Dejar de ser responsable</a>
+        </section>
+    {% endfor %}
+
+    <p class="text-xs text-ink-muted">«Verificado» significa que compañeros de este equipo han confirmado a esa persona en Turnin. No es una certificación oficial del centro.</p>
+</main>
+{% endblock %}

@@ -22,6 +22,7 @@ final readonly class SwapAgreementView
         public string $reference,
         public string $publicToken,
         public bool $revoked,
+        public ?string $approvedByName = null,
     ) {
     }
 }

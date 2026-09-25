@@ -1,0 +1,65 @@
+{# Supervision on the home, in the order people need it: my own request or
+   area first, then what my team asks of me, then the invitation prompt.
+   Expects `overview` (SupervisionOverview) and `approvalCounts`. #}
+{% set csrfToken = csrf_token('supervision') %}
+{% for supervision in overview.mySupervisions %}
+    {% if supervision.verified %}
+        {% set waiting = approvalCounts[supervision.swapPoolId]|default(0) %}
+        <section class="supervisor-card" data-testid="supervisor-verified-card">
+            <p class="supervisor-state">Responsable · {{ supervision.teamLabel }} ✓</p>
+            <div class="supervisor-team"><strong>{{ supervision.teamLabel }}</strong><span>{{ supervision.workplaceName }}</span></div>
+            <p class="text-lg font-bold">
+                {% if waiting == 0 %}No hay cambios pendientes de revisión.{% elseif waiting == 1 %}1 cambio pendiente de revisión.{% else %}{{ waiting }} cambios pendientes de revisión.{% endif %}
+            </p>
+            <div class="supervisor-actions">
+                <a class="btn-primary" href="{{ path('swap_supervisor') }}">Ir al panel de responsable</a>
+                <a class="btn-secondary" href="{{ path('workforce_team') }}">Ver equipo</a>
+            </div>
+            <a class="text-sm text-ink-muted" href="{{ path('workforce_supervisor_leave_confirm', {assignmentId: supervision.assignmentId}) }}">Dejar de ser responsable</a>
+        </section>
+    {% else %}
+        <section class="supervisor-card supervisor-card-pending" data-testid="supervisor-pending-card">
+            <p class="supervisor-state">Responsable · pendiente de verificación</p>
+            <div class="supervisor-team"><strong>{{ supervision.teamLabel }}</strong><span>{{ supervision.workplaceName }}</span></div>
+            <div class="supervisor-progress">
+                <p data-testid="supervisor-progress">{{ supervision.confirmations }} de {{ supervision.requiredConfirmations }} confirmaciones</p>
+                <div class="supervisor-progress-bar" role="progressbar" aria-label="Confirmaciones" aria-valuemin="0" aria-valuemax="{{ supervision.requiredConfirmations }}" aria-valuenow="{{ supervision.confirmations }}"><span style="width: {{ supervision.progressPercent }}%"></span></div>
+            </div>
+            {% if supervision.quorumReachable %}
+                <p class="text-ink-muted">Necesitamos que {{ supervision.missing == 1 ? 'otro miembro' : 'otros ' ~ supervision.missing ~ ' miembros' }} del equipo {{ supervision.missing == 1 ? 'confirme' : 'confirmen' }} que eres su responsable. Hasta entonces no podrás aprobar cambios.</p>
+            {% else %}
+                <p class="alert-info">Necesitamos al menos {{ supervision.requiredConfirmations }} miembros del equipo en Turnin para verificar al responsable. Invita a tus compañeros a entrar.</p>
+            {% endif %}
+            {% include 'workforce/_supervisor_share.html.twig' with {url: supervision.verificationUrl, message: supervision.shareMessage, title: 'Verificación de responsable · Turnin', whatsappLabel: 'Pedir confirmación por WhatsApp'} only %}
+            <a class="btn-ghost btn-block" href="{{ path('workforce_supervisor_leave_confirm', {assignmentId: supervision.assignmentId}) }}">Ya no quiero ser responsable</a>
+        </section>
+    {% endif %}
+{% endfor %}
+
+{% for check in overview.checksToDo %}
+    <section class="supervisor-card supervisor-card-pending" data-testid="supervisor-check-card">
+        <p class="supervisor-state">Comprueba a tu responsable</p>
+        <p><strong>{{ check.candidateName }}</strong> está esperando confirmación como responsable de {{ check.teamLabel }}.</p>
+        <a class="btn-primary btn-block" href="{{ check.verificationPath }}">Revisar</a>
+    </section>
+{% endfor %}
+
+{% for team in overview.teamsWithoutSupervisor %}
+    {% if team.pendingSupervisors|filter(p => not p.answeredByViewer)|length == 0 %}
+        <section class="supervisor-card supervisor-card-muted" data-testid="supervisor-missing-card">
+            <p class="supervisor-state">Responsable del equipo</p>
+            <div class="supervisor-team"><strong>{{ team.teamLabel }}</strong><span>{{ team.workplaceName }}</span></div>
+            {% if team.pendingSupervisors|length %}
+                {% for pending in team.pendingSupervisors %}
+                    <p>{{ pending.candidateName }} está pendiente de verificación: {{ pending.confirmations }} de {{ pending.requiredConfirmations }} confirmaciones.</p>
+                {% endfor %}
+            {% else %}
+                <p class="text-ink-muted">Todavía no tenéis un responsable verificado en Turnin. Puedes invitar a la persona que normalmente valida vuestros cambios.</p>
+                <form method="post" action="{{ path('workforce_supervisor_invite', {swapPoolId: team.swapPoolId}) }}">
+                    <input type="hidden" name="_token" value="{{ csrfToken }}">
+                    <button class="btn-secondary btn-block" type="submit">Invitar responsable</button>
+                </form>
+            {% endif %}
+        </section>
+    {% endif %}
+{% endfor %}

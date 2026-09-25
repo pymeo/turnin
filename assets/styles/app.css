@@ -1806,3 +1806,30 @@
 }
 
 [aria-pressed="true"] > .shift-day-tick { @apply block; }
+
+/* --- Supervisor onboarding ---------------------------------------------------
+   One card per state (docs/adr/0014-team-verified-supervisors.md). The state
+   is the first line of every card, so nobody has to read the body to know
+   whether a supervisor is verified yet.
+   -------------------------------------------------------------------------- */
+@utility supervisor-card {
+	@apply card flex flex-col gap-3;
+	border-left: .35rem solid var(--turnin-teal);
+}
+@utility supervisor-card-pending { border-left-color: var(--turnin-warning); }
+@utility supervisor-card-muted { border-left-color: var(--turnin-border); }
+@utility supervisor-state { @apply text-xs font-black uppercase tracking-[0.12em] text-ink-muted; }
+@utility supervisor-team { @apply flex flex-col; & > strong { @apply text-xl font-bold leading-tight; } & > span { @apply text-sm text-ink-muted; } }
+@utility supervisor-progress { @apply flex flex-col gap-2; & > p { @apply text-base font-bold; } }
+@utility supervisor-progress-bar {
+	@apply h-3 overflow-hidden rounded-full bg-surface-muted;
+	& > span { @apply block h-full rounded-full; background: var(--turnin-teal); }
+}
+@utility supervisor-person { @apply flex items-center gap-3; & > div { @apply flex min-w-0 flex-col; } & > div > strong { @apply text-lg font-bold; } & > div > span { @apply truncate text-sm text-ink-muted; } }
+@utility supervisor-avatar {
+	@apply grid size-12 shrink-0 place-items-center rounded-full text-lg font-black text-white;
+	background: var(--turnin-petroleum);
+}
+@utility supervisor-actions { @apply flex flex-col gap-2 sm:flex-row sm:flex-wrap; & > * { @apply sm:flex-1; } }
+@utility supervisor-share-feedback { @apply min-h-5 text-center text-sm text-ink-muted; }
+@utility supervisor-shell { @apply page flex flex-col gap-5; }

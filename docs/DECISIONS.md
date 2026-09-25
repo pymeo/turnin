@@ -442,3 +442,50 @@ El calendario recibe trazas estructuradas por segmento. `fromSwap` se conserva
 solo como compatibilidad visual, pero no decide textos, roles ni enlaces. La
 decisión completa y alternativas descartadas están en
 [ADR 13](adr/0013-agreement-resource-notifications-and-calendar-projection.md).
+
+## 2026-09-25 — Responsables: quórum, enlaces y canales
+
+La responsabilidad es un `SupervisorAssignment` por pool verificado por el
+equipo (→ [ADR 14](adr/0014-team-verified-supervisors.md)). Decisiones menores
+que alguien podría cuestionar:
+
+* **Quórum 2/3 contando sin la candidata.** Un equipo de 2–4 compañeros
+  necesita dos confirmaciones; de 5 o más, tres. Umbrales en
+  `config/services.yaml` hasta que haya configuración por organización. Si el
+  equipo no llega al mínimo, la solicitud sigue pendiente y se explica; no hay
+  atajo.
+* **El invitador es la primera confirmación**, como fila `INVITATION`, porque
+  crear el enlace ya es afirmar que se conoce a esa persona. Si ha dejado el
+  pool cuando se acepta, no cuenta.
+* **Una invitación viva por compañero y pool.** Generar otra deja la anterior
+  en `SUPERSEDED`: pulsar dos veces no reparte tokens válidos. Otras personas
+  del equipo pueden tener la suya. Aceptar otra invitación estando ya pendiente
+  o verificado en ese pool se rechaza con un mensaje, no crea otro assignment.
+* **El enlace de verificación es un HMAC del id** con `APP_SECRET`, guardado
+  como hash. Así la candidata puede volver a compartirlo desde su inicio sin
+  guardarlo en claro. Rotar `APP_SECRET` invalida los enlaces pendientes, no
+  los assignments; los compañeros siguen teniendo la tarjeta en su inicio.
+* **«No puedo confirmarlo» se guarda** para no seguir insistiendo, no cuenta y
+  puede convertirse en confirmación; una confirmación no se retira. No hay
+  estado `DISPUTED` porque no existe todavía quién resuelva una disputa.
+* **Canales.** Push para pedir verificación, avisar a la responsable
+  verificada y avisar de un cambio pendiente de revisar. Solo campanita para
+  «ha aceptado/rechazado tu invitación», «ya tenéis responsable» y «cambios
+  que ya esperaban»; la renuncia se empuja solo si deja cambios esperando sin
+  nadie que los apruebe. Una renuncia estando pendiente no avisa a nadie: el
+  enlace deja de valer y lo dice.
+* **Sin foto de Google.** Nombre completo del perfil y email enmascarado
+  (`lau***@dominio`) bastan para reconocer a alguien. Con cuentas sin nombre, se
+  muestra el email enmascarado.
+* **`/supervisor` y el flag de cuenta.** El flag `has_supervisor_profile` se
+  activa al aceptar y solo sirve para que una cuenta sin perfil laboral aterrice
+  en `/app` en vez del onboarding. La antigua página `/supervisor` redirige.
+* **La tabla `workforce_swap_supervisors` se migra y se elimina.** Solo se
+  rellenaba a mano; sus filas pasan a `ORGANIZATION_VERIFIED` para no quitar
+  autoridad a nadie que ya la tuviera.
+* **E2E de responsables con unidad local propia.** Cada ejecución crea una
+  unidad con nombre único para que el equipo sea exactamente de dos personas y
+  el quórum sea determinista contra la base de desarrollo compartida. El login
+  de la responsable en E2E es por email porque Google no puede automatizarse;
+  el ida y vuelta real de OAuth está en el test funcional con el proveedor
+  simulado.

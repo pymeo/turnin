@@ -26,7 +26,12 @@ final readonly class DeliverNotification
     ) {
     }
 
-    public function deliver(string $eventId, string $recipientId, NotificationType $type, string $title, string $body, string $targetUrl): void
+    /**
+     * The in-app row is always written. `$push` is the channel policy: only
+     * things somebody has to act on reach the phone; team news stays in the
+     * bell.
+     */
+    public function deliver(string $eventId, string $recipientId, NotificationType $type, string $title, string $body, string $targetUrl, bool $push = true): void
     {
         $notification = UserNotification::create($this->ids->next(), $recipientId, $eventId, $type, $title, $body, $targetUrl, $this->clock->now());
         try {
@@ -43,6 +48,10 @@ final readonly class DeliverNotification
                 'exception' => $exception,
             ]);
 
+            return;
+        }
+
+        if (!$push) {
             return;
         }
 

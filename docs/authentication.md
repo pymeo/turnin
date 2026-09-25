@@ -77,5 +77,13 @@ en PHP.
 Contraseña y Google terminan en `PostAuthenticationSuccessHandler`, que consume
 un `target_path` interno y delega el resto en
 `PostAuthenticationDestinationResolver`. URLs externas se descartan. El shell
-autenticado muestra `Salir` en onboarding y ambos lobbies. Logout requiere POST
+autenticado muestra `Salir` en onboarding y en el inicio.
+
+Una cuenta con perfil de trabajador o de responsable va a `/app`; sin ninguno,
+al onboarding. El perfil de responsable es navegación, no permiso
+(→ [ADR 14](adr/0014-team-verified-supervisors.md)). Los enlaces de invitación
+de responsable guardan su propia URL como `target_path` antes de ofrecer
+«Continuar con Google», de modo que tras OAuth se vuelve a esa invitación y no
+al inicio; los de verificación, bajo `/app`, lo consiguen con el mismo mecanismo
+del firewall. Logout requiere POST
 + CSRF, invalida solo Turnin y nunca cierra la sesión global de Google.

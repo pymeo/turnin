@@ -1,0 +1,13 @@
+{% extends 'base.html.twig' %}
+{% block title %}Turnin — Área de responsable{% endblock %}
+{% block body %}
+<main class="supervisor-shell" data-changes-csrf-value="{{ csrfToken }}">
+    {% include 'identity/_authenticated_header.html.twig' %}
+    <section class="supervisor-card supervisor-card-muted" role="alert">
+        <p class="supervisor-state">Área de responsable</p>
+        <h1 class="text-2xl font-bold">Todavía no eres responsable verificado de ningún equipo.</h1>
+        <p class="text-ink-muted">Si has aceptado una invitación, tus compañeros tienen que confirmarte antes de que puedas revisar cambios.</p>
+        <a class="btn-secondary btn-block" href="{{ path('identity_app') }}">Volver al inicio</a>
+    </section>
+</main>
+{% endblock %}

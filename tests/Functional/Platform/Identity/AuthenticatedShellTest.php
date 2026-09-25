@@ -23,7 +23,7 @@ final class AuthenticatedShellTest extends WebTestCase
     {
         yield 'onboarding' => ['/onboarding', false, false];
         yield 'worker lobby' => ['/app', true, false];
-        yield 'supervisor lobby' => ['/supervisor', false, true];
+        yield 'supervisor-only home' => ['/app', false, true];
     }
 
     #[DataProvider('authenticatedAreas')]

@@ -13,6 +13,7 @@ final readonly class SwapNotificationOutcome
         public string $requestedDate,
         public bool $requiresApproval = false,
         public int $optionCount = 0,
+        public string $swapPoolId = '',
     ) {
     }
 }

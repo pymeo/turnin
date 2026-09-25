@@ -107,9 +107,12 @@ parameters:
         Coordination:
             - Vendor
             - SharedKernel
+        # Notification subscribes to the events of the contexts it speaks for
+        # and implements their publishing ports; never the other way round.
         Notification:
             - Vendor
             - Swap
+            - Workforce
             - SharedKernel
         SharedKernel:
             - Vendor

@@ -9,7 +9,8 @@ Platform
 └── Identity   cuenta, credenciales, sesión y perfil personal   [IMPLEMENTADO]
 
 Workforce
-└── Workplace + Workforce assignment + SwapPool                 [IMPLEMENTADO]
+├── Workplace + Workforce assignment + SwapPool                 [IMPLEMENTADO]
+└── Supervision: invitación, assignment y verificación          [IMPLEMENTADO]
 
 Scheduling
 └── RosterDay + ShiftPreset + RosterPattern                     [IMPLEMENTADO]
@@ -116,8 +117,12 @@ y no al revés es lo que permite cambiarlo sin tocar el modelo.
 ### `Notification` propio
 
 Único contexto que habla con el exterior (push, email). Su fallo no puede tumbar
-un cambio de turno, así que se acopla solo por eventos. `Swap` publica hechos;
-`Notification` decide título, copy, destinatarios, deep-link e intento Web Push.
+un cambio de turno, así que se acopla solo por eventos. `Swap` y `Workforce`
+(responsables) publican hechos a través de puertos que Notification implementa
+(`SwapEvents`, `SupervisionEvents`); `Notification` decide título, copy,
+destinatarios, deep-link, canal e intento Web Push. Para contar los cambios que
+esperan a un responsable declara `PendingApprovals`, que implementa leyendo el
+puerto de propuestas de Swap.
 La restricción única `(recipient_id, event_id)` hace idempotente la proyección.
 
 ### `Platform\Identity` separado de `Workforce`
@@ -159,6 +164,9 @@ porque los datos de `Identity` tienen un régimen de privacidad más estricto.
 | Workforce → Scheduling / Swap | *Customer–supplier* | Ambos preguntan a `SwapPool` si un cambio es admisible |
 | Swap → Matching | *Customer–supplier*, invocación explícita | `Swap` pide candidatos; `Matching` no conoce a `Swap` |
 | Swap → Notification | *Publisher–subscriber* (eventos) | Notificar no puede bloquear ni fallar un acuerdo |
+| Workforce → Notification | *Publisher–subscriber* (eventos de responsables) | Pedir verificación o avisar de una renuncia no puede fallar la verificación |
+| Workforce → Swap | Puerto `ShiftExchangeGovernance`, declarado por Swap | Qué exige un pool (aprobación) y quién tiene autoridad (responsable `VERIFIED` de ese pool) |
+| Identity → Workforce | Puerto `SupervisorProfiles`, declarado por Workforce | Nombre y email enmascarado para reconocer a una candidata, y el flag de navegación. Nunca autoridad |
 | Scheduling ← Swap | *Publisher–subscriber* (eventos) | Un acuerdo cerrado aplica el cambio al calendario |
 | Coverage → Workforce, Scheduling | *Conformist* (futuro) | El producto B2B consume el modelo existente sin alterarlo |
 
@@ -173,8 +181,11 @@ de dominio o puertos declarados en el contexto que consume. Lo comprueba
 `Platform/Identity` contiene la identidad y autenticación, no datos laborales.
 `User` puede tener capacidad de trabajador y/o supervisor sin convertirlas en
 cuentas distintas. Registro y login usan sesión Symfony y el destino inicial se
-resuelve hacia Workforce cuando falta la asignación. `/app` y `/supervisor` son
-entradas separadas; el primero es el contexto por defecto para quien tiene ambos.
+resuelve hacia Workforce cuando falta la asignación. `/app` es la entrada de
+ambas capacidades: muestra el calendario a quien trabaja y, aparte, el estado de
+responsable de cada pool. `/supervisor` solo redirige a `/app/responsable`, que
+vive en Swap y abre únicamente con un `SupervisorAssignment` `VERIFIED`
+(→ [ADR 14](adr/0014-team-verified-supervisors.md)).
 
 Google OAuth es un adapter de Infrastructure de Identity. KnpU/League no cruzan
 hacia Application o Domain; ambos reciben únicamente proveedor, subject, email y

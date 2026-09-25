@@ -152,12 +152,18 @@ final class ChangesFlowTest extends WebTestCase
         $client->request('GET', '/app/notifications');
         self::assertResponseIsSuccessful();
         $notificationPayload = json_decode((string) $client->getResponse()->getContent(), true, 512, \JSON_THROW_ON_ERROR);
+        self::assertIsArray($notificationPayload);
         self::assertSame(2, $notificationPayload['unreadCount'] ?? null);
-        $firstNotificationId = $notificationPayload['notifications'][0]['id'] ?? null;
+        $notifications = $notificationPayload['notifications'] ?? null;
+        self::assertIsArray($notifications);
+        self::assertIsArray($notifications[0] ?? null);
+        $firstNotificationId = $notifications[0]['id'] ?? null;
         self::assertIsString($firstNotificationId);
         $client->request('POST', '/app/notifications/'.$firstNotificationId.'/read', server: ['HTTP_X_CSRF_TOKEN' => $notificationToken]);
         self::assertResponseIsSuccessful();
-        self::assertSame(1, json_decode((string) $client->getResponse()->getContent(), true, 512, \JSON_THROW_ON_ERROR)['unreadCount'] ?? null);
+        $afterRead = json_decode((string) $client->getResponse()->getContent(), true, 512, \JSON_THROW_ON_ERROR);
+        self::assertIsArray($afterRead);
+        self::assertSame(1, $afterRead['unreadCount'] ?? null);
         $client->request('POST', '/app/notifications/read-all', server: ['HTTP_X_CSRF_TOKEN' => $notificationToken]);
         self::assertResponseIsSuccessful();
         self::assertSame(0, $this->countRows('SELECT COUNT(*) FROM notification_user_notifications WHERE recipient_id = :recipient AND read_at IS NULL', ['recipient' => $this->workers['pedro']['id']]));
@@ -222,12 +228,16 @@ final class ChangesFlowTest extends WebTestCase
             'allows_coverage' => false,
             'updated_at' => '2026-09-24T18:00:00+00:00',
         ], ['requires_approval' => 'boolean', 'allows_coverage' => 'boolean']);
-        $this->connection->insert('workforce_swap_supervisors', [
-            'swap_pool_id' => $this->uciPool,
+        $this->connection->insert('workforce_supervisor_assignments', [
+            'id' => Uuid::v7()->toRfc4122(),
             'supervisor_user_id' => $this->workers['antonio']['id'],
-            'active' => true,
+            'swap_pool_id' => $this->uciPool,
+            'verification_token_hash' => hash('sha256', 'changes-flow-supervisor'),
+            'status' => 'verified',
+            'verification_level' => 'team_verified',
             'created_at' => '2026-09-24T18:00:00+00:00',
-        ], ['active' => 'boolean']);
+            'verified_at' => '2026-09-24T18:00:00+00:00',
+        ]);
 
         $this->signIn($client, 'pedro');
         $requestId = $this->publishedRequestId($this->json($client, 'POST', '/app/changes/publicar', [

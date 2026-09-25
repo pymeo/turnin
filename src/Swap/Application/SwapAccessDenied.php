@@ -24,6 +24,11 @@ final class SwapAccessDenied extends RuntimeException
         return new self('No perteneces a ese grupo de trabajo.');
     }
 
+    public static function notASupervisor(): self
+    {
+        return new self('No eres responsable verificado de este equipo.');
+    }
+
     public static function notYours(): self
     {
         return new self('Eso no es tuyo.');

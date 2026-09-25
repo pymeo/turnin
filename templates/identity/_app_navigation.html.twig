@@ -12,7 +12,7 @@
         <span class="app-navigation-icon" aria-hidden="true">⇄</span>
         <span>Cambios</span>
     </a>
-    <a class="app-navigation-item" href="{{ path('workforce_assignments') }}"{% if currentRoute starts with 'workforce_' %} aria-current="page"{% endif %}>
+    <a class="app-navigation-item" href="{{ path('workforce_assignments') }}"{% if currentRoute starts with 'workforce_' and not (currentRoute starts with 'workforce_supervisor' or currentRoute == 'workforce_team') %} aria-current="page"{% endif %}>
         <span class="app-navigation-icon" aria-hidden="true">♙</span>
         <span>Perfil laboral</span>
     </a>

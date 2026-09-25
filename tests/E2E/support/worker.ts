@@ -26,7 +26,7 @@ export async function onboardWorker(
 	page: Page,
 	testInfo: TestInfo,
 	label: string,
-	group?: { category: string; destination: string; additionalDestinations?: string[] },
+	group?: { category: string; destination: string; additionalDestinations?: string[]; local?: boolean },
 ): Promise<void> {
 	const offset = PROJECTS.indexOf(testInfo.project.name) + 1;
 	const seed = (Date.now() + offset * 7919 + label.length * 104_729) % 100_000_000;
@@ -71,7 +71,15 @@ export async function onboardWorker(
 	// workers in the *same* swap pool — the suggestion order depends on how many
 	// people already chose each unit, so it cannot be relied on for that.
 	const destinationStep = page.locator('[data-step="destination"]');
-	if (group) {
+	if (group?.local) {
+		// A local unit with a unique name is a pool nobody else can be in, so
+		// team sizes are exact even against a shared development database.
+		// Creating the same name twice returns the same unit.
+		await destinationStep.getByRole('button', { name: /Ver todas las opciones/ }).click();
+		await destinationStep.locator('[data-searchable-picker-target="localName"]').fill(group.destination);
+		await destinationStep.getByRole('button', { name: 'Añadir unidad' }).click();
+		await expect(destinationStep.getByRole('combobox')).toHaveValue(group.destination);
+	} else if (group) {
 		await destinationStep.getByRole('combobox').fill(group.destination);
 		await destinationStep.locator('[role="option"]').filter({ hasText: group.destination }).first().click();
 	} else {
@@ -92,6 +100,25 @@ export async function onboardWorker(
 
 	await page.locator('[data-step="summary"]').getByRole('button', { name: 'Entrar en Turnin' }).click();
 	await page.waitForURL(/\/app$/);
+}
+
+/** An account with no job at all — the plain supervisor case. Returns its email. */
+export async function registerAccount(page: Page, testInfo: TestInfo, label: string): Promise<string> {
+	const offset = PROJECTS.indexOf(testInfo.project.name) + 1;
+	const seed = (Date.now() + offset * 7919 + label.length * 104_729) % 100_000_000;
+	const email = `${label}-${testInfo.project.name}-${seed}@example.test`;
+	const password = 'E2e-supervisor-2026';
+
+	await page.goto('/register');
+	await page.locator('input[name="email"]').fill(email);
+	await page.locator('input[name="password"]').fill(password);
+	await page.locator('input[name="password_repeat"]').fill(password);
+	await page.getByRole('button', { name: 'Crear cuenta con email' }).click();
+	await page.locator('input[name="_username"]').fill(email);
+	await page.locator('input[name="_password"]').fill(password);
+	await page.getByRole('button', { name: 'Iniciar sesión' }).click();
+
+	return email;
 }
 
 /**

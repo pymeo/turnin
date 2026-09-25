@@ -76,7 +76,7 @@ final readonly class AcceptSwapProposalHandler
                 $proposal->awaitApproval($command->workerId, null, $now);
                 $this->proposals->save($proposal);
 
-                return new SwapNotificationOutcome($proposal->id(), $proposal->requestOwnerId(), $proposal->proposerId(), (string) $request->workDate(), true);
+                return new SwapNotificationOutcome($proposal->id(), $proposal->requestOwnerId(), $proposal->proposerId(), (string) $request->workDate(), true, swapPoolId: $request->swapPoolId());
             }
 
             $this->executor->execute($proposal, $request, $now);
@@ -95,6 +95,11 @@ final readonly class AcceptSwapProposalHandler
             $names[$result->proposerId] ?? 'Un compañero',
             $result->requestedDate,
             $result->requiresApproval,
+            $result->swapPoolId,
+            // Whoever is verified when the agreement is reached. Agreements
+            // reached before anybody was verified are picked up by the
+            // supervisor dashboard, which reads pending approvals, not events.
+            $result->requiresApproval ? $this->governance->approversOf($result->swapPoolId) : [],
         ));
     }
 }

@@ -1,0 +1,10 @@
+{# The same three ways out for every supervisor link: WhatsApp, the system
+   share sheet, and the clipboard. `whatsappLabel` names the intent. #}
+<div class="flex flex-col gap-2" data-controller="supervisor-share" data-supervisor-share-url-value="{{ url }}" data-supervisor-share-message-value="{{ message }}" data-supervisor-share-title-value="{{ title }}" data-testid="supervisor-share">
+    <button class="btn-primary btn-block" type="button" data-action="supervisor-share#whatsapp">{{ whatsappLabel }}</button>
+    <div class="supervisor-actions">
+        <button class="btn-secondary" type="button" data-action="supervisor-share#share">Compartir</button>
+        <button class="btn-secondary" type="button" data-action="supervisor-share#copy">Copiar enlace</button>
+    </div>
+    <p class="supervisor-share-feedback" data-supervisor-share-target="feedback" role="status" aria-live="polite"></p>
+</div>

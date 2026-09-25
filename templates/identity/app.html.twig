@@ -6,8 +6,20 @@
 
     <header>
         <p class="text-ink-muted">Hola</p>
-        <h1 class="text-3xl font-bold">Tu grupo de trabajo</h1>
+        <h1 class="text-3xl font-bold">{{ user.hasWorkerProfile ? 'Tu grupo de trabajo' : 'Tu área de responsable' }}</h1>
     </header>
+
+    {% if app.request.query.get('responsable') == 'dejado' %}
+        <p class="alert-success" role="status">Has dejado de ser responsable. Tu historial se conserva.</p>
+    {% elseif app.request.query.get('responsable') == 'rechazado' %}
+        <p class="alert-info" role="status">Has rechazado la invitación. Avisaremos a quien te la envió.</p>
+    {% endif %}
+
+    {# Supervision comes first while it needs something from this person: a
+       pending request is the main thing on the home until the team answers. #}
+    {% include 'workforce/_supervision_home.html.twig' with {overview: supervision_overview(user.id), approvalCounts: pending_approval_counts(user.id)} only %}
+
+    {% if user.hasWorkerProfile %}
 
     {# The calendar is the thing that makes everything else possible, so it is
        the first card and the only primary action. Skippable on purpose: nobody
@@ -36,7 +48,15 @@
         <a class="btn-primary btn-block" href="{{ path('swap_changes', {flow: 'release'}) }}">Quiero librar un turno</a>
         <a class="btn-secondary btn-block" href="{{ path('swap_changes', {flow: 'availability'}) }}">Puedo trabajar</a>
         <a class="btn-ghost btn-block" href="{{ path('swap_changes') }}">Ver cambios</a>
+        <a class="btn-ghost btn-block" href="{{ path('workforce_team') }}">Mi equipo y responsables</a>
         <a class="btn-ghost btn-block" href="{{ path('workforce_assignments') }}">Mis lugares de trabajo</a>
     </nav>
+    {% else %}
+    <section class="card flex flex-col gap-2">
+        <p class="text-lg font-semibold">¿También trabajas a turnos?</p>
+        <p class="text-ink-muted">Con la misma cuenta puedes completar tu perfil laboral y cambiar tus propios turnos.</p>
+        <a class="btn-secondary btn-block" href="{{ path('workforce_onboarding') }}">Completar mi perfil laboral</a>
+    </section>
+    {% endif %}
 </main>
 {% endblock %}

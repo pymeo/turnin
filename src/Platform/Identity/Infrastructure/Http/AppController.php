@@ -34,14 +34,13 @@ final readonly class AppController
         return new Response($this->twig->render('identity/app.html.twig', ['user' => $user]));
     }
 
+    /**
+     * Kept for old bookmarks. What a supervisor may see is decided per pool by
+     * the supervisor area itself, not by the account's profile flag.
+     */
     #[Route('/supervisor', name: 'identity_supervisor', methods: ['GET'])]
     public function supervisor(): Response
     {
-        $user = $this->tokens->getToken()?->getUser();
-        if (!$user instanceof SecurityUser || !$user->hasSupervisorProfile()) {
-            return new Response('No tienes acceso a gestión.', Response::HTTP_FORBIDDEN);
-        }
-
-        return new Response($this->twig->render('identity/supervisor.html.twig'));
+        return new RedirectResponse('/app/responsable');
     }
 }

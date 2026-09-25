@@ -8,6 +8,15 @@
 # Domain knows nothing about Symfony or Doctrine. See docs/ARCHITECTURE.md.
 
 parameters:
+    # Supervisor onboarding (docs/adr/0014-team-verified-supervisors.md).
+    # Days an invitation link stays valid; an accepted one no longer depends on it.
+    turnin.supervisor_invitation_ttl_days: 7
+    # Colleagues who must confirm a supervisor: teams below the threshold need
+    # the small number, teams at or above it the large one. Per-organization
+    # values will replace these defaults when organizations exist.
+    turnin.supervisor_quorum.small_team: 2
+    turnin.supervisor_quorum.large_team: 3
+    turnin.supervisor_quorum.large_team_from: 5
 
 services:
     _defaults:
@@ -30,6 +39,10 @@ services:
             string $vapidPrivateKey: '%env(VAPID_PRIVATE_KEY)%'
             string $googleOAuthClientId: '%env(GOOGLE_OAUTH_CLIENT_ID)%'
             string $googleOAuthClientSecret: '%env(GOOGLE_OAUTH_CLIENT_SECRET)%'
+            int $supervisorInvitationTtlDays: '%turnin.supervisor_invitation_ttl_days%'
+            # Derives the verification-link token; rotating APP_SECRET
+            # invalidates pending verification links, never an assignment.
+            string $supervisorLinkSecret: '%kernel.secret%'
 
     App\:
         resource: '../src/'
@@ -151,6 +164,20 @@ services:
     App\Workforce\Domain\WorkerAssignments: '@App\Workforce\Infrastructure\Persistence\Doctrine\DoctrineWorkerAssignmentWriter'
     App\Workforce\Domain\WorkerOnboardingDrafts: '@App\Workforce\Infrastructure\Persistence\Doctrine\DoctrineWorkerOnboardingDrafts'
     App\Workforce\Domain\SwapPoolResolver: ~
+    App\Workforce\Domain\Supervision\SupervisorInvitations: '@App\Workforce\Infrastructure\Persistence\Doctrine\DoctrineSupervisorInvitations'
+    App\Workforce\Domain\Supervision\SupervisorAssignments: '@App\Workforce\Infrastructure\Persistence\Doctrine\DoctrineSupervisorAssignments'
+    App\Workforce\Domain\Supervision\SwapPoolTeams: '@App\Workforce\Infrastructure\Persistence\Doctrine\DoctrineSwapPoolTeams'
+    App\Workforce\Domain\Supervision\SupervisorLinkTokens: '@App\Workforce\Infrastructure\Security\HmacSupervisorLinkTokens'
+    App\Workforce\Domain\Supervision\SupervisionIdGenerator: '@App\Workforce\Infrastructure\Identity\SymfonySupervisionIdGenerator'
+    App\Workforce\Domain\Supervision\SupervisionEvents: '@App\Notification\Infrastructure\Workforce\MessengerSupervisionEvents'
+    # Declared by Workforce, implemented by Identity: a name to recognise a
+    # candidate and the navigation flag. Authority never comes from here.
+    App\Workforce\Domain\Supervision\SupervisorProfiles: '@App\Platform\Identity\Infrastructure\Workforce\IdentitySupervisorProfiles'
+    App\Workforce\Domain\Supervision\SupervisorVerificationPolicy:
+        arguments:
+            $smallTeamConfirmations: '%turnin.supervisor_quorum.small_team%'
+            $largeTeamConfirmations: '%turnin.supervisor_quorum.large_team%'
+            $largeTeamFrom: '%turnin.supervisor_quorum.large_team_from%'
     App\Platform\Identity\Domain\Users: '@App\Platform\Identity\Infrastructure\Persistence\Doctrine\DoctrineUsers'
     App\Platform\Identity\Domain\PasswordHasher: '@App\Platform\Identity\Infrastructure\Security\SymfonyPasswordHasher'
     App\Platform\Identity\Domain\UserIdGenerator: '@App\Platform\Identity\Infrastructure\Identity\SymfonyUserIdGenerator'
@@ -221,6 +248,7 @@ services:
     App\Notification\Domain\NotificationIdGenerator: '@App\Notification\Infrastructure\Identity\SymfonyNotificationIdGenerator'
     App\Notification\Domain\PushGateway: '@App\Notification\Infrastructure\Push\MinishlinkPushGateway'
     App\Notification\Domain\AuthenticatedNotificationRecipient: '@App\Platform\Identity\Infrastructure\Notification\IdentityNotificationRecipient'
+    App\Notification\Domain\PendingApprovals: '@App\Notification\Infrastructure\Swap\SwapPendingApprovals'
 
     # --- Coordination -----------------------------------------------------
     App\Coordination\Domain\ScheduleInvitations: '@App\Coordination\Infrastructure\Persistence\Doctrine\DoctrineScheduleInvitations'

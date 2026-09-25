@@ -43,6 +43,11 @@ actualizarlo.
 | **SwapAgreement** | Una propuesta aceptada por todos y, si hace falta, aprobada. |
 | **ShiftDebt** | «Marta hizo mi turno y le debo uno». Nominal, sin precio. |
 | **Cycle** | Un cambio encadenado: A→B→C→A. |
+| **SupervisorInvitation** | El enlace con el que un compañero invita a quien valida los cambios de su pool. Permite *pedir* ser responsable, nunca lo concede. |
+| **SupervisorAssignment** | «Esta persona es responsable de este pool», con estado: `PENDING_VERIFICATION`, `VERIFIED`, `LEFT`, `REVOKED`. Solo `VERIFIED` da autoridad, y solo sobre ese pool. |
+| **SupervisorVerification** | La respuesta de un compañero sobre una candidata: `CONFIRMED` o `CANNOT_CONFIRM`. Una por persona y assignment. |
+| **SupervisorVerificationPolicy** | Cuántas confirmaciones hacen falta en un pool: 2 con menos de 5 compañeros, 3 con 5 o más. |
+| **TEAM_VERIFIED** | Verificación comunitaria: el equipo ha confirmado a esa persona en Turnin. No es una certificación oficial del centro. |
 
 ## `Workplace` — catálogo implementado
 
@@ -270,6 +275,43 @@ Los hechos `SwapProposalCreated`, `SwapAgreementReached`,
 La notificación interna se guarda antes del intento externo y los fallos se
 registran sin propagarse al flujo de intercambio.
 
+Los hechos de responsables (`SupervisorVerificationRequested`,
+`SupervisorVerified`, `SupervisorLeft`, `SupervisorInvitationDeclined`) llegan
+de Workforce por el mismo camino. `DeliverNotification` recibe además el canal:
+push solo para lo que exige actuar; las novedades del equipo, solo en la
+campanita.
+
+## Responsables verificados por su equipo
+
+Implementado en `Workforce\Domain\Supervision`
+(→ [ADR 14](adr/0014-team-verified-supervisors.md)). Un pool puede exigir
+aprobación (`ShiftExchangePolicy`), y *quién* puede darla lo dice
+`SupervisorAssignment`. Son preguntas distintas y viven en sitios distintos.
+
+```
+compañero invita ─▶ responsable entra con Google ─▶ acepta
+   ─▶ PENDING_VERIFICATION ─▶ el equipo confirma (quórum) ─▶ VERIFIED ─▶ LEFT
+```
+
+Invariantes:
+
+* tener el enlace o aceptar la invitación **no** da ningún permiso;
+* solo confirman miembros activos del mismo pool, nunca la candidata;
+* una persona confirma como mucho una vez por assignment
+  (`UNIQUE(assignment, verifier)`); «no puedo confirmarlo» no cuenta y solo
+  puede cambiar a una confirmación;
+* el invitador cuenta como primera confirmación, registrada con
+  `source = INVITATION`, si sigue siendo miembro activo;
+* el voto que alcanza el quórum y el paso a `VERIFIED` ocurren en la misma
+  transacción, con el assignment bloqueado; `recordVerification` devuelve `true`
+  exactamente una vez;
+* como mucho un assignment activo por persona y pool (índice único parcial);
+  un pool puede tener varios verificados;
+* renunciar pasa a `LEFT` con `leftAt`, sin borrar la fila ni sus votos;
+* si el equipo es más pequeño que el quórum, la solicitud sigue pendiente;
+* sin responsable verificado, un cambio `PENDING_APPROVAL` espera. Nunca se
+  aprueba ni se cancela por falta de responsable.
+
 ## SwapPool: el concepto que hay que entender
 
 **Dos personas del mismo hospital no pueden intercambiar turnos automáticamente.**
@@ -443,8 +485,10 @@ Turnin es un producto sobre el tiempo. Estas reglas no son negociables.
 Dos personas van a intentar quedarse con la misma oportunidad. Es cuestión de
 tiempo, y de que el producto funcione.
 
-Todavía no hay nada que proteger, así que no hay nada implementado. Cuando lo
-haya, el orden de preferencia es:
+Lo ya protegido: un acuerdo pendiente de aprobación por solicitud, una
+verificación por compañero y assignment, y un assignment activo por persona y
+pool, todos con índice único; propuestas, invitaciones y assignments se leen
+con `FOR UPDATE` en los comandos que deciden. El orden de preferencia es:
 
 1. **Restricciones de base de datos.** Un índice único sobre «un acuerdo por
    solicitud» es la única garantía que sobrevive a un despliegue con dos
@@ -470,6 +514,10 @@ Se publican cuando ocurre algo que el negocio reconoce, no en cada `save()`.
 | `SwapAgreementSettled` | Scheduling (aplicar el cambio al calendario vía `ScheduleDraft` con `RosterSource::SWAP`), ShiftDebt |
 | `ShiftDebtIncurred` / `ShiftDebtSettled` | Notification |
 | `AvailabilityChanged` | Matching |
+| `SupervisorVerificationRequested` | Notification (pide a los compañeros que confirmen) |
+| `SupervisorVerified` | Notification (responsable, equipo y cambios que ya esperaban) |
+| `SupervisorLeft` | Notification (el equipo, con aviso si se queda sin responsable) |
+| `SupervisorInvitationDeclined` | Notification (quien invitó) |
 
 Es la vía por la que los contextos se comunican sin conocerse
 (→ [CONTEXT_MAP.md](CONTEXT_MAP.md)).
@@ -480,9 +528,10 @@ Es la vía por la que los contextos se comunican sin conocerse
 `PersonalProfile` y `UsageIdentity`.
 La identidad no contiene centro, categoría ni destino: esas decisiones viven en
 `Workforce\WorkerAssignment`. Las capacidades `worker` y `supervisor` son
-independientes para permitir una misma cuenta con ambos perfiles. El supervisor
-solo recibe acceso por una relación de dominio o invitación; nunca por un botón
-público de autoasignación.
+independientes para permitir una misma cuenta con ambos perfiles. El flag
+`supervisor` se activa al aceptar una invitación y solo decide la navegación
+tras el login; **no autoriza nada**. La autoridad es un `SupervisorAssignment`
+`VERIFIED` para un pool concreto, y se consulta en cada petición.
 
 `ExternalIdentity` es una credencial de esa misma cuenta. Conserva proveedor,
 subject estable, email observado al vincular y fecha; nunca tokens OAuth. El

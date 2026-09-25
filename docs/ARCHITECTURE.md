@@ -40,6 +40,11 @@ src/
       Domain|Application|Infrastructure/
 ```
 
+Dentro de una capa, un subespacio de nombres agrupa un concepto con varias
+piezas —`Workforce\Domain\Supervision` tiene agregados, política, puertos y
+eventos—. Sigue siendo la capa `Domain` para Deptrac. Los handlers se quedan en
+`Application/Command` y `Application/Query`, donde los registra el bus.
+
 Y no:
 
 ```
@@ -57,7 +62,7 @@ Hoy existen físicamente tres módulos bajo `Platform` y un contexto de producto
 | `Platform\System`  | Salud del sistema: `/health`, `turnin:health`, correlación de logs.    |
 | `Platform\Web`     | El shell web: la landing pública. Sin dominio propio, y así se declara. |
 | `Platform\Identity` | Cuenta, contraseña, OAuth, sesión y perfil personal protegido.        |
-| `Workforce`        | Catálogo, asignación, pools y onboarding laboral reanudable.            |
+| `Workforce`        | Catálogo, asignación, pools, onboarding laboral reanudable y responsables verificados por su equipo (`Domain\Supervision`, → [ADR 14](adr/0014-team-verified-supervisors.md)). |
 | `Scheduling`       | El calendario personal: días, turnos, patrones y su entrada por voz.    |
 | `Swap`             | Qué quiere hacer alguien con sus turnos y cuándo puede trabajar.        |
 | `Notification`     | Bandeja interna y entrega Web Push derivadas de hechos de otros contextos. |

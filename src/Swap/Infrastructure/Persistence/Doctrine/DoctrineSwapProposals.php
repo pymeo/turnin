@@ -83,6 +83,23 @@ final readonly class DoctrineSwapProposals implements SwapProposals
         return $this->many("SELECT p.* FROM swap_proposals p JOIN swap_requests r ON r.id = p.request_id WHERE p.status = 'pending_approval' AND r.swap_pool_id IN (:pools) ORDER BY p.updated_at", ['pools' => $poolIds], ['pools' => ArrayParameterType::STRING]);
     }
 
+    public function countAwaitingApprovalByPool(array $poolIds): array
+    {
+        if ([] === $poolIds) {
+            return [];
+        }
+        $counts = [];
+        foreach ($this->connection->fetchAllAssociative("SELECT r.swap_pool_id, COUNT(*) AS waiting FROM swap_proposals p JOIN swap_requests r ON r.id = p.request_id WHERE p.status = 'pending_approval' AND r.swap_pool_id IN (:pools) GROUP BY r.swap_pool_id", ['pools' => $poolIds], ['pools' => ArrayParameterType::STRING]) as $row) {
+            $pool = $row['swap_pool_id'] ?? null;
+            $waiting = $row['waiting'] ?? 0;
+            if (\is_string($pool) && is_numeric($waiting)) {
+                $counts[$pool] = (int) $waiting;
+            }
+        }
+
+        return $counts;
+    }
+
     public function activeRedemption(string $balanceId, string $requestId, string $proposerId): ?SwapProposal
     {
         return $this->one("SELECT * FROM swap_proposals WHERE exchange_balance_id = :balance AND request_id = :request AND proposer_id = :proposer AND status IN ('pending', 'pending_approval')", ['balance' => $balanceId, 'request' => $requestId, 'proposer' => $proposerId]);

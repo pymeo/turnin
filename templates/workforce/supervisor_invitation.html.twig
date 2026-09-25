@@ -1,0 +1,34 @@
+{% extends 'base.html.twig' %}
+{% block title %}Turnin — Invitación de responsable{% endblock %}
+{% block body %}
+<main class="supervisor-shell">
+    {% include 'identity/_authenticated_header.html.twig' %}
+    <section class="supervisor-card" data-testid="supervisor-invitation">
+        <p class="supervisor-state">Te han invitado como responsable de</p>
+        <div class="supervisor-team"><strong>{{ invitation.workplaceName }}</strong><span class="text-lg">{{ invitation.teamLabel }}</span></div>
+        {% if invitation.acceptedByViewer or (invitation.viewerAlreadySupervises and invitation.state != 'open') %}
+            <p class="alert-success">Ya has aceptado esta invitación.</p>
+            <a class="btn-primary btn-block" href="{{ path('identity_app') }}">Ver mi verificación</a>
+        {% elseif invitation.state == 'expired' %}
+            <p class="alert-info">Esta invitación ha caducado. Pide a quien te la envió que genere una nueva.</p>
+        {% elseif invitation.state != 'open' %}
+            <p class="alert-info">Esta invitación ya no está disponible.</p>
+        {% elseif invitation.createdByViewer %}
+            <p class="alert-info">Has creado tú esta invitación. Envíasela a la persona que normalmente valida vuestros cambios.</p>
+        {% elseif invitation.viewerAlreadySupervises %}
+            <p class="alert-info">Ya eres responsable de este equipo o estás pendiente de verificación.</p>
+            <a class="btn-primary btn-block" href="{{ path('identity_app') }}">Ir al inicio</a>
+        {% else %}
+            <p class="text-ink-muted">Los miembros del equipo confirmarán que eres la persona que normalmente gestiona sus cambios. Hasta entonces no podrás aprobar cambios ni ver su cuadrante.</p>
+            <form method="post" action="{{ path('workforce_supervisor_invitation_answer', {token: token, answer: 'aceptar'}) }}">
+                <input type="hidden" name="_token" value="{{ csrfToken }}">
+                <button class="btn-primary btn-block" type="submit">Aceptar</button>
+            </form>
+            <form method="post" action="{{ path('workforce_supervisor_invitation_answer', {token: token, answer: 'rechazar'}) }}">
+                <input type="hidden" name="_token" value="{{ csrfToken }}">
+                <button class="btn-ghost btn-block" type="submit">No soy yo / Rechazar</button>
+            </form>
+        {% endif %}
+    </section>
+</main>
+{% endblock %}

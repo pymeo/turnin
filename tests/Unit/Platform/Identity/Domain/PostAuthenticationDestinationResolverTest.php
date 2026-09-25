@@ -13,7 +13,7 @@ final class PostAuthenticationDestinationResolverTest extends TestCase
     #[TestWith([false, false, '/onboarding'])]
     #[TestWith([true, false, '/app'])]
     #[TestWith([true, true, '/app'])]
-    #[TestWith([false, true, '/supervisor'])]
+    #[TestWith([false, true, '/app'])]
     public function test_it_chooses_the_primary_authenticated_context(bool $worker, bool $supervisor, string $expected): void
     {
         self::assertSame($expected, (new PostAuthenticationDestinationResolver())->resolve($worker, $supervisor));
