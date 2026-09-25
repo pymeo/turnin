@@ -37,6 +37,11 @@ modelo tiene que soportarlas sin reescribirse. Por eso el `SwapPool`
   dejar que el compañero elija uno —implementado—;
 * confirmar el intercambio y reconocer después ambos turnos con `↔` en el
   calendario —implementado—;
+* volver a una ficha que explica quién hace cada turno, si falta aprobación y
+  cómo compartir una consulta mínima de solo lectura con el responsable
+  —implementado—;
+* recibir el aviso en la campanita y, si se activa expresamente, mediante Web
+  Push con enlace directo a la propuesta o al cambio —implementado—;
 * decir «quiero librar este día»;
 * decir «quiero coger turnos»;
 * ceder un turno sin recibir otro a cambio;

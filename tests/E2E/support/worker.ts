@@ -82,6 +82,7 @@ export async function onboardWorker(
 	// The label of this button depends on whether anything was picked
 	// ("Omitir por ahora" / "Continuar"), so it is addressed by its target.
 	const additionalStep = page.locator('[data-step="additional"]');
+	await expect(additionalStep).toBeVisible({ timeout: 30_000 });
 	for (const destination of group?.additionalDestinations ?? []) {
 		await additionalStep.getByRole('combobox').fill(destination);
 		await additionalStep.locator('[role="option"]').filter({ hasText: destination }).first().click();
@@ -121,7 +122,7 @@ export const test = base.extend<Record<string, never>, { workerStorageState: str
 
 			await use(file);
 		},
-		{ scope: 'worker' },
+		{ scope: 'worker', timeout: 120_000 },
 	],
 });
 

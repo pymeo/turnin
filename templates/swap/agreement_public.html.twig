@@ -1,0 +1,17 @@
+{% extends 'base.html.twig' %}
+
+{% block title %}Turnin — Cambio de turno {{ agreement.reference }}{% endblock %}
+{% block description %}Consulta privada de un cambio de turno acordado.{% endblock %}
+{% block robots %}<meta name="robots" content="noindex,nofollow">{% endblock %}
+
+{% block body %}
+<main class="agreement-shell agreement-public">
+    <header class="public-brand"><img src="/brand/turnin-wordmark.svg" alt="TURNIN" width="91" height="24"></header>
+    {% include 'swap/_agreement_content.html.twig' with {agreement: agreement} only %}
+    <footer class="agreement-meta">
+        <p>Acordado: {{ agreement.reachedAt }}</p>
+        <p>Referencia del cambio: <strong>{{ agreement.reference }}</strong></p>
+        <p>Consulta de solo lectura. Esta página no permite aceptar, aprobar ni modificar el cambio.</p>
+    </footer>
+</main>
+{% endblock %}

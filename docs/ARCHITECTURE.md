@@ -60,6 +60,7 @@ Hoy existen físicamente tres módulos bajo `Platform` y un contexto de producto
 | `Workforce`        | Catálogo, asignación, pools y onboarding laboral reanudable.            |
 | `Scheduling`       | El calendario personal: días, turnos, patrones y su entrada por voz.    |
 | `Swap`             | Qué quiere hacer alguien con sus turnos y cuándo puede trabajar.        |
+| `Notification`     | Bandeja interna y entrega Web Push derivadas de hechos de otros contextos. |
 
 No hay más porque no hay más producto todavía. El mapa de contextos previsto está
 en [CONTEXT_MAP.md](CONTEXT_MAP.md); se crean cuando se implementan, no antes.
@@ -103,10 +104,12 @@ turnin.query_handlers:
     tags: [{ name: 'messenger.message_handler', bus: 'query.bus' }]
 ```
 
-Todo se procesa de forma **síncrona**. Redis está levantado y listo, pero no hay
-transporte asíncrono hasta que exista un caso de uso lento de verdad (matching,
-notificaciones, importaciones). Convertir todo en asíncrono desde el principio
-añade latencia, complejidad de depuración y estados intermedios a cambio de nada.
+Los cambios de estado se procesan de forma síncrona. Los eventos de notificación
+se despachan con `DispatchAfterCurrentBusStamp`: la transacción de Swap termina
+antes de crear la notificación o intentar Web Push. La fila in-app se persiste
+primero y el envío externo es *best effort*; ningún fallo de push cambia el
+resultado del acuerdo. Redis queda disponible para mover esa entrega a un
+transporte asíncrono cuando el volumen lo justifique.
 
 ## Persistencia
 

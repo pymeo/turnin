@@ -39,6 +39,8 @@
                     <input type="hidden" name="_token" value="{{ csrfToken }}">
                     <button class="btn-ghost btn-block" type="submit">Retirar</button>
                 </form>
+            {% elseif proposal.status in ['pending_approval', 'executed', 'accepted', 'approval_rejected', 'expired'] and proposal.chosenHeadline %}
+                <a class="btn-secondary btn-block" href="{{ path('swap_agreement', {proposalId: proposal.proposalId}) }}">Ver cambio</a>
             {% else %}
                 <a class="btn-secondary btn-block" href="{{ path('swap_proposal_decision', {proposalId: proposal.proposalId}) }}">Ver detalle</a>
             {% endif %}

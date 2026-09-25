@@ -24,6 +24,10 @@ services:
             string $piiHmacKey: '%env(PII_HMAC_KEY)%'
             string $piiEncryptionKey: '%env(PII_ENCRYPTION_KEY)%'
             string $calendarTokenEncryptionKey: '%env(CALENDAR_TOKEN_ENCRYPTION_KEY)%'
+            string $agreementTokenEncryptionKey: '%env(AGREEMENT_TOKEN_ENCRYPTION_KEY)%'
+            string $vapidSubject: '%env(VAPID_SUBJECT)%'
+            string $vapidPublicKey: '%env(VAPID_PUBLIC_KEY)%'
+            string $vapidPrivateKey: '%env(VAPID_PRIVATE_KEY)%'
             string $googleOAuthClientId: '%env(GOOGLE_OAUTH_CLIENT_ID)%'
             string $googleOAuthClientSecret: '%env(GOOGLE_OAUTH_CLIENT_SECRET)%'
 
@@ -118,6 +122,24 @@ services:
         tags:
             - { name: 'messenger.message_handler', bus: 'command.bus' }
 
+    turnin.notification_query_handlers:
+        namespace: App\Notification\Application\Query\
+        resource: '../src/Notification/Application/Query/*Handler.php'
+        tags:
+            - { name: 'messenger.message_handler', bus: 'query.bus' }
+
+    turnin.notification_command_handlers:
+        namespace: App\Notification\Application\Command\
+        resource: '../src/Notification/Application/Command/*Handler.php'
+        tags:
+            - { name: 'messenger.message_handler', bus: 'command.bus' }
+
+    turnin.notification_event_handlers:
+        namespace: App\Notification\Application\Event\
+        resource: '../src/Notification/Application/Event/*Handler.php'
+        tags:
+            - { name: 'messenger.message_handler', bus: 'event.bus' }
+
     App\Workforce\Domain\Workplaces: '@App\Workforce\Infrastructure\Persistence\Doctrine\DoctrineWorkplaces'
     App\Workforce\Domain\WorkplaceIdGenerator: '@App\Workforce\Infrastructure\Identity\SymfonyWorkplaceIdGenerator'
     App\Workforce\Domain\StaffCategories: '@App\Workforce\Infrastructure\Persistence\Doctrine\DoctrineStaffCategories'
@@ -170,12 +192,17 @@ services:
     App\Swap\Domain\Availabilities: '@App\Swap\Infrastructure\Persistence\Doctrine\DoctrineAvailabilities'
     App\Swap\Domain\SwapIdGenerator: '@App\Swap\Infrastructure\Identity\SymfonySwapIdGenerator'
     App\Swap\Domain\SwapTransaction: '@App\Swap\Infrastructure\Persistence\Doctrine\DoctrineSwapTransaction'
+    App\Swap\Domain\SwapAgreementSnapshots: '@App\Swap\Infrastructure\Persistence\Doctrine\DoctrineSwapAgreementSnapshots'
+    App\Swap\Domain\AgreementShareTokenGenerator: '@App\Swap\Infrastructure\Identity\SecureAgreementShareTokenGenerator'
+    App\Swap\Domain\AgreementTokenCipher: '@App\Swap\Infrastructure\Security\SodiumAgreementTokenCipher'
+    App\Swap\Domain\SwapEvents: '@App\Notification\Infrastructure\Swap\MessengerSwapEvents'
     App\Swap\Domain\ShiftExchangeGovernance: '@App\Workforce\Infrastructure\Swap\WorkforceShiftExchangeGovernance'
     App\Swap\Domain\SwapGroups: '@App\Workforce\Infrastructure\Swap\WorkforceSwapGroups'
     App\Swap\Domain\RosteredDays: '@App\Scheduling\Infrastructure\Swap\SchedulingRosteredDays'
     App\Swap\Domain\AuthenticatedWorkers: '@App\Platform\Identity\Infrastructure\Swap\IdentitySwapWorkers'
     App\Swap\Domain\WorkerDisplayNames: '@App\Platform\Identity\Infrastructure\Swap\IdentitySwapWorkers'
     App\Scheduling\Domain\CalendarInsightSource: '@App\Scheduling\Domain\RestStreakInsights'
+    App\Scheduling\Application\Query\RosterSwapTraces: '@App\Swap\Infrastructure\Scheduling\DoctrineRosterSwapTraces'
     App\Scheduling\Application\ExternalCalendar\CalendarTokenCipher: '@App\Scheduling\Infrastructure\ExternalCalendar\SodiumCalendarTokenCipher'
     App\Scheduling\Application\ExternalCalendar\ExternalCalendarConnections: '@App\Scheduling\Infrastructure\Persistence\Doctrine\DoctrineExternalCalendars'
     App\Scheduling\Application\ExternalCalendar\ExternalCalendarMappings: '@App\Scheduling\Infrastructure\Persistence\Doctrine\DoctrineExternalCalendars'
@@ -187,6 +214,13 @@ services:
     App\Scheduling\Domain\ScheduleTextParser: ~
     App\Scheduling\Domain\DateExpressionParser: ~
     App\Scheduling\Domain\RepeatingRosterPatternDetector: ~
+
+    # --- Notification ------------------------------------------------------
+    App\Notification\Domain\UserNotifications: '@App\Notification\Infrastructure\Persistence\Doctrine\DoctrineUserNotifications'
+    App\Notification\Domain\PushSubscriptions: '@App\Notification\Infrastructure\Persistence\Doctrine\DoctrinePushSubscriptions'
+    App\Notification\Domain\NotificationIdGenerator: '@App\Notification\Infrastructure\Identity\SymfonyNotificationIdGenerator'
+    App\Notification\Domain\PushGateway: '@App\Notification\Infrastructure\Push\MinishlinkPushGateway'
+    App\Notification\Domain\AuthenticatedNotificationRecipient: '@App\Platform\Identity\Infrastructure\Notification\IdentityNotificationRecipient'
 
     # --- Coordination -----------------------------------------------------
     App\Coordination\Domain\ScheduleInvitations: '@App\Coordination\Infrastructure\Persistence\Doctrine\DoctrineScheduleInvitations'

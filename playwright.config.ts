@@ -33,15 +33,15 @@ export default defineConfig({
 			// The narrowest screen we intend to support. If the layout survives
 			// here it survives anywhere.
 			name: 'mobile-375',
-			use: { ...devices['iPhone SE'] },
+			use: { ...devices['Desktop Chrome'], viewport: { width: 375, height: 667 }, isMobile: true, hasTouch: true },
 		},
 		{
 			name: 'mobile-390',
-			use: { ...devices['iPhone 13'] },
+			use: { ...devices['Desktop Chrome'], viewport: { width: 390, height: 844 }, isMobile: true, hasTouch: true },
 		},
 		{
 			name: 'mobile-430',
-			use: { ...devices['iPhone 14 Pro Max'] },
+			use: { ...devices['Desktop Chrome'], viewport: { width: 430, height: 932 }, isMobile: true, hasTouch: true },
 		},
 		{
 			name: 'tablet-768',

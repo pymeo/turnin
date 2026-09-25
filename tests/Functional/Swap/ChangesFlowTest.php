@@ -5,9 +5,11 @@ declare(strict_types=1);
 namespace App\Tests\Functional\Swap;
 
 use App\Platform\Identity\Infrastructure\Security\SecurityUser;
+use App\Swap\Application\Command\ReviewSwapApproval;
 use Doctrine\DBAL\Connection;
 use Symfony\Bundle\FrameworkBundle\KernelBrowser;
 use Symfony\Bundle\FrameworkBundle\Test\WebTestCase;
+use Symfony\Component\Messenger\MessageBusInterface;
 use Symfony\Component\Uid\Uuid;
 
 /**
@@ -103,7 +105,7 @@ final class ChangesFlowTest extends WebTestCase
         self::assertStringContainsString('María te hace el turno', $decision->html());
         self::assertStringContainsString('Elige qué turno puedes hacerle tú', $decision->html());
         $client->request('POST', '/app/changes/proposals/'.$proposalId.'/aceptar', ['_token' => $this->tokenFrom($client), 'optionId' => $optionId]);
-        self::assertResponseRedirects('/app/changes/proposals?hecho=1');
+        self::assertResponseRedirects('/app/changes/agreements/'.$proposalId);
         self::assertSame(
             'rest',
             $this->scalar(
@@ -129,6 +131,51 @@ final class ChangesFlowTest extends WebTestCase
         self::assertSame('swap', $this->scalar('SELECT source FROM scheduling_roster_days WHERE worker_assignment_id = :assignment AND work_date = :date', ['assignment' => $this->workers['pedro']['assignment'], 'date' => $returnDate]));
         self::assertSame('executed', $this->scalar('SELECT status FROM swap_proposals WHERE id = :id', ['id' => $proposalId]));
         self::assertSame('covered', $this->scalar('SELECT status FROM swap_requests WHERE id = :id', ['id' => $requestId]));
+
+        // The accepted proposal becomes one stable agreement resource. The
+        // proposal notification is only for Pedro; the agreement reaches both.
+        self::assertSame(1, $this->countRows('SELECT COUNT(*) FROM swap_agreement_snapshots WHERE proposal_id = :proposal', ['proposal' => $proposalId]));
+        self::assertSame(2, $this->countRows('SELECT COUNT(*) FROM notification_user_notifications WHERE recipient_id = :recipient', ['recipient' => $this->workers['pedro']['id']]));
+        self::assertSame(1, $this->countRows('SELECT COUNT(*) FROM notification_user_notifications WHERE recipient_id = :recipient', ['recipient' => $this->workers['maria']['id']]));
+
+        $agreement = $client->request('GET', '/app/changes/agreements/'.$proposalId);
+        self::assertResponseIsSuccessful();
+        self::assertStringContainsString('MARÍA HARÁ POR PEDRO', mb_strtoupper($agreement->html()));
+        self::assertStringContainsString('PEDRO HARÁ POR MARÍA', mb_strtoupper($agreement->html()));
+        self::assertStringContainsString('Cambio confirmado', $agreement->html());
+        self::assertStringContainsString('Compartir con responsable', $agreement->html());
+        $publicUrl = (string) $agreement->filter('[data-agreement-share-url-value]')->attr('data-agreement-share-url-value');
+        self::assertMatchesRegularExpression('#/cambio/[A-Za-z0-9_-]{43}$#', $publicUrl);
+        self::assertStringNotContainsString($proposalId, $publicUrl);
+
+        $notificationToken = (string) $agreement->filter('[data-notifications-csrf-value]')->attr('data-notifications-csrf-value');
+        $client->request('GET', '/app/notifications');
+        self::assertResponseIsSuccessful();
+        $notificationPayload = json_decode((string) $client->getResponse()->getContent(), true, 512, \JSON_THROW_ON_ERROR);
+        self::assertSame(2, $notificationPayload['unreadCount'] ?? null);
+        $firstNotificationId = $notificationPayload['notifications'][0]['id'] ?? null;
+        self::assertIsString($firstNotificationId);
+        $client->request('POST', '/app/notifications/'.$firstNotificationId.'/read', server: ['HTTP_X_CSRF_TOKEN' => $notificationToken]);
+        self::assertResponseIsSuccessful();
+        self::assertSame(1, json_decode((string) $client->getResponse()->getContent(), true, 512, \JSON_THROW_ON_ERROR)['unreadCount'] ?? null);
+        $client->request('POST', '/app/notifications/read-all', server: ['HTTP_X_CSRF_TOKEN' => $notificationToken]);
+        self::assertResponseIsSuccessful();
+        self::assertSame(0, $this->countRows('SELECT COUNT(*) FROM notification_user_notifications WHERE recipient_id = :recipient AND read_at IS NULL', ['recipient' => $this->workers['pedro']['id']]));
+
+        $client->getCookieJar()->clear();
+        $publicPath = (string) parse_url($publicUrl, \PHP_URL_PATH);
+        $publicAgreement = $client->request('GET', $publicPath);
+        self::assertResponseIsSuccessful();
+        self::assertStringContainsString('Consulta de solo lectura', $publicAgreement->html());
+        self::assertStringContainsString('noindex,nofollow', $publicAgreement->html());
+        self::assertStringNotContainsString($this->workers['pedro']['email'], $publicAgreement->html());
+        self::assertStringNotContainsString($this->workers['maria']['email'], $publicAgreement->html());
+        self::assertResponseHeaderSame('X-Robots-Tag', 'noindex, nofollow');
+        self::assertStringContainsString('no-store', (string) $client->getResponse()->headers->get('Cache-Control'));
+        $client->request('POST', $publicPath);
+        self::assertResponseStatusCodeSame(405);
+        $client->request('GET', '/cambio/'.str_repeat('x', 43));
+        self::assertResponseStatusCodeSame(404);
     }
 
     public function test_a_profile_edit_after_publishing_does_not_strand_the_agreement_on_the_old_team_assignment(): void
@@ -158,11 +205,61 @@ final class ChangesFlowTest extends WebTestCase
         $this->signIn($client, 'pedro');
         $client->request('POST', '/app/changes/proposals/'.$proposalId.'/aceptar', ['_token' => $this->tokenFrom($client), 'optionId' => $optionId]);
 
-        self::assertResponseRedirects('/app/changes/proposals?hecho=1');
+        self::assertResponseRedirects('/app/changes/agreements/'.$proposalId);
         self::assertSame('executed', $this->scalar('SELECT status FROM swap_proposals WHERE id = :id', ['id' => $proposalId]));
         self::assertSame('working', $this->scalar('SELECT state FROM scheduling_roster_days WHERE worker_assignment_id = :assignment AND work_date = :date', ['assignment' => $currentPedroCalendar, 'date' => '2027-03-20']));
         self::assertSame('swap', $this->scalar('SELECT source FROM scheduling_roster_days WHERE worker_assignment_id = :assignment AND work_date = :date', ['assignment' => $currentPedroCalendar, 'date' => '2027-03-20']));
         self::assertSame('rest', $this->scalar('SELECT state FROM scheduling_roster_days WHERE worker_assignment_id = :assignment AND work_date = :date', ['assignment' => $currentPedroCalendar, 'date' => self::SHIFT_DATE]), 'A copied source shift is also released from the current visible calendar.');
+    }
+
+    public function test_an_agreement_that_requires_approval_stays_pending_until_the_supervisor_approves_it(): void
+    {
+        $client = $this->world();
+        self::assertNotNull($this->connection);
+        $this->connection->insert('workforce_shift_exchange_policies', [
+            'swap_pool_id' => $this->uciPool,
+            'requires_approval' => true,
+            'allows_coverage' => false,
+            'updated_at' => '2026-09-24T18:00:00+00:00',
+        ], ['requires_approval' => 'boolean', 'allows_coverage' => 'boolean']);
+        $this->connection->insert('workforce_swap_supervisors', [
+            'swap_pool_id' => $this->uciPool,
+            'supervisor_user_id' => $this->workers['antonio']['id'],
+            'active' => true,
+            'created_at' => '2026-09-24T18:00:00+00:00',
+        ], ['active' => 'boolean']);
+
+        $this->signIn($client, 'pedro');
+        $requestId = $this->publishedRequestId($this->json($client, 'POST', '/app/changes/publicar', [
+            'assignmentId' => $this->workers['pedro']['assignment'],
+            'date' => self::SHIFT_DATE,
+        ], $this->tokenFrom($client)));
+        $this->signIn($client, 'maria');
+        $client->request('POST', '/app/changes/'.$requestId.'/propuestas', [
+            '_token' => $this->tokenFrom($client),
+            'offeredShifts' => [$this->workers['maria']['assignment'].'|2027-03-20'],
+        ]);
+        $proposalId = $this->scalar('SELECT id FROM swap_proposals WHERE request_id = :request', ['request' => $requestId]);
+        $optionId = $this->scalar('SELECT id FROM swap_proposal_options WHERE proposal_id = :proposal', ['proposal' => $proposalId]);
+
+        $this->signIn($client, 'pedro');
+        $client->request('POST', '/app/changes/proposals/'.$proposalId.'/aceptar', ['_token' => $this->tokenFrom($client), 'optionId' => $optionId]);
+        self::assertResponseRedirects('/app/changes/agreements/'.$proposalId);
+        self::assertSame('pending_approval', $this->scalar('SELECT status FROM swap_proposals WHERE id = :id', ['id' => $proposalId]));
+        self::assertSame('working', $this->scalar('SELECT state FROM scheduling_roster_days WHERE worker_assignment_id = :assignment AND work_date = :date', ['assignment' => $this->workers['pedro']['assignment'], 'date' => self::SHIFT_DATE]));
+        $pending = $client->request('GET', '/app/changes/agreements/'.$proposalId);
+        self::assertStringContainsString('Acordado entre compañeros', $pending->html());
+        self::assertStringContainsString('Falta la aprobación/registro del responsable', $pending->html());
+
+        $bus = static::getContainer()->get('command.bus');
+        self::assertInstanceOf(MessageBusInterface::class, $bus);
+        $bus->dispatch(new ReviewSwapApproval($this->workers['antonio']['id'], $proposalId, 'approve'));
+
+        self::assertSame('executed', $this->scalar('SELECT status FROM swap_proposals WHERE id = :id', ['id' => $proposalId]));
+        self::assertSame(2, $this->countRows("SELECT COUNT(*) FROM notification_user_notifications WHERE recipient_id = :recipient AND type IN ('swap_agreement', 'swap_approved')", ['recipient' => $this->workers['maria']['id']]));
+        $approved = $client->request('GET', '/app/changes/agreements/'.$proposalId);
+        self::assertStringContainsString('Cambio confirmado', $approved->html());
+        self::assertStringNotContainsString('Falta la aprobación', $approved->html());
     }
 
     /** Same hospital, different pool. Antonio must not see any of it. */

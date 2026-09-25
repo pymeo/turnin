@@ -1,11 +1,13 @@
 import { startStimulusApp } from '@symfony/stimulus-bundle';
 import BottomSheetController from './controllers/bottom_sheet_controller.js';
 import CalendarController from './controllers/calendar_controller.js';
+import AgreementShareController from './controllers/agreement_share_controller.js';
 import CalendarIntegrationController from './controllers/calendar_integration_controller.js';
 import CalendarPaintController from './controllers/calendar_paint_controller.js';
 import ChangesController from './controllers/changes_controller.js';
 import DayExchangeController from './controllers/day_exchange_controller.js';
 import OnboardingController from './controllers/onboarding_controller.js';
+import NotificationsController from './controllers/notifications_controller.js';
 import PatternBuilderController from './controllers/pattern_builder_controller.js';
 import ScheduleDraftController from './controllers/schedule_draft_controller.js';
 import SearchablePickerController from './controllers/searchable_picker_controller.js';
@@ -15,7 +17,9 @@ import VoiceScheduleController from './controllers/voice_schedule_controller.js'
 import WorkerAssignmentsController from './controllers/worker_assignments_controller.js';
 
 const app = startStimulusApp();
+app.register('agreement-share', AgreementShareController);
 app.register('onboarding', OnboardingController);
+app.register('notifications', NotificationsController);
 app.register('searchable-picker', SearchablePickerController);
 app.register('bottom-sheet', BottomSheetController);
 app.register('calendar', CalendarController);

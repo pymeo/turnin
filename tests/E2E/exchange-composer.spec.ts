@@ -73,7 +73,7 @@ async function publish(page: Page, date: string): Promise<string> {
 	await page.goto('/app/changes?flow=release');
 	const sheet = page.locator('[data-changes-target="sheet"]');
 	await expect(sheet).toBeVisible();
-	await sheet.locator('.shift-choice').filter({ hasText: String(Number(date.slice(8))) }).first().click();
+	await sheet.locator(`[data-day="${date}"]`).click();
 	const published = page.waitForResponse((response) => response.url().endsWith('/app/changes/publicar') && response.request().method() === 'POST');
 	await sheet.getByRole('button', { name: 'Buscar compañero' }).click();
 	const payload = await (await published).json() as { result?: { requestId?: string } };
@@ -86,8 +86,8 @@ async function publish(page: Page, date: string): Promise<string> {
 test.describe('choosing what to ask for in return', () => {
 	test.describe.configure({ mode: 'serial', timeout: 420_000 });
 	test.skip(
-		() => !['mobile-375', 'desktop'].includes(test.info().project.name),
-		'The journey runs on the narrowest phone and on a desktop: those are the two layouts.',
+		() => !['mobile-390', 'tablet-768', 'desktop'].includes(test.info().project.name),
+		'The complete agreement journey is reviewed on phone, tablet and desktop.',
 	);
 
 	test('María picks a shift off her own calendar and the list agrees with it', async ({ browser }, testInfo) => {
@@ -105,6 +105,7 @@ test.describe('choosing what to ask for in return', () => {
 			await paintRota(maria, [7, 8, 9, 10].map(day), [11, 12, 13].map(day));
 
 			await paintDay(pedro, day(19), 'Noche', 'working');
+			await paintDay(maria, day(19), 'Mañana', 'working');
 			const requestId = await publish(pedro, day(19));
 
 			await maria.goto('/app/changes/available');
@@ -118,7 +119,8 @@ test.describe('choosing what to ask for in return', () => {
 			await expect(maria.locator('.shift-day')).toHaveCount(28);
 			await expect(maria.locator('.shift-day[data-state="rest"]').first()).toContainText('Libre');
 			await expect(maria.locator('.shift-day[data-state="unknown"]').first()).toContainText('Sin datos');
-			await expect(maria.locator(`.shift-day[data-date="${day(19)}"][data-state="incoming"]`)).toHaveCount(1);
+			await expect(maria.locator(`.shift-day[data-date="${day(19)}"][data-state="combined-offerable"]`)).toHaveCount(1);
+			await expect(maria.locator(`.shift-day[data-date="${day(19)}"]`)).toContainText('Tu turno');
 
 			// ── The suggestion helps inside the calendar, without another card ──
 			await expect(maria.locator('.reco-card')).toHaveCount(0);
@@ -163,22 +165,54 @@ test.describe('choosing what to ask for in return', () => {
 			await maria.getByRole('button', { name: /Enviar 3 opciones/ }).click();
 			await maria.waitForURL(/\/app\/changes\/proposals/);
 
-			await pedro.goto('/app/changes/mine');
-			await pedro.getByRole('link', { name: 'Ver y elegir' }).click();
+			await pedro.goto('/app/changes');
+			await pedro.getByRole('button', { name: /Notificaciones/ }).click();
+			const notificationPanel = pedro.locator('[data-notifications-target="panel"]');
+			await expect(notificationPanel).toContainText('te propone un cambio');
+			await pedro.screenshot({ path: testInfo.outputPath(`notifications-${testInfo.project.name}.png`), fullPage: true });
+			await notificationPanel.locator('.notification-item').filter({ hasText: 'te propone un cambio' }).click();
 			await expect(pedro.getByRole('heading', { name: /te hace el turno/ })).toBeVisible();
 			await expect(pedro.locator('input[name="optionId"]')).toHaveCount(3);
 			await pedro.locator('.trade-option').nth(1).click({ timeout: 10_000 });
 			await expect(pedro.locator('input[name="optionId"]').nth(1)).toBeChecked();
 			await pedro.getByRole('button', { name: 'Confirmar intercambio' }).click({ timeout: 10_000 });
-			await pedro.waitForURL(/\/app\/changes\/proposals\?hecho=1/);
+			await pedro.waitForURL(/\/app\/changes\/agreements\//);
+			const agreementPath = new URL(pedro.url()).pathname;
+			await expect(pedro.getByRole('heading', { name: 'Nuestro cambio' })).toBeVisible();
+			await expect(pedro.getByText('Cambio confirmado')).toBeVisible();
+			await expect(pedro.getByRole('button', { name: /Compartir con responsable|Copiar enlace/ })).toBeVisible();
+			const publicUrl = await pedro.locator('[data-agreement-share-url-value]').getAttribute('data-agreement-share-url-value');
+			expect(publicUrl).toMatch(/\/cambio\/[A-Za-z0-9_-]{43}$/);
+			await pedro.screenshot({ path: testInfo.outputPath(`agreement-${testInfo.project.name}.png`), fullPage: true });
+
+			await maria.goto('/app/changes');
+			await maria.getByRole('button', { name: /Notificaciones/ }).click();
+			const mariaPanel = maria.locator('[data-notifications-target="panel"]');
+			await expect(mariaPanel).toContainText('Cambio acordado');
+			await mariaPanel.locator('.notification-item').filter({ hasText: 'Cambio acordado' }).click();
+			await expect(maria).toHaveURL(new RegExp(`${agreementPath}$`));
+
+			const anonymousContext = await browser.newContext({ baseURL });
+			const anonymous = await anonymousContext.newPage();
+			try {
+				await anonymous.goto(new URL(publicUrl ?? '').pathname);
+				await expect(anonymous.getByRole('heading', { name: 'Nuestro cambio' })).toBeVisible();
+				await expect(anonymous.getByText('Consulta de solo lectura')).toBeVisible();
+				await anonymous.screenshot({ path: testInfo.outputPath(`agreement-public-${testInfo.project.name}.png`), fullPage: true });
+			} finally { await anonymousContext.close(); }
 
 			await openCalendar(pedro, day(9).slice(0, 7));
 			await expect(pedro.locator(`[data-day="${day(9)}"]`)).toHaveAttribute('data-state', 'working');
 			await expect(pedro.locator(`[data-day="${day(9)}"]`)).toHaveAttribute('data-from-swap', 'true');
+			await expect(pedro.locator(`[data-day="${day(9)}"]`)).toContainText(/Por Ana/i);
 			await expect(pedro.locator(`[data-day="${day(19)}"]`)).toHaveAttribute('data-from-swap', 'true');
+			await expect(pedro.locator(`[data-day="${day(19)}"]`)).toContainText(/Te lo hace Ana/i);
 			await openCalendar(maria, day(19).slice(0, 7));
 			await expect(maria.locator(`[data-day="${day(19)}"]`)).toHaveAttribute('data-state', 'working');
 			await expect(maria.locator(`[data-day="${day(19)}"]`)).toHaveAttribute('data-from-swap', 'true');
+			await expect(maria.locator(`[data-day="${day(19)}"] .calendar-segment-band`)).toHaveCount(2);
+			await expect(maria.locator(`[data-day="${day(19)}"]`)).toContainText(/Por Ana/i);
+			await maria.screenshot({ path: testInfo.outputPath(`calendar-two-shifts-${testInfo.project.name}.png`), fullPage: true });
 		} finally {
 			// Do not let teardown hide the precise failed interaction when the
 			// browser has already been closed by a test timeout.

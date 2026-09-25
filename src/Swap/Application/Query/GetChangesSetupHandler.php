@@ -44,26 +44,23 @@ final readonly class GetChangesSetupHandler
 
         $shifts = [];
         $workingDates = [];
-        foreach ($this->rosteredDays->inRangeForAssignments($assignments, (string) $from, (string) $to) as $day) {
-            if (!$day->isWorking()) {
-                continue;
-            }
-            $group = $primaryByAssignment[$day->assignmentId] ?? null;
+        foreach ($this->rosteredDays->shiftsInRange($assignments, (string) $from, (string) $to) as $shift) {
+            $group = $primaryByAssignment[$shift->assignmentId] ?? null;
             if (!$group instanceof SwapGroup) {
                 continue;
             }
-            $workingDates[$day->date] = true;
-            $open = $openByDay[$day->assignmentId.'|'.$day->date] ?? null;
+            $workingDates[$shift->date] = true;
+            $open = $openByDay[$shift->assignmentId.'|'.$shift->date] ?? null;
             $shifts[] = new UpcomingShiftView(
-                $day->assignmentId,
+                $shift->assignmentId,
                 $group->poolId,
-                $day->date,
-                WorkDateLabel::headline(\App\Swap\Domain\WorkDate::fromString($day->date)),
-                $day->shiftLabel,
-                $day->hours(),
-                $day->durationMinutes(),
-                $day->durationLabel(),
-                $day->shiftKind->value,
+                $shift->date,
+                WorkDateLabel::headline(\App\Swap\Domain\WorkDate::fromString($shift->date)),
+                $shift->label,
+                $shift->hours(),
+                $shift->durationMinutes(),
+                $shift->durationLabel(),
+                $shift->shiftKind->value,
                 $group->workplaceName,
                 $group->label(),
                 null !== $open,

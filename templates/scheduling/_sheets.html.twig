@@ -79,6 +79,7 @@
             <button type="button" class="picker-close" data-action="bottom-sheet#close" aria-label="Cerrar">×</button>
         </div>
         <div class="hidden flex-col gap-2" data-calendar-target="dayPersonalList" aria-label="Eventos personales del día"></div>
+        <div class="hidden flex-col gap-2" data-calendar-target="dayAgreementList" aria-label="Cambios de turno del día"></div>
         <div class="flex flex-wrap gap-2" role="group" aria-label="Elegir turno">
             {% for preset in presets %}
                 <button type="button" class="picker-chip" data-action="calendar#setDayPreset" data-preset-id="{{ preset.id }}">

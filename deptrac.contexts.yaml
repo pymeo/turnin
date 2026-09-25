@@ -44,6 +44,11 @@ parameters:
               - type: classNameRegex
                 value: '#^App\\Coordination\\#'
 
+        - name: Notification
+          collectors:
+              - type: classNameRegex
+                value: '#^App\\Notification\\#'
+
         - name: SharedKernel
           collectors:
               - type: classNameRegex
@@ -97,9 +102,14 @@ parameters:
         Swap:
             - Vendor
             - Coordination
+            - Scheduling
             - SharedKernel
         Coordination:
             - Vendor
+            - SharedKernel
+        Notification:
+            - Vendor
+            - Swap
             - SharedKernel
         SharedKernel:
             - Vendor

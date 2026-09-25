@@ -80,6 +80,11 @@ parameters:
               - type: classNameRegex
                 value: '#^(KnpU\\OAuth2ClientBundle|League\\OAuth2\\Client)\\#'
 
+        - name: WebPush
+          collectors:
+              - type: classNameRegex
+                value: '#^Minishlink\\WebPush\\#'
+
     ruleset:
         # The whole point: the model is plain PHP.
         Domain:
@@ -101,6 +106,7 @@ parameters:
             - Twig
             - Monolog
             - OAuth
+            - WebPush
 
         AppRoot:
             - Php
@@ -113,3 +119,4 @@ parameters:
         Twig: ~
         Monolog: ~
         OAuth: ~
+        WebPush: ~

@@ -18,6 +18,10 @@ services:
             GOOGLE_OAUTH_CLIENT_SECRET: ${GOOGLE_OAUTH_CLIENT_SECRET:?GOOGLE_OAUTH_CLIENT_SECRET must be provided}
             PII_HMAC_KEY: ${PII_HMAC_KEY:?PII_HMAC_KEY must be provided}
             PII_ENCRYPTION_KEY: ${PII_ENCRYPTION_KEY:?PII_ENCRYPTION_KEY must be provided}
+            AGREEMENT_TOKEN_ENCRYPTION_KEY: ${AGREEMENT_TOKEN_ENCRYPTION_KEY:?AGREEMENT_TOKEN_ENCRYPTION_KEY must be provided}
+            VAPID_SUBJECT: ${VAPID_SUBJECT:?VAPID_SUBJECT must be provided}
+            VAPID_PUBLIC_KEY: ${VAPID_PUBLIC_KEY:?VAPID_PUBLIC_KEY must be provided}
+            VAPID_PRIVATE_KEY: ${VAPID_PRIVATE_KEY:?VAPID_PRIVATE_KEY must be provided}
             DATABASE_URL: ${DATABASE_URL:?DATABASE_URL must be provided}
             REDIS_URL: ${REDIS_URL:?REDIS_URL must be provided}
             # Which headers are trusted is fixed in config/packages/framework.yaml.

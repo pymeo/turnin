@@ -139,3 +139,34 @@ self.addEventListener('fetch', (event) => {
 
 	// Everything else: let the browser do its normal thing, uncached.
 });
+
+self.addEventListener('push', (event) => {
+	let message = {};
+	try {
+		message = event.data ? event.data.json() : {};
+	} catch {
+		message = {};
+	}
+	const title = message.title || 'Turnin';
+	const targetUrl = typeof message.targetUrl === 'string' && message.targetUrl.startsWith('/') ? message.targetUrl : '/app/changes';
+	event.waitUntil(self.registration.showNotification(title, {
+		body: message.body || 'Tienes una nueva notificación.',
+		icon: '/icons/icon-192.png',
+		badge: '/icons/icon-192.png',
+		data: { targetUrl },
+		tag: targetUrl,
+	}));
+});
+
+self.addEventListener('notificationclick', (event) => {
+	event.notification.close();
+	const targetUrl = event.notification.data?.targetUrl || '/app/changes';
+	event.waitUntil(self.clients.matchAll({ type: 'window', includeUncontrolled: true }).then(async (windows) => {
+		const existing = windows[0];
+		if (existing) {
+			await existing.focus();
+			return existing.navigate(targetUrl);
+		}
+		return self.clients.openWindow(targetUrl);
+	}));
+});

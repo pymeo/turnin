@@ -19,7 +19,7 @@ async function publishThroughGuide(page: Page, date: string): Promise<string> {
 	await page.goto('/app/changes?flow=release');
 	const sheet = page.locator('[data-changes-target="sheet"]');
 	await expect(sheet).toBeVisible();
-	await sheet.locator('.shift-choice').filter({ hasText: String(Number(date.slice(8))) }).click();
+	await sheet.locator(`[data-day="${date}"]`).click();
 	await sheet.getByRole('button', { name: 'Buscar compañero' }).click();
 	await expect(sheet).toContainText('Estamos buscando a alguien');
 	await page.goto('/app/changes/mine');
@@ -58,7 +58,7 @@ test.describe('guided changes', () => {
 		const shift = shifts.find((candidate: { date: string }) => candidate.date === date);
 		expect(shift).toBeTruthy();
 		const csrf = (await root.getAttribute('data-changes-csrf-value')) ?? '';
-		await page.locator('.shift-choice').filter({ hasText: '17' }).click();
+		await page.locator(`[data-day="${date}"]`).click();
 		await page.getByRole('button', { name: 'Buscar compañero' }).click();
 		await expect(page.locator('[data-changes-target="sheet"]')).toContainText('Estamos buscando a alguien');
 
@@ -77,24 +77,24 @@ test.describe('guided changes', () => {
 		const maria = await context.newPage();
 		try {
 			await onboardWorker(maria, testInfo, 'availability-maria', { ...GROUP, additionalDestinations: ['UCI'] });
-			await chooseAvailability(maria, ['2026-09-19', '2026-09-22'], ['morning', 'evening'], ['Urgencias', 'UCI']);
+			await chooseAvailability(maria, ['2026-10-19', '2026-10-22'], ['morning', 'evening'], ['Urgencias', 'UCI']);
 			await maria.goto('/app/changes/mine');
 			await expect(maria.locator('[data-availability-date]')).toHaveCount(2);
-			for (const date of ['2026-09-19', '2026-09-22']) {
+			for (const date of ['2026-10-19', '2026-10-22']) {
 				const card = maria.locator(`[data-availability-date="${date}"]`);
 				await expect(card).toContainText('Mañana · Tarde');
 				await expect(card).toContainText('Urgencias');
 				await expect(card).toContainText('UCI');
 			}
 
-			await maria.locator('[data-availability-date="2026-09-19"]').getByRole('link', { name: 'Editar' }).click();
+			await maria.locator('[data-availability-date="2026-10-19"]').getByRole('link', { name: 'Editar' }).click();
 			const sheet = maria.locator('[data-changes-target="sheet"]');
 			await sheet.locator('[data-kind="evening"]').click();
 			await sheet.getByRole('button', { name: 'Continuar' }).click();
 			await sheet.getByRole('button', { name: 'Continuar' }).click();
 			await sheet.getByRole('button', { name: 'Guardar disponibilidad' }).click();
 			await maria.goto('/app/changes/mine');
-			const edited = maria.locator('[data-availability-date="2026-09-19"]');
+			const edited = maria.locator('[data-availability-date="2026-10-19"]');
 			await expect(edited).toContainText('Mañana');
 			await expect(edited).not.toContainText('Tarde');
 			await expect(edited).toContainText('Urgencias');
@@ -109,7 +109,7 @@ test.describe('guided changes', () => {
 		try {
 			await onboardWorker(pedro, testInfo, 'pool-pedro', { category: 'TCAE', destination: 'UCI' });
 			await onboardWorker(maria, testInfo, 'pool-maria', GROUP);
-			await setShift(pedro, '2026-11-12', 'Noche'); const requestId = await publishThroughGuide(pedro, '2026-11-12');
+			await setShift(pedro, '2026-10-14', 'Noche'); const requestId = await publishThroughGuide(pedro, '2026-10-14');
 			await maria.goto('/app/changes/available');
 			await expect(maria.locator(`.activity-card[data-request-id="${requestId}"]`)).toHaveCount(0);
 		} finally { await pedroContext.close(); await mariaContext.close(); }
@@ -119,7 +119,7 @@ test.describe('guided changes', () => {
 		test.setTimeout(120_000);
 		const baseURL = process.env.E2E_BASE_URL ?? 'http://127.0.0.1:8080';
 		const pedroContext = await browser.newContext({ baseURL }); const mariaContext = await browser.newContext({ baseURL });
-		const pedro = await pedroContext.newPage(); const maria = await mariaContext.newPage(); const date = '2026-11-19';
+		const pedro = await pedroContext.newPage(); const maria = await mariaContext.newPage(); const date = '2026-10-15';
 		try {
 			await onboardWorker(pedro, testInfo, 'kind-pedro', GROUP); await onboardWorker(maria, testInfo, 'kind-maria', GROUP);
 			await setShift(pedro, date, 'Noche'); const requestId = await publishThroughGuide(pedro, date);

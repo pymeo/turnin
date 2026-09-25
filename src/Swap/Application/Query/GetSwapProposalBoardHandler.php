@@ -111,7 +111,7 @@ final readonly class GetSwapProposalBoardHandler
         return match ($status) {
             SwapProposalStatus::PENDING => $incoming ? 'Tienes que elegir un turno' : 'Esperando respuesta',
             SwapProposalStatus::PENDING_APPROVAL => 'Pendiente de aprobación',
-            SwapProposalStatus::EXECUTED, SwapProposalStatus::ACCEPTED => 'Intercambio hecho',
+            SwapProposalStatus::EXECUTED, SwapProposalStatus::ACCEPTED => 'Cambio confirmado',
             SwapProposalStatus::REJECTED => 'Rechazada',
             SwapProposalStatus::APPROVAL_REJECTED => 'No aprobada',
             SwapProposalStatus::WITHDRAWN => 'Retirada',

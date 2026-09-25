@@ -5,8 +5,12 @@ declare(strict_types=1);
 namespace App\Swap\Application\Command;
 
 use App\Swap\Application\ExecuteSwapAgreement;
+use App\Swap\Application\SwapNotificationOutcome;
+use App\Swap\Domain\Event\SwapAgreementApproved;
+use App\Swap\Domain\Event\SwapAgreementRejected;
 use App\Swap\Domain\ExchangeBalances;
 use App\Swap\Domain\ShiftExchangeGovernance;
+use App\Swap\Domain\SwapEvents;
 use App\Swap\Domain\SwapProposalKind;
 use App\Swap\Domain\SwapProposals;
 use App\Swap\Domain\SwapProposalStatus;
@@ -17,19 +21,19 @@ use Psr\Clock\ClockInterface;
 
 final readonly class ReviewSwapApprovalHandler
 {
-    public function __construct(private SwapTransaction $transaction, private SwapProposals $proposals, private SwapRequests $requests, private ExchangeBalances $balances, private ShiftExchangeGovernance $governance, private ExecuteSwapAgreement $executor, private ClockInterface $clock)
+    public function __construct(private SwapTransaction $transaction, private SwapProposals $proposals, private SwapRequests $requests, private ExchangeBalances $balances, private ShiftExchangeGovernance $governance, private ExecuteSwapAgreement $executor, private SwapEvents $events, private ClockInterface $clock)
     {
     }
 
     public function __invoke(ReviewSwapApproval $command): void
     {
-        $this->transaction->run(function () use ($command): void {
+        $result = $this->transaction->run(function () use ($command): ?SwapNotificationOutcome {
             $proposal = $this->proposals->byIdForUpdate($command->proposalId) ?? throw new InvalidArgumentException('La propuesta no existe.');
             if ('approve' === $command->decision && SwapProposalStatus::EXECUTED === $proposal->status()) {
-                return;
+                return null;
             }
             if ('reject' === $command->decision && SwapProposalStatus::APPROVAL_REJECTED === $proposal->status()) {
-                return;
+                return null;
             }
             if (SwapProposalStatus::PENDING_APPROVAL !== $proposal->status()) {
                 throw new InvalidArgumentException('Este cambio ya no espera aprobación.');
@@ -48,12 +52,21 @@ final readonly class ReviewSwapApprovalHandler
                 $proposal->rejectApproval($now);
                 $this->proposals->save($proposal);
 
-                return;
+                return new SwapNotificationOutcome($proposal->id(), $proposal->requestOwnerId(), $proposal->proposerId(), (string) $request->workDate());
             }
             if ('approve' !== $command->decision) {
                 throw new InvalidArgumentException('La decisión no es válida.');
             }
             $this->executor->execute($proposal, $request, $now, $command->supervisorUserId);
+
+            return new SwapNotificationOutcome($proposal->id(), $proposal->requestOwnerId(), $proposal->proposerId(), (string) $request->workDate(), true);
         });
+        if (!$result instanceof SwapNotificationOutcome) {
+            return;
+        }
+        $event = $result->requiresApproval
+            ? new SwapAgreementApproved($result->proposalId, $result->requestOwnerId, $result->proposerId, $result->requestedDate)
+            : new SwapAgreementRejected($result->proposalId, $result->requestOwnerId, $result->proposerId, $result->requestedDate);
+        $this->events->publishAfterCommit($event);
     }
 }

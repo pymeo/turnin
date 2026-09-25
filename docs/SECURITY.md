@@ -169,6 +169,26 @@ una decisión de seguridad y no de producto:
   respuestas de acceso denegado son todas iguales: decir «esa solicitud es de
   otro pool» confirmaría que existe y de qué centro viene.
 
+### Consulta pública de un acuerdo
+
+`/cambio/{token}` es una capacidad de solo lectura para el responsable que no
+tiene cuenta. El token son 32 bytes aleatorios codificados en base64url; no es el
+UUID de la propuesta ni la referencia humana. En PostgreSQL se guarda su hash
+para resolverlo y una copia cifrada para que ambos participantes compartan
+siempre la misma URL.
+
+La página contiene únicamente nombres de pila, las dos piernas del acuerdo,
+horarios, servicio/centro, estado, fecha y una referencia corta. Nunca incluye
+email, teléfono, documento, calendarios completos ni enlaces hacia áreas
+privadas. Solo admite GET y responde con `noindex,nofollow`, `no-store`,
+`no-referrer` y `nosniff`. Rechazo, expiración o revocación conservan la URL para
+explicar lo sucedido, pero la muestran inequívocamente como no vigente.
+
+Las suscripciones Web Push guardan endpoint y claves del navegador. Las claves
+VAPID privadas y la clave que cifra el token compartible entran solo por entorno;
+no se versionan. Pedir permiso push requiere el gesto explícito sobre «Activar
+notificaciones» y nunca ocurre al cargar una pantalla.
+
 ## `/health`
 
 Es público y sin autenticar, porque lo consultan Docker y el balanceador antes de

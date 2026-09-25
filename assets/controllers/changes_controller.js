@@ -8,7 +8,7 @@ const MONTHS = ['enero', 'febrero', 'marzo', 'abril', 'mayo', 'junio', 'julio', 
 
 export default class extends Controller {
 	static targets = [
-		'error', 'sheet', 'stepLabel', 'title', 'releasePick', 'shiftList', 'noShifts', 'releaseConfirm', 'releaseRecap',
+		'error', 'sheet', 'stepLabel', 'title', 'releasePick', 'shiftList', 'releaseMonthTitle', 'noShifts', 'releaseConfirm', 'releaseRecap', 'releaseOptions',
 		'availabilityDates', 'monthTitle', 'dateGrid', 'dateCount', 'datesContinue', 'availabilityKinds', 'kindsContinue',
 		'availabilityPlaces', 'placeList', 'placesContinue', 'availabilitySummary', 'availabilityRecap', 'deleteDay',
 		'success', 'successTitle', 'successCopy', 'successAvailable', 'flowError',
@@ -33,50 +33,57 @@ export default class extends Controller {
 
 	startRelease() {
 		this.editingDate = null;
-		this.showPanel('releasePick', 'Tus próximos turnos', '¿Qué turno quieres librar?');
+		this.releaseVisibleMonth = (this.upcomingValue[0]?.date || this.fromValue || new Date().toISOString().slice(0, 10)).slice(0, 7);
+		this.showPanel('releasePick', 'Mi calendario', '¿Qué turno quieres librar?');
+		this.renderReleaseCalendar();
+		this.openSheet();
+	}
+
+	renderReleaseCalendar() {
 		this.shiftListTarget.replaceChildren();
 		this.noShiftsTarget.classList.toggle('hidden', this.upcomingValue.length > 0);
-
-		let previousMonth = '';
-		this.upcomingValue.forEach((shift, index) => {
-			const month = shift.date.slice(0, 7);
-			if (month !== previousMonth) {
-				const heading = document.createElement('h3');
-				heading.className = 'flow-month';
-				heading.textContent = `${MONTHS[Number(month.slice(5)) - 1]} ${month.slice(0, 4)}`;
-				this.shiftListTarget.append(heading);
-				previousMonth = month;
-			}
+		const [year, month] = this.releaseVisibleMonth.split('-').map(Number);
+		this.releaseMonthTitleTarget.textContent = `${MONTHS[month - 1]} ${year}`;
+		const first = new Date(Date.UTC(year, month - 1, 1));
+		const offset = (first.getUTCDay() + 6) % 7;
+		const days = new Date(Date.UTC(year, month, 0)).getUTCDate();
+		for (let index = 0; index < offset; index += 1) this.shiftListTarget.append(document.createElement('span'));
+		for (let day = 1; day <= days; day += 1) {
+			const date = `${year}-${String(month).padStart(2, '0')}-${String(day).padStart(2, '0')}`;
+			const shifts = this.upcomingValue.filter((shift) => shift.date === date);
 			const button = document.createElement('button');
 			button.type = 'button';
-			button.className = 'shift-choice';
-			button.dataset.index = String(index);
-			button.dataset.kind = shift.shiftKind;
-			button.addEventListener('click', () => this.pickShift(index));
-			const date = document.createElement('span');
-			date.className = 'shift-choice-date';
-			const [weekday = '', day = '', shortMonth = ''] = shift.dateHeadline.split(' ');
-			const weekdayNode = document.createElement('small'); weekdayNode.textContent = weekday.slice(0, 3);
-			const dayNode = document.createElement('strong'); dayNode.textContent = day;
-			const monthNode = document.createElement('small'); monthNode.textContent = shortMonth;
-			date.append(weekdayNode, dayNode, monthNode);
-			const copy = document.createElement('span');
-			copy.className = 'shift-choice-copy';
-			const name = document.createElement('strong');
-			name.textContent = shift.shiftLabel;
-			const hours = document.createElement('small');
-			hours.textContent = shift.hours;
-			const place = document.createElement('small');
-			place.className = 'shift-choice-place';
-			place.textContent = shift.destinationLabel;
-			copy.append(name, hours, place);
-			const state = document.createElement('span');
-			state.className = shift.alreadyOpen ? 'shift-choice-open' : 'shift-choice-arrow';
-			state.textContent = shift.alreadyOpen ? 'Buscando ✓' : '›';
-			button.append(date, copy, state);
+			button.className = 'calendar-cell calendar-tone-unknown release-calendar-day';
+			button.dataset.day = date;
+			button.disabled = shifts.length === 0;
+			button.setAttribute('aria-label', shifts.length ? `${day} de ${MONTHS[month - 1]}. ${shifts.map((shift) => `${shift.shiftLabel}, ${shift.hours}${shift.alreadyOpen ? ', ya publicado' : ''}`).join('. ')}` : `${day} de ${MONTHS[month - 1]}, libre o sin turno publicable`);
+			const number = document.createElement('span'); number.className = 'calendar-cell-number'; number.textContent = String(day); button.append(number);
+			if (shifts.length) {
+				button.disabled = false;
+				button.classList.remove('calendar-tone-unknown');
+				button.classList.add(`calendar-tone-${this.toneFor(shifts[0].shiftKind)}`);
+				const bands = document.createElement('span'); bands.className = 'calendar-segment-bands';
+				shifts.slice(0, 2).forEach((shift) => { const band = document.createElement('span'); band.className = 'calendar-segment-band'; band.textContent = `${shift.shiftLabel.slice(0, 1).toUpperCase()} ${shift.hours}`; bands.append(band); });
+				if (shifts.length > 2) { const more = document.createElement('span'); more.className = 'calendar-segment-more'; more.textContent = `+${shifts.length - 2}`; bands.append(more); }
+				button.append(bands);
+				if (shifts.some((shift) => shift.alreadyOpen)) { const published = document.createElement('span'); published.className = 'release-published'; published.textContent = 'Ya publicado'; button.append(published); }
+				button.addEventListener('click', () => this.pickReleaseDate(date));
+			}
 			this.shiftListTarget.append(button);
-		});
-		this.openSheet();
+		}
+	}
+
+	releasePreviousMonth() { this.moveReleaseMonth(-1); }
+	releaseNextMonth() { this.moveReleaseMonth(1); }
+	moveReleaseMonth(delta) { const [year, month] = this.releaseVisibleMonth.split('-').map(Number); const next = new Date(Date.UTC(year, month - 1 + delta, 1)); this.releaseVisibleMonth = `${next.getUTCFullYear()}-${String(next.getUTCMonth() + 1).padStart(2, '0')}`; this.renderReleaseCalendar(); }
+	pickReleaseDate(date) {
+		const choices = this.upcomingValue.map((shift, index) => ({ shift, index })).filter((choice) => choice.shift.date === date);
+		if (choices.length === 1) { this.pickShift(choices[0].index); return; }
+		this.releaseOptionsTarget.replaceChildren();
+		for (const choice of choices) { const button = document.createElement('button'); button.type = 'button'; button.className = 'shift-choice'; button.textContent = `${choice.shift.hours} · ${choice.shift.shiftLabel} · ${choice.shift.destinationLabel}`; button.addEventListener('click', () => this.pickShift(choice.index)); this.releaseOptionsTarget.append(button); }
+		this.releaseRecapTarget.replaceChildren(this.recapLine(this.humanDate(date), true), this.recapLine('¿Qué turno quieres cambiar?'));
+		this.releaseConfirmTarget.querySelector('[data-action="changes#confirmRelease"]').classList.add('hidden');
+		this.showPanel('releaseConfirm', 'Tu calendario', 'Elige el turno');
 	}
 
 	pickShift(index) {
@@ -87,9 +94,12 @@ export default class extends Controller {
 			this.recapLine(shift.workplaceName, true), this.recapLine(shift.destinationLabel),
 		);
 		const button = this.releaseConfirmTarget.querySelector('[data-action="changes#confirmRelease"]');
+		this.releaseOptionsTarget.replaceChildren();
+		button.classList.remove('hidden');
 		button.textContent = shift.alreadyOpen ? 'Dejar de buscar' : 'Buscar compañero';
 		this.showPanel('releaseConfirm', shift.alreadyOpen ? 'Turno publicado' : 'Confirmar', shift.alreadyOpen ? 'Ya estamos buscando compañero' : 'Quieres librar este turno');
 	}
+	toneFor(kind) { return ({ morning: 'amber', evening: 'orange', night: 'indigo', long_day: 'teal', long_night: 'violet', on_call: 'rose' })[kind] || 'slate'; }
 
 	backToShifts() { this.startRelease(); }
 

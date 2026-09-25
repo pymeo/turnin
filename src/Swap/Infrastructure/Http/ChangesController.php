@@ -267,7 +267,7 @@ final readonly class ChangesController
             return new Response(SwapSession::rootCause($exception)->getMessage(), Response::HTTP_UNPROCESSABLE_ENTITY);
         }
 
-        return new RedirectResponse('/app/changes/proposals?hecho=1');
+        return new RedirectResponse('/app/changes/agreements/'.$proposalId);
     }
 
     #[Route('/app/changes/proposals/{proposalId}/{decision}', name: 'swap_proposal_decide', requirements: ['decision' => 'reject|withdraw'], methods: ['POST'])]

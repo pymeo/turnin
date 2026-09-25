@@ -12,21 +12,42 @@
 <div class="calendar-grid" role="grid" aria-label="Calendario de turnos" data-calendar-target="grid" data-month="{{ month.month }}">
     {% for cell in month.cells %}
         {% set personal = personalByDate[cell.date]|default([]) %}
+        {% set trace = cell.swapTraces|first %}
+        {% set directAgreement = cell.swapTraces|length == 1 and personal is empty and cell.shiftSegments|length <= 1 %}
         <button type="button"
                 role="gridcell"
-                class="calendar-cell {{ tones[cell.tone]|default('calendar-tone-unknown') }}{{ cell.fromSwap ? ' calendar-cell-swapped' : '' }}"
+                class="calendar-cell {{ tones[cell.tone]|default('calendar-tone-unknown') }}{{ cell.fromSwap ? ' calendar-cell-swapped' : '' }}{{ trace ? ' calendar-swap-' ~ trace.status.value : '' }}"
                 data-day="{{ cell.date }}"
                 data-state="{{ cell.state }}"
                 data-outside="{{ cell.inMonth ? 'false' : 'true' }}"
                 data-today="{{ cell.isToday ? 'true' : 'false' }}"
                 data-weekend="{{ cell.isWeekend ? 'true' : 'false' }}"
                 data-from-swap="{{ cell.fromSwap ? 'true' : 'false' }}"
+                data-agreements="{{ cell.swapTraces|json_encode|e('html_attr') }}"
+                {% if directAgreement %}data-agreement-url="{{ path('swap_agreement', {proposalId: trace.agreementId}) }}"{% endif %}
+                data-detail="{% for segment in cell.shiftSegments %}{{ segment.swapRole ? 'Turno de cambio: ' : 'Tu turno: ' }}{{ segment.start }}–{{ segment.end }} · {{ segment.label }}{% if segment.colleagueDisplayName %} · Lo haces por {{ segment.colleagueDisplayName }}{% endif %}{% if not loop.last %}&#10;{% endif %}{% endfor %}"
                 data-personal-events="{{ personal|json_encode|e('html_attr') }}"
                 aria-pressed="false"
                 aria-label="{{ cell.ariaLabel }}{{ cell.isToday ? ', hoy' : '' }}">
             <span class="calendar-cell-number">{{ cell.dayNumber }}</span>
-            <span class="calendar-cell-code" aria-hidden="true">{{ cell.abbreviation|default('·') }}</span>
-            {% if cell.fromSwap %}<span class="calendar-swap-mark" aria-label="{{ cell.state == 'rest' ? 'Libre tras un cambio de turno' : 'Turno recibido mediante un cambio' }}">↔</span>{% endif %}
+            <span class="calendar-segment-bands" aria-hidden="true">
+                {% for segment in cell.shiftSegments|slice(0, 2) %}
+                    <span class="calendar-segment-band{{ segment.swapRole ? ' calendar-segment-swap' : '' }}">
+                        <b{{ loop.first ? ' class="calendar-cell-code"' : '' }}>{{ segment.swapRole ? '↔' : segment.abbreviation }}</b><small>{{ segment.start|slice(0, 5) }}–{{ segment.end|slice(0, 5) }}</small>
+                        {% if segment.swapRole %}<em>Por {{ segment.colleagueDisplayName }}</em>{% endif %}
+                    </span>
+                {% else %}
+                    <span class="calendar-cell-code">{{ cell.abbreviation|default('·') }}</span>
+                {% endfor %}
+                {% if cell.shiftSegments|length > 2 %}<span class="calendar-segment-more">+{{ cell.shiftSegments|length - 2 }}</span>{% endif %}
+            </span>
+            {% if trace %}
+                <span class="calendar-swap-summary" aria-hidden="true">
+                    <b>↔ {{ trace.status.value == 'pending' ? 'ACORDADO' : (trace.status.value == 'confirmed' ? 'CAMBIO' : 'CANCELADO') }}</b>
+                    <small>{{ trace.role.value == 'given_away' ? 'Te lo hace ' ~ trace.colleagueDisplayName : 'Haces a ' ~ trace.colleagueDisplayName }}</small>
+                    {% if trace.status.value == 'pending' %}<em>Pendiente centro</em>{% endif %}
+                </span>
+            {% endif %}
             {% if personal|length %}<span class="calendar-personal-indicators" aria-hidden="true">{% for event in personal|slice(0, 2) %}<i></i>{% endfor %}{% if personal|length > 2 %}<b>+{{ personal|length - 2 }}</b>{% endif %}</span>{% endif %}
         </button>
     {% endfor %}

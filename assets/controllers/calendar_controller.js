@@ -9,7 +9,7 @@ import { applyTone, closeSheet, configureCalendarContext, getJson, openSheet, po
  * exactly one confirm-and-write path.
  */
 export default class extends Controller {
-	static targets = ['grid', 'summary', 'title', 'emptyState', 'addSheet', 'daySheet', 'daySheetTitle', 'daySheetDetail', 'daySheetClear', 'dayPersonalList', 'manualFields', 'manualLabel', 'manualAbbreviation', 'manualStart', 'manualEnd', 'manualKind', 'manualColor', 'personalSheet', 'personalTitle', 'personalDate', 'personalAllDay', 'personalTimes', 'personalStart', 'personalEnd', 'personalType', 'personalBlocks', 'filterWork', 'filterPersonal', 'patternSheet', 'voiceSheet', 'voiceChoice', 'detection', 'detectionText', 'addButton'];
+	static targets = ['grid', 'summary', 'title', 'emptyState', 'addSheet', 'daySheet', 'daySheetTitle', 'daySheetDetail', 'daySheetClear', 'dayPersonalList', 'dayAgreementList', 'manualFields', 'manualLabel', 'manualAbbreviation', 'manualStart', 'manualEnd', 'manualKind', 'manualColor', 'personalSheet', 'personalTitle', 'personalDate', 'personalAllDay', 'personalTimes', 'personalStart', 'personalEnd', 'personalType', 'personalBlocks', 'filterWork', 'filterPersonal', 'patternSheet', 'voiceSheet', 'voiceChoice', 'detection', 'detectionText', 'addButton'];
 	static values = { month: String, today: String, csrf: String, assignment: String, view: String };
 
 	connect() {
@@ -68,6 +68,10 @@ export default class extends Controller {
 		const cell = event.target.closest('[data-day]');
 		if (!cell) return;
 		if (this.painting) return; // calendar-paint owns the grid while painting
+		if (cell.dataset.agreementUrl) {
+			window.location.assign(cell.dataset.agreementUrl);
+			return;
+		}
 		this.openDay(cell);
 	}
 
@@ -85,6 +89,7 @@ export default class extends Controller {
 			: described.charAt(0).toLocaleUpperCase('es') + described.slice(1));
 		this.daySheetClearTarget.classList.toggle('hidden', unknown);
 		this.renderPersonalEvents(cell);
+		this.renderAgreements(cell);
 		// Swap decides what this day allows; the calendar only says which day.
 		document.dispatchEvent(new CustomEvent('exchange:day', {
 			detail: { date: this.selectedDate, assignmentId: this.hasAssignmentValue ? this.assignmentValue : '' },
@@ -206,6 +211,28 @@ export default class extends Controller {
 			hours.textContent = event.allDay ? 'Todo el día' : `${event.start}–${event.end}`;
 			row.append(title, hours);
 			this.dayPersonalListTarget.append(row);
+		}
+	}
+
+	renderAgreements(cell) {
+		let agreements = [];
+		try { agreements = JSON.parse(cell.dataset.agreements || '[]'); } catch { agreements = []; }
+		this.dayAgreementListTarget.replaceChildren();
+		this.dayAgreementListTarget.classList.toggle('hidden', agreements.length === 0);
+		this.dayAgreementListTarget.classList.toggle('flex', agreements.length > 0);
+		for (const agreement of agreements) {
+			const card = document.createElement('article');
+			card.className = 'day-agreement-card';
+			const title = document.createElement('strong');
+			title.textContent = agreement.role === 'given_away' ? 'TURNO DE CAMBIO ↔' : 'TURNO QUE HACES POR OTRO ↔';
+			const detail = document.createElement('span');
+			detail.textContent = agreement.role === 'given_away' ? `Te lo hace ${agreement.colleagueDisplayName}.` : `Lo haces por ${agreement.colleagueDisplayName}.`;
+			const link = document.createElement('a');
+			link.className = 'btn-secondary btn-block';
+			link.href = `/app/changes/agreements/${encodeURIComponent(agreement.agreementId)}`;
+			link.textContent = `Ver cambio con ${agreement.colleagueDisplayName}`;
+			card.append(title, detail, link);
+			this.dayAgreementListTarget.append(card);
 		}
 	}
 

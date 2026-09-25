@@ -5,11 +5,16 @@ declare(strict_types=1);
 namespace App\Swap\Application\Command;
 
 use App\Swap\Application\ExecuteSwapAgreement;
+use App\Swap\Application\RecordSwapAgreement;
+use App\Swap\Application\SwapNotificationOutcome;
+use App\Swap\Domain\Event\SwapAgreementReached;
 use App\Swap\Domain\ShiftExchangeGovernance;
+use App\Swap\Domain\SwapEvents;
 use App\Swap\Domain\SwapProposals;
 use App\Swap\Domain\SwapProposalStatus;
 use App\Swap\Domain\SwapRequests;
 use App\Swap\Domain\SwapTransaction;
+use App\Swap\Domain\WorkerDisplayNames;
 use InvalidArgumentException;
 use Psr\Clock\ClockInterface;
 
@@ -29,19 +34,22 @@ final readonly class AcceptSwapProposalHandler
         private SwapRequests $requests,
         private ShiftExchangeGovernance $governance,
         private ExecuteSwapAgreement $executor,
+        private RecordSwapAgreement $agreements,
+        private SwapEvents $events,
+        private WorkerDisplayNames $names,
         private ClockInterface $clock,
     ) {
     }
 
     public function __invoke(AcceptSwapProposal $command): void
     {
-        $this->transaction->run(function () use ($command): void {
+        $result = $this->transaction->run(function () use ($command): ?SwapNotificationOutcome {
             $proposal = $this->proposals->byIdForUpdate($command->proposalId) ?? throw new InvalidArgumentException('Esa propuesta ya no existe.');
             if ($proposal->requestOwnerId() !== $command->workerId) {
                 throw new InvalidArgumentException('Solo quien publicó el turno puede aceptar.');
             }
             if (\in_array($proposal->status(), [SwapProposalStatus::PENDING_APPROVAL, SwapProposalStatus::EXECUTED], true)) {
-                return;
+                return null;
             }
             if (SwapProposalStatus::PENDING !== $proposal->status()) {
                 throw new InvalidArgumentException('Esta propuesta ya no se puede aceptar.');
@@ -58,7 +66,9 @@ final readonly class AcceptSwapProposalHandler
             $now = $this->clock->now();
             $proposal->chooseOption($command->workerId, $command->optionId, $now);
 
-            if ($this->governance->policyFor($request->swapPoolId())->requiresApproval) {
+            $requiresApproval = $this->governance->policyFor($request->swapPoolId())->requiresApproval;
+            $this->agreements->record($proposal, $request, $now);
+            if ($requiresApproval) {
                 $other = $this->proposals->pendingApprovalForRequest($request->id());
                 if (null !== $other && $other->id() !== $proposal->id()) {
                     throw new InvalidArgumentException('Este turno ya tiene un acuerdo pendiente de aprobación.');
@@ -66,10 +76,25 @@ final readonly class AcceptSwapProposalHandler
                 $proposal->awaitApproval($command->workerId, null, $now);
                 $this->proposals->save($proposal);
 
-                return;
+                return new SwapNotificationOutcome($proposal->id(), $proposal->requestOwnerId(), $proposal->proposerId(), (string) $request->workDate(), true);
             }
 
             $this->executor->execute($proposal, $request, $now);
+
+            return new SwapNotificationOutcome($proposal->id(), $proposal->requestOwnerId(), $proposal->proposerId(), (string) $request->workDate());
         });
+        if (!$result instanceof SwapNotificationOutcome) {
+            return;
+        }
+        $names = $this->names->forWorkers([$result->requestOwnerId, $result->proposerId]);
+        $this->events->publishAfterCommit(new SwapAgreementReached(
+            $result->proposalId,
+            $result->requestOwnerId,
+            $result->proposerId,
+            $names[$result->requestOwnerId] ?? 'Un compañero',
+            $names[$result->proposerId] ?? 'Un compañero',
+            $result->requestedDate,
+            $result->requiresApproval,
+        ));
     }
 }

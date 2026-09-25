@@ -8,7 +8,12 @@ use App\Scheduling\Application\Command\EnsureShiftPresets;
 use App\Scheduling\Application\Command\EnsureShiftPresetsHandler;
 use App\Scheduling\Application\Query\GetRosterMonth;
 use App\Scheduling\Application\Query\GetRosterMonthHandler;
+use App\Scheduling\Application\Query\RosterAgreementStatus;
 use App\Scheduling\Application\Query\RosterDayCell;
+use App\Scheduling\Application\Query\RosterSwapRole;
+use App\Scheduling\Application\Query\RosterSwapTrace;
+use App\Scheduling\Application\Query\RosterSwapTraces;
+use App\Scheduling\Application\Query\RosterSwapTraceSegment;
 use App\Scheduling\Application\RosterCalendar;
 use App\Scheduling\Application\RosterWorkspace;
 use App\Scheduling\Domain\RestStreakInsights;
@@ -91,6 +96,46 @@ final class GetRosterMonthHandlerTest extends TestCase
         self::assertTrue($received->fromSwap);
         self::assertStringContainsString('libre tras un cambio', $released->ariaLabel);
         self::assertStringContainsString('recibido mediante un cambio', $received->ariaLabel);
+    }
+
+    public function test_swap_projection_explains_who_does_what_and_keeps_multiple_segments(): void
+    {
+        $roster = new InMemoryRosterDays();
+        $morning = new ShiftSegment('morning', null, 'Mañana', 'M', ShiftWindow::fromStrings('08:00', '15:00'), ShiftKind::MORNING, 0);
+        $received = new ShiftSegment('received', null, 'Tarde', 'T', ShiftWindow::fromStrings('15:00', '22:00'), ShiftKind::EVENING, 1);
+        $roster->apply('assignment-1', [
+            RosterDay::rest('given', 'assignment-1', WorkDate::fromString('2026-09-18'), RosterSource::SWAP, $this->createdAt()),
+            RosterDay::working('two-segments', 'assignment-1', WorkDate::fromString('2026-09-20'), [$morning, $received], RosterSource::SWAP, $this->createdAt()),
+        ], []);
+        $traces = new class implements RosterSwapTraces {
+            public function forWorkerInRange(string $workerId, string $from, string $to): array
+            {
+                return [
+                    new RosterSwapTrace('2026-09-18', RosterSwapRole::GIVEN_AWAY, 'Ana', 'agreement-1', RosterAgreementStatus::PENDING, [new RosterSwapTraceSegment('22:00', '08:00', 600, 'Noche', 'N', 'blue')]),
+                    new RosterSwapTrace('2026-09-20', RosterSwapRole::TAKEN_FROM_COLLEAGUE, 'David', 'agreement-1', RosterAgreementStatus::CONFIRMED, [new RosterSwapTraceSegment('15:00', '22:00', 420, 'Tarde', 'T', 'slate')]),
+                ];
+            }
+        };
+        $handler = new GetRosterMonthHandler(
+            new RosterWorkspace(FixedAssignedWorkers::inMadrid(), new InMemoryShiftPresets()),
+            $roster,
+            new RosterCalendar(new FrozenClock('2026-09-11T09:00:00+00:00')),
+            new RestStreakInsights(),
+            $traces,
+        );
+
+        $view = $handler(new GetRosterMonth('worker-1', '2026-09'));
+        $given = $this->cellFor($view, '2026-09-18');
+        $taken = $this->cellFor($view, '2026-09-20');
+
+        self::assertStringContainsString('cubierto por Ana', $given->ariaLabel);
+        self::assertStringContainsString('pendiente del centro', $given->ariaLabel);
+        self::assertCount(2, $taken->shiftSegments);
+        self::assertNull($taken->shiftSegments[0]->swapRole);
+        self::assertSame(RosterSwapRole::TAKEN_FROM_COLLEAGUE, $taken->shiftSegments[1]->swapRole);
+        self::assertSame('David', $taken->shiftSegments[1]->colleagueDisplayName);
+        self::assertSame('agreement-1', $taken->shiftSegments[1]->agreementId);
+        self::assertStringContainsString('turno que haces por David', $taken->ariaLabel);
     }
 
     public function test_today_is_marked_once(): void

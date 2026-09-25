@@ -1,0 +1,38 @@
+<header class="agreement-hero">
+    <p class="changes-kicker">Cambio de turno</p>
+    <h1>{{ agreement.cancelled ? agreement.statusTitle : 'Nuestro cambio' }}</h1>
+    <p class="agreement-between"><span>{{ agreement.requestOwnerName }}</span><b aria-hidden="true">↔</b><span>{{ agreement.proposerName }}</span></p>
+</header>
+
+<section class="agreement-leg" aria-labelledby="requested-leg-title">
+    <p id="requested-leg-title" class="agreement-leg-title">{{ agreement.requestedLeg.eyebrow }}</p>
+    <h2>{{ agreement.requestedLeg.date|upper }}</h2>
+    {% for segment in agreement.requestedLeg.segments %}
+        <div class="agreement-segment">
+            <strong>{{ segment.hours }}</strong><span>{{ segment.duration }}</span>
+            <p>{{ segment.label }}{% if segment.endsNextDay %} · termina al día siguiente{% endif %}</p>
+        </div>
+    {% endfor %}
+    <p class="agreement-location">{{ agreement.requestedLeg.location }}</p>
+</section>
+
+{% if agreement.returnLeg %}
+    <div class="agreement-direction" aria-hidden="true">↕</div>
+    <section class="agreement-leg" aria-labelledby="return-leg-title">
+        <p id="return-leg-title" class="agreement-leg-title">{{ agreement.returnLeg.eyebrow }}</p>
+        <h2>{{ agreement.returnLeg.date|upper }}</h2>
+        {% for segment in agreement.returnLeg.segments %}
+            <div class="agreement-segment">
+                <strong>{{ segment.hours }}</strong><span>{{ segment.duration }}</span>
+                <p>{{ segment.label }}{% if segment.endsNextDay %} · termina al día siguiente{% endif %}</p>
+            </div>
+        {% endfor %}
+        <p class="agreement-location">{{ agreement.returnLeg.location }}</p>
+    </section>
+    <section class="agreement-difference"><p class="changes-kicker">Diferencia</p><strong>{{ agreement.difference }}</strong></section>
+{% endif %}
+
+<section class="agreement-status agreement-status-{{ agreement.cancelled ? 'cancelled' : (agreement.pendingApproval ? 'pending' : 'confirmed') }}" aria-label="Estado del cambio">
+    <span aria-hidden="true">{{ agreement.cancelled ? '×' : (agreement.pendingApproval ? '◷' : '✓') }}</span>
+    <div><p class="changes-kicker">Estado</p><strong>{{ agreement.statusTitle }}</strong><p>{{ agreement.statusDetail }}</p></div>
+</section>

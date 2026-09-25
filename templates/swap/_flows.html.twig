@@ -10,7 +10,15 @@
         </div>
 
         <section class="flow-panel" data-changes-target="releasePick">
-            <div class="flow-list" data-changes-target="shiftList"></div>
+            <div class="availability-calendar">
+                <div class="calendar-header">
+                    <button class="calendar-nav-button" type="button" data-action="changes#releasePreviousMonth" aria-label="Mes anterior">‹</button>
+                    <h3 data-changes-target="releaseMonthTitle"></h3>
+                    <button class="calendar-nav-button" type="button" data-action="changes#releaseNextMonth" aria-label="Mes siguiente">›</button>
+                </div>
+                <div class="calendar-weekdays" aria-hidden="true"><span>L</span><span>M</span><span>X</span><span>J</span><span>V</span><span>S</span><span>D</span></div>
+                <div class="calendar-grid release-calendar-grid" data-changes-target="shiftList" role="grid" aria-label="Tus turnos publicables"></div>
+            </div>
             <div class="empty-state hidden" data-changes-target="noShifts">
                 <strong>No tienes próximos turnos que puedas publicar.</strong>
                 <span>Los turnos que ya buscan compañero aparecen marcados en esta lista.</span>
@@ -20,6 +28,7 @@
         <section class="flow-panel hidden" data-changes-target="releaseConfirm">
             <p class="text-sm text-ink-muted">Quieres librar</p>
             <div class="flow-recap" data-changes-target="releaseRecap"></div>
+            <div class="flow-list" data-changes-target="releaseOptions"></div>
             <p class="privacy-note"><svg aria-hidden="true" viewBox="0 0 24 24" width="20" height="20"><path d="M12 3 5 6v5c0 4.7 2.8 8.3 7 10 4.2-1.7 7-5.3 7-10V6l-7-3Z" fill="none" stroke="currentColor" stroke-width="2"/><path d="m9 12 2 2 4-4" fill="none" stroke="currentColor" stroke-width="2"/></svg> Turnin enseñará este turno únicamente a compañeros compatibles.</p>
             <div class="sheet-actions">
                 <button class="btn-primary btn-block" type="button" data-action="changes#confirmRelease">Buscar compañero</button>

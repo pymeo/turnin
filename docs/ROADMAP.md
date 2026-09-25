@@ -30,6 +30,11 @@ con tests: media funcionalidad sin pantalla no es media funcionalidad, es deuda.
   `ShiftPreset` y `RosterPattern`. Tres entradas —pintar, patrón y voz/texto—
   que convergen en un `ScheduleDraft`, con preview obligatorio y política de
   conflictos explícita. Parser determinista sin IA ni servicios externos.
+* **7b/8. Acuerdo visible y ejecución.** Propuestas directas de 1–5 turnos,
+  aceptación, aprobación opcional, ficha estable, enlace público privado por
+  capacidad y calendario semántico para ambas partes.
+* **10. Notificaciones.** Campanita in-app, contador ligero, lectura individual
+  o global y Web Push multi-dispositivo con deep-link a propuesta o acuerdo.
 
 ## Siguiente
 
@@ -38,13 +43,7 @@ mitad de 7 ya están hechas.
 
 4. **SwapPool y Membership.** El concepto del que depende todo el matching
    (→ [DOMAIN.md](DOMAIN.md#swappool-el-concepto-que-hay-que-entender)).
-7b. **Propuesta y aceptación.** `SwapProposal` sobre una `SwapRequest` y una
-   `Availability` que ya se conocen: quién confirma, en qué orden, qué pasa si
-   dos aceptan a la vez.
-8. **`SwapAgreement` y aplicar el cambio al calendario.** Cierra el primer ciclo
-   completo. **Aquí Turnin empieza a servir para algo.**
 9. **DirectMatcher.** Turnin propone, en vez de esperar a que el usuario elija.
-10. **Notificaciones.** Push. Sin esto, el matching no llega a tiempo.
 11. **Pro / Subscription.** Stripe. No antes: no hay nada que cobrar hasta que
     9 y 10 funcionen.
 12. **Encuéntrame un día libre.** «Quiero librar el sábado 19» sin decir cómo.
@@ -86,8 +85,8 @@ Problemas reales, no una lista de deseos.
 * **Editar las horas de un segmento sin tocar el preset.** Hoy un turno se
   cambia eligiendo otro preset; un horario excepcional se resuelve creando un
   preset. Basta mientras no aparezca alguien con turnos irrepetibles.
-* **Aprobación de supervisión.** Muchos centros exigen visto bueno para un cambio.
-  Está previsto en la máquina de estados (`awaiting_approval`) y no implementado.
+* **Alta administrativa de supervisores.** El gobierno, la espera y la decisión
+  ya existen; falta el backoffice con el que un centro asignará responsables.
 * **Motor de reglas por pool.** Hoy la compatibilidad se preguntará al `SwapPool`
   con reglas mínimas. El motor completo llega cuando haya varios centros reales
   con reglas contradictorias, no antes.
@@ -111,8 +110,7 @@ un día trabajado y «Puedo trabajar este día» sobre uno libre o sin indicar.
 
 **Pendiente**
 
-* `SwapAgreement`;
-* aprobación de supervisión ligada a una organización;
+* alta administrativa de supervisores;
 * consumo de saldo mediante solicitud posterior;
 * matching automático avanzado y cadenas;
 * grados de disponibilidad.

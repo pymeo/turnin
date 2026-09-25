@@ -1,0 +1,16 @@
+{% extends 'base.html.twig' %}
+
+{% block title %}Turnin — Cambio con {{ agreement.proposerName }}{% endblock %}
+
+{% block body %}
+<main class="agreement-shell" data-controller="agreement-share" data-agreement-share-url-value="{{ publicUrl }}" data-agreement-share-text-value="Te envío el cambio de turno acordado entre {{ agreement.requestOwnerName }} y {{ agreement.proposerName }}:">
+    {% include 'identity/_authenticated_header.html.twig' %}
+    <a class="text-sm text-ink-muted no-underline" href="{{ path('swap_proposals') }}">‹ Mis cambios</a>
+    {% include 'swap/_agreement_content.html.twig' with {agreement: agreement} only %}
+    <div class="agreement-share">
+        <button class="btn-primary btn-block" type="button" data-action="agreement-share#share" data-agreement-share-target="button">Compartir con responsable</button>
+        <p class="agreement-share-feedback" data-agreement-share-target="feedback" role="status" aria-live="polite"></p>
+    </div>
+    <p class="agreement-meta">Acordado: {{ agreement.reachedAt }} · Ref. {{ agreement.reference }}</p>
+</main>
+{% endblock %}

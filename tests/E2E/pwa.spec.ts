@@ -71,6 +71,15 @@ test.describe('pwa', () => {
 		expect(response.headers()['cache-control']).toContain('no-cache');
 	});
 
+	test('push notifications preserve their agreement deep link', async ({ request }) => {
+		const source = await (await request.get('/sw.js')).text();
+
+		expect(source).toContain("data: { targetUrl }");
+		expect(source).toContain('existing.navigate(targetUrl)');
+		expect(source).toContain('self.clients.openWindow(targetUrl)');
+		expect(source).not.toContain("openWindow('/app')");
+	});
+
 	test('the offline fallback stands on its own', async ({ page }) => {
 		// It must not depend on the asset pipeline: the network is gone when it
 		// is needed.

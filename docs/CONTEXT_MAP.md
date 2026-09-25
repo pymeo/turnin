@@ -15,12 +15,16 @@ Scheduling
 └── RosterDay + ShiftPreset + RosterPattern                     [IMPLEMENTADO]
 
 Swap
-└── SwapRequest + Availability                                  [IMPLEMENTADO]
+└── SwapRequest + Availability + SwapProposal + acuerdo         [IMPLEMENTADO]
+
+Notification
+└── UserNotification + PushSubscription                         [IMPLEMENTADO]
 ```
 
-Matching, Notification, Billing y Coverage siguen siendo el destino, no el
-presente. De `Swap` existen la publicación de un turno y la disponibilidad
-explícita; `SwapProposal`, `SwapAgreement` y `ShiftDebt` todavía no.
+Matching, Billing y Coverage siguen siendo destino, no presente. `Swap` ya
+incluye propuestas de 1–5 opciones, aceptación, gobierno y una proyección
+inmutable del acuerdo para su ficha. `Notification` ya mantiene la bandeja y
+varias suscripciones push por persona; `ShiftDebt` sigue siendo posterior.
 
 **Un contexto se crea cuando se implementa.** Crear veinte directorios vacíos con
 sus tres capas cada uno no es diseño, es ruido: nadie sabe cuáles están vivos, el
@@ -112,7 +116,9 @@ y no al revés es lo que permite cambiarlo sin tocar el modelo.
 ### `Notification` propio
 
 Único contexto que habla con el exterior (push, email). Su fallo no puede tumbar
-un cambio de turno, así que se acopla solo por eventos.
+un cambio de turno, así que se acopla solo por eventos. `Swap` publica hechos;
+`Notification` decide título, copy, destinatarios, deep-link e intento Web Push.
+La restricción única `(recipient_id, event_id)` hace idempotente la proyección.
 
 ### `Platform\Identity` separado de `Workforce`
 

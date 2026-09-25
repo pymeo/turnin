@@ -5,10 +5,13 @@ declare(strict_types=1);
 namespace App\Swap\Application\Command;
 
 use App\Swap\Application\ShiftCompatibilityResolver;
+use App\Swap\Application\SwapNotificationOutcome;
 use App\Swap\Application\SwapWorkspace;
+use App\Swap\Domain\Event\SwapProposalCreated;
 use App\Swap\Domain\RosteredDay;
 use App\Swap\Domain\RosteredDays;
 use App\Swap\Domain\ShiftCompatibility;
+use App\Swap\Domain\SwapEvents;
 use App\Swap\Domain\SwapGroup;
 use App\Swap\Domain\SwapGroups;
 use App\Swap\Domain\SwapIdGenerator;
@@ -17,6 +20,7 @@ use App\Swap\Domain\SwapProposalOption;
 use App\Swap\Domain\SwapProposals;
 use App\Swap\Domain\SwapTransaction;
 use App\Swap\Domain\WorkDate;
+use App\Swap\Domain\WorkerDisplayNames;
 use InvalidArgumentException;
 use Psr\Clock\ClockInterface;
 
@@ -38,13 +42,15 @@ final readonly class CreateSwapProposalHandler
         private ShiftCompatibilityResolver $compatibility,
         private SwapProposals $proposals,
         private SwapIdGenerator $ids,
+        private SwapEvents $events,
+        private WorkerDisplayNames $names,
         private ClockInterface $clock,
     ) {
     }
 
     public function __invoke(CreateSwapProposal $command): string
     {
-        $id = $this->transaction->run(function () use ($command): string {
+        $result = $this->transaction->run(function () use ($command): SwapNotificationOutcome {
             $request = $this->workspace->requireVisibleRequest($command->workerId, $command->requestId);
             if (!$request->isOpen() || $request->workerId() === $command->workerId) {
                 throw new InvalidArgumentException('Este turno ya no admite propuestas.');
@@ -81,10 +87,16 @@ final readonly class CreateSwapProposalHandler
             $proposal = SwapProposal::proposeExchange($this->ids->next(), $request->id(), $request->workerId(), $command->workerId, $options[0]->assignmentId, $options, $this->clock->now());
             $this->proposals->save($proposal);
 
-            return $proposal->id();
+            return new SwapNotificationOutcome($proposal->id(), $request->workerId(), $command->workerId, (string) $request->workDate(), optionCount: \count($options));
         });
 
-        return \is_string($id) ? $id : '';
+        if (!$result instanceof SwapNotificationOutcome) {
+            return '';
+        }
+        $name = $this->names->forWorkers([$command->workerId])[$command->workerId] ?? 'Un compañero';
+        $this->events->publishAfterCommit(new SwapProposalCreated($result->proposalId, $result->requestOwnerId, $name, $result->requestedDate, $result->optionCount));
+
+        return $result->proposalId;
     }
 
     /**

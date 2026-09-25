@@ -243,6 +243,33 @@ asignación primaria conservando su UUID. Para datos históricos que sí contien
 una asignación sustituida, la ejecución resuelve la pertenencia activa por pool
 en vez de rechazar un acuerdo válido por comparar el identificador obsoleto.
 
+### Ficha y evidencia del acuerdo
+
+`SwapProposal` y `SwapRequest` siguen siendo la fuente de verdad del estado; no
+se ha creado otro agregado competidor. Al aceptar se guarda una
+`SwapAgreementSnapshot` con las dos piernas, segmentos, centro y grupo tal como
+eran al acordar. Esa evidencia alimenta una única ficha privada y su consulta
+pública. La propuesta aporta siempre el estado vivo (`PENDING_APPROVAL`,
+`EXECUTED`, rechazo o expiración), por lo que compartir una URL nunca congela un
+cambio cancelado como si siguiera vigente.
+
+Scheduling consume `RosterSwapTraces`, un puerto de lectura que Swap implementa.
+Cada segmento proyecta horas, duración, fuente, rol (`GIVEN_AWAY` o
+`TAKEN_FROM_COLLEAGUE`), compañero, acuerdo y estado. El calendario no deduce
+semántica de `ShiftSegment::describe()` ni reduce ya un cambio a `fromSwap`.
+
+## `Notification` — bandeja y Web Push
+
+`UserNotification` es la notificación durable: destinatario, tipo, texto humano,
+deep-link, fecha y lectura. `PushSubscription` es independiente y permite varios
+dispositivos. La bandeja funciona aunque el navegador no admita push o el usuario
+lo deniegue. Un 404/410 retira solo el endpoint caducado.
+
+Los hechos `SwapProposalCreated`, `SwapAgreementReached`,
+`SwapAgreementApproved` y `SwapAgreementRejected` se publican después del commit.
+La notificación interna se guarda antes del intento externo y los fallos se
+registran sin propagarse al flujo de intercambio.
+
 ## SwapPool: el concepto que hay que entender
 
 **Dos personas del mismo hospital no pueden intercambiar turnos automáticamente.**

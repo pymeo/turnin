@@ -424,3 +424,21 @@ una, y el backend revalida solicitud, pertenencia, propiedad y compatibilidad
 antes de ejecutar. Los turnos movidos conservan `RosterSource::SWAP` para que el
 calendario los marque con `↔`. Los detalles y alternativas se recogen en
 [ADR 12](adr/0012-direct-exchange-options-and-real-interval-compatibility.md).
+
+## 2026-09-24 — Un acuerdo tiene una ficha, una URL y semántica de calendario
+
+`SwapProposal` y `SwapRequest` continúan gobernando el estado. Se descartó crear
+un segundo agregado mutable de acuerdo porque duplicaría la máquina de estados;
+se guarda una instantánea inmutable de la evidencia necesaria para explicar qué
+aceptaron ambas personas. La misma proyección alimenta ficha privada y consulta
+pública, mientras el estado vivo siempre se lee de la propuesta.
+
+La URL pública usa un secreto aleatorio estable, almacenado como hash y con una
+copia cifrada para poder volver a compartirla. No se regenera en cada click ni
+expone UUID internos. Las notificaciones son otro contexto y reaccionan a
+eventos post-commit; la bandeja durable precede al push *best effort*.
+
+El calendario recibe trazas estructuradas por segmento. `fromSwap` se conserva
+solo como compatibilidad visual, pero no decide textos, roles ni enlaces. La
+decisión completa y alternativas descartadas están en
+[ADR 13](adr/0013-agreement-resource-notifications-and-calendar-projection.md).

@@ -11,7 +11,10 @@ namespace App\Scheduling\Application\Query;
  */
 final readonly class RosterDayCell
 {
-    /** @param list<string> $segments */
+    /** @param list<string> $segments
+     * @param list<RosterShiftSegmentView> $shiftSegments
+     * @param list<RosterSwapTrace>        $swapTraces
+     */
     public function __construct(
         public string $date,
         public int $dayNumber,
@@ -26,6 +29,8 @@ final readonly class RosterDayCell
         public bool $isWeekend,
         /** Both the received shift and the newly freed day keep this trace. */
         public bool $fromSwap = false,
+        public array $shiftSegments = [],
+        public array $swapTraces = [],
     ) {
     }
 

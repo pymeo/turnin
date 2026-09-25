@@ -1,8 +1,19 @@
-<header class="session-header" aria-label="Sesión">
+{% set unreadNotifications = app.user ? notification_unread_count(app.user.id) : 0 %}
+<header class="session-header" aria-label="Sesión" data-controller="notifications" data-notifications-csrf-value="{{ csrf_token('notifications') }}" data-notifications-vapid-key-value="{{ push_public_key() }}">
     <a href="{{ path('identity_app') }}" class="session-brand" aria-label="TURNIN, inicio"><img class="session-mark" src="/brand/turnin-mark.svg" alt=""><img src="/brand/turnin-wordmark.svg" alt="TURNIN" width="91" height="24"></a>
-    <form method="post" action="{{ path('identity_logout') }}">
-        <input type="hidden" name="_csrf_token" value="{{ csrf_token('logout') }}">
-        <button class="btn-ghost" type="submit">Salir</button>
-    </form>
+    <div class="session-actions">
+        <button class="notification-bell" type="button" aria-label="Notificaciones{{ unreadNotifications ? ', ' ~ unreadNotifications ~ ' sin leer' : '' }}" data-action="notifications#toggle">
+            <span aria-hidden="true">🔔</span><b data-notifications-target="badge"{{ unreadNotifications ? '' : ' hidden' }}>{{ unreadNotifications }}</b>
+        </button>
+        <form method="post" action="{{ path('identity_logout') }}">
+            <input type="hidden" name="_csrf_token" value="{{ csrf_token('logout') }}">
+            <button class="btn-ghost" type="submit">Salir</button>
+        </form>
+    </div>
+    <section class="notification-panel" data-notifications-target="panel" hidden aria-label="Notificaciones">
+        <div class="notification-panel-heading"><h2>Notificaciones</h2><button type="button" data-action="notifications#markAll">Marcar todas como leídas</button></div>
+        <div class="notification-list" data-notifications-target="list"><p class="notification-empty">Cargando…</p></div>
+        <div class="notification-push"><strong>Notificaciones en tu móvil</strong><p>Recibe un aviso cuando alguien responda a uno de tus turnos.</p><div data-notifications-target="pushState"></div></div>
+    </section>
 </header>
 {% include 'identity/_app_navigation.html.twig' %}
