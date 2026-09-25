@@ -11,5 +11,6 @@
 </article>{% endfor %}
 </section>
 <a class="btn-primary btn-block" href="{{ path('workforce_onboarding', {mode: 'add'}) }}">＋ Añadir otro lugar de trabajo</a>
+<section class="card flex flex-col gap-2" data-testid="profile-team-role"><p class="eyebrow">Tu papel en el equipo</p><p class="text-ink-muted">Consulta quién es responsable de tus equipos o, si eres tú quien gestiona sus cambios, pide a tus compañeros que te confirmen.</p><a class="btn-secondary btn-block" href="{{ path('workforce_team') }}">Mi equipo y responsables</a></section>
 </main>
 {% endblock %}

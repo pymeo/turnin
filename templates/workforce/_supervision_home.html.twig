@@ -28,9 +28,9 @@
             {% if supervision.quorumReachable %}
                 <p class="text-ink-muted">Necesitamos que {{ supervision.missing == 1 ? 'otro miembro' : 'otros ' ~ supervision.missing ~ ' miembros' }} del equipo {{ supervision.missing == 1 ? 'confirme' : 'confirmen' }} que eres su responsable. Hasta entonces no podrás aprobar cambios.</p>
             {% else %}
-                <p class="alert-info">Necesitamos al menos {{ supervision.requiredConfirmations }} miembros del equipo en Turnin para verificar al responsable. Invita a tus compañeros a entrar.</p>
+                <p class="alert-info" data-testid="supervisor-quorum-unreachable">Actualmente no hay suficientes compañeros en Turnin para verificarte. Necesitas {{ supervision.requiredConfirmations }} confirmaciones y {{ supervision.eligibleVerifiers == 0 ? 'todavía nadie puede hacerlo' : (supervision.eligibleVerifiers == 1 ? 'solo hay 1 persona que puede hacerlo' : 'solo hay ' ~ supervision.eligibleVerifiers ~ ' personas que pueden hacerlo') }}.</p>
             {% endif %}
-            {% include 'workforce/_supervisor_share.html.twig' with {url: supervision.verificationUrl, message: supervision.shareMessage, title: 'Verificación de responsable · Turnin', whatsappLabel: 'Pedir confirmación por WhatsApp'} only %}
+            {% include 'workforce/_supervisor_share.html.twig' with {url: supervision.verificationUrl, message: supervision.shareMessage, title: 'Verificación de responsable · Turnin', whatsappLabel: supervision.quorumReachable ? 'Pedir confirmación por WhatsApp' : 'Invitar compañeros a Turnin'} only %}
             <a class="btn-ghost btn-block" href="{{ path('workforce_supervisor_leave_confirm', {assignmentId: supervision.assignmentId}) }}">Ya no quiero ser responsable</a>
         </section>
     {% endif %}
@@ -59,6 +59,8 @@
                     <input type="hidden" name="_token" value="{{ csrfToken }}">
                     <button class="btn-secondary btn-block" type="submit">Invitar responsable</button>
                 </form>
+                <p class="text-sm text-ink-muted">¿Eres tú quien normalmente gestiona los cambios? Pide a tus compañeros que te confirmen.</p>
+                <a class="btn-ghost btn-block" href="{{ path('workforce_supervisor_request_form', {equipo: team.swapPoolId}) }}">Solicitar ser responsable</a>
             {% endif %}
         </section>
     {% endif %}

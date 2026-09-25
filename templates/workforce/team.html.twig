@@ -6,12 +6,13 @@
     <header>
         <a class="text-sm text-ink-muted no-underline" href="{{ path('identity_app') }}">‹ Inicio</a>
         <h1 class="text-3xl font-bold">Mi equipo</h1>
-        <p class="text-ink-muted">Quién revisa los cambios de cada grupo con el que puedes cambiar.</p>
+        <p class="text-ink-muted">Quién revisa los cambios de cada grupo con el que puedes cambiar, y tu papel en cada uno.</p>
     </header>
 
     {% for team in overview.teams %}
-        <section class="supervisor-card{{ team.verifiedSupervisors|length ? '' : ' supervisor-card-muted' }}" data-testid="team-card">
+        <section class="supervisor-card{{ team.verifiedSupervisors|length or team.viewerRole == 'verified' ? '' : ' supervisor-card-muted' }}" data-testid="team-card">
             <div class="supervisor-team"><strong>{{ team.teamLabel }}</strong><span>{{ team.workplaceName }}</span></div>
+
             <p class="supervisor-state">Responsable</p>
             {% for name in team.verifiedSupervisors %}
                 <div class="supervisor-person">
@@ -19,9 +20,6 @@
                     <div><strong>{{ name }} ✓</strong><span>Responsable verificado por el equipo</span></div>
                 </div>
             {% endfor %}
-            {% if team.viewerIsSupervisor %}
-                <p class="text-ink-muted">Tú también eres responsable de este equipo.</p>
-            {% endif %}
             {% for pending in team.pendingSupervisors %}
                 <div class="supervisor-person">
                     <span class="supervisor-avatar" aria-hidden="true">{{ pending.candidateName|first|upper }}</span>
@@ -29,25 +27,44 @@
                 </div>
                 {% if not pending.answeredByViewer %}<a class="btn-primary btn-block" href="{{ pending.verificationPath }}">Revisar</a>{% endif %}
             {% endfor %}
-            {% if team.verifiedSupervisors is empty and not team.viewerIsSupervisor %}
+            {% if team.verifiedSupervisors is empty and team.viewerRole != 'verified' %}
                 <p class="font-semibold" data-testid="team-without-supervisor">Sin responsable verificado.</p>
-                <p class="text-ink-muted">Los cambios que necesiten aprobación esperarán hasta que el equipo verifique a alguien. Nunca se aprueban solos.</p>
+                <p class="text-sm text-ink-muted">Los cambios que necesiten aprobación esperarán hasta que el equipo verifique a alguien. Nunca se aprueban solos.</p>
             {% endif %}
             <form method="post" action="{{ path('workforce_supervisor_invite', {swapPoolId: team.swapPoolId}) }}">
                 <input type="hidden" name="_token" value="{{ csrfToken }}">
-                <button class="{{ team.verifiedSupervisors is empty and team.pendingSupervisors is empty ? 'btn-primary' : 'btn-secondary' }} btn-block" type="submit">Invitar responsable</button>
+                <button class="btn-secondary btn-block" type="submit">Invitar responsable</button>
             </form>
+
+            {# The viewer's own role. Never a switch: asking is a request to the team. #}
+            <div class="flex flex-col gap-2 border-t border-line pt-3" data-testid="team-my-role">
+                <p class="supervisor-state">Tu papel en el equipo</p>
+                <p>Trabajador · {{ team.teamLabel }}</p>
+                {% if team.viewerRole == 'verified' %}
+                    <p><strong>Responsable:</strong> verificado por el equipo ✓</p>
+                    <a class="btn-primary btn-block" href="{{ path('swap_supervisor') }}">Ir al panel de responsable</a>
+                    <a class="btn-ghost btn-block" href="{{ path('workforce_supervisor_leave_confirm', {assignmentId: team.viewerSupervision.assignmentId}) }}">Dejar de ser responsable</a>
+                {% elseif team.viewerRole == 'pending' %}
+                    <p><strong>Responsable:</strong> pendiente de verificación · {{ team.viewerSupervision.confirmations }} de {{ team.viewerSupervision.requiredConfirmations }} confirmaciones</p>
+                    <a class="btn-secondary btn-block" href="{{ path('identity_app') }}">Pedir confirmación</a>
+                    <a class="btn-ghost btn-block" href="{{ path('workforce_supervisor_leave_confirm', {assignmentId: team.viewerSupervision.assignmentId}) }}">Cancelar solicitud</a>
+                {% else %}
+                    <p><strong>Responsable:</strong> no</p>
+                    <a class="btn-secondary btn-block" href="{{ path('workforce_supervisor_request_form', {equipo: team.swapPoolId}) }}">Solicitar ser responsable</a>
+                {% endif %}
+            </div>
         </section>
     {% else %}
         <div class="empty-state"><strong>Todavía no perteneces a ningún equipo.</strong><span>Completa tu perfil laboral para ver a tu equipo.</span></div>
     {% endfor %}
 
-    {% for supervision in overview.mySupervisions %}
+    {# Teams this person supervises without working in them (they were invited). #}
+    {% for supervision in overview.mySupervisions|filter(s => s.swapPoolId not in overview.teams|map(t => t.swapPoolId)) %}
         <section class="supervisor-card{{ supervision.verified ? '' : ' supervisor-card-pending' }}">
             <p class="supervisor-state">{{ supervision.verified ? 'Eres responsable ✓' : 'Tu solicitud de responsable' }}</p>
             <div class="supervisor-team"><strong>{{ supervision.teamLabel }}</strong><span>{{ supervision.workplaceName }}</span></div>
             {% if not supervision.verified %}<p>{{ supervision.confirmations }} de {{ supervision.requiredConfirmations }} confirmaciones</p>{% endif %}
-            <a class="btn-ghost btn-block" href="{{ path('workforce_supervisor_leave_confirm', {assignmentId: supervision.assignmentId}) }}">Dejar de ser responsable</a>
+            <a class="btn-ghost btn-block" href="{{ path('workforce_supervisor_leave_confirm', {assignmentId: supervision.assignmentId}) }}">{{ supervision.verified ? 'Dejar de ser responsable' : 'Cancelar solicitud' }}</a>
         </section>
     {% endfor %}
 

@@ -22,17 +22,10 @@ final readonly class GetSupervisionOverviewHandler
     {
         $mine = [];
         foreach ($this->assignments->activeForSupervisor($query->userId) as $assignment) {
-            $pool = $this->teams->describe($assignment->swapPoolId());
-            if (null === $pool) {
-                continue;
+            $supervision = $this->mine($assignment, $query);
+            if (null !== $supervision) {
+                $mine[$assignment->swapPoolId()] = $supervision;
             }
-            $team = $this->teams->team($assignment->swapPoolId());
-            $url = rtrim($query->baseUrl, '/').SupervisionShareMessages::verificationPath($this->tokens->verificationToken($assignment->id()));
-            $mine[] = new MySupervisionView(
-                $assignment->id(), $assignment->swapPoolId(), $pool->workplaceName, $pool->teamLabel, $assignment->hasApprovalAuthority(),
-                $assignment->confirmations(), $this->policy->requiredConfirmations($team, $query->userId), $this->policy->canBeReached($team, $query->userId),
-                $url, SupervisionShareMessages::verification($pool->teamLabel, $pool->workplaceName, $url),
-            );
         }
 
         $teams = [];
@@ -44,10 +37,8 @@ final readonly class GetSupervisionOverviewHandler
             $team = $this->teams->team($poolId);
             $verified = [];
             $pending = [];
-            $viewerIsSupervisor = false;
             foreach ($this->assignments->activeInPool($poolId) as $assignment) {
                 if ($assignment->supervisorUserId() === $query->userId) {
-                    $viewerIsSupervisor = true;
                     continue;
                 }
                 if ($assignment->hasApprovalAuthority()) {
@@ -56,10 +47,31 @@ final readonly class GetSupervisionOverviewHandler
                 }
                 $pending[] = $this->pending($assignment, $pool->teamLabel, $this->policy->requiredConfirmations($team, $assignment->supervisorUserId()), $query->userId);
             }
-            $teams[] = new TeamSupervisionView($poolId, $pool->workplaceName, $pool->teamLabel, $verified, $pending, $viewerIsSupervisor);
+            $own = $mine[$poolId] ?? null;
+            $role = null === $own ? TeamSupervisionView::ROLE_NONE : ($own->verified ? TeamSupervisionView::ROLE_VERIFIED : TeamSupervisionView::ROLE_PENDING);
+            $teams[] = new TeamSupervisionView(
+                $poolId, $pool->workplaceName, $pool->teamLabel, $verified, $pending, null !== $own, $role, $own,
+                $this->policy->requiredConfirmations($team, $query->userId), $team->eligibleVerifierCount($query->userId),
+            );
         }
 
-        return new SupervisionOverview($mine, $teams);
+        return new SupervisionOverview(array_values($mine), $teams);
+    }
+
+    private function mine(SupervisorAssignment $assignment, GetSupervisionOverview $query): ?MySupervisionView
+    {
+        $pool = $this->teams->describe($assignment->swapPoolId());
+        if (null === $pool) {
+            return null;
+        }
+        $team = $this->teams->team($assignment->swapPoolId());
+        $url = rtrim($query->baseUrl, '/').SupervisionShareMessages::verificationPath($this->tokens->verificationToken($assignment->id()));
+
+        return new MySupervisionView(
+            $assignment->id(), $assignment->swapPoolId(), $pool->workplaceName, $pool->teamLabel, $assignment->hasApprovalAuthority(),
+            $assignment->confirmations(), $this->policy->requiredConfirmations($team, $query->userId), $this->policy->canBeReached($team, $query->userId),
+            $url, SupervisionShareMessages::verification($pool->teamLabel, $pool->workplaceName, $url), $team->eligibleVerifierCount($query->userId),
+        );
     }
 
     private function pending(SupervisorAssignment $assignment, string $teamLabel, int $required, string $viewerId): PendingSupervisorView

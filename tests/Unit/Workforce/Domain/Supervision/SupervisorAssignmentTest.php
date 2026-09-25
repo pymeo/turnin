@@ -6,6 +6,7 @@ namespace App\Tests\Unit\Workforce\Domain\Supervision;
 
 use App\Workforce\Domain\Supervision\SupervisionRejected;
 use App\Workforce\Domain\Supervision\SupervisorAssignment;
+use App\Workforce\Domain\Supervision\SupervisorAssignmentOrigin;
 use App\Workforce\Domain\Supervision\SupervisorAssignmentStatus;
 use App\Workforce\Domain\Supervision\SupervisorVerification;
 use App\Workforce\Domain\Supervision\SupervisorVerificationDecision;
@@ -194,6 +195,52 @@ final class SupervisorAssignmentTest extends TestCase
         self::assertTrue($uci->hasApprovalAuthority());
         self::assertFalse($urgencias->hasApprovalAuthority(), 'Authority for UCI says nothing about Urgencias.');
         self::assertTrue($second->hasApprovalAuthority(), 'Nothing limits a pool to one supervisor.');
+    }
+
+    public function test_a_member_asking_starts_at_zero_and_the_team_verifies_them_without_counting_the_candidate(): void
+    {
+        $team = $this->team(self::LAURA, 'ana', 'david', 'maria');
+        $assignment = SupervisorAssignment::selfRequested('a-self', self::LAURA, $team, str_repeat('d', 64), new DateTimeImmutable('2026-09-25T10:00:00+00:00'));
+        $policy = new SupervisorVerificationPolicy();
+
+        self::assertSame(SupervisorAssignmentStatus::PENDING_VERIFICATION, $assignment->status());
+        self::assertSame(SupervisorAssignmentOrigin::SELF_REQUEST, $assignment->origin());
+        self::assertNull($assignment->invitationId());
+        self::assertSame(0, $assignment->confirmations());
+        self::assertFalse($assignment->hasApprovalAuthority());
+        self::assertSame(2, $policy->requiredConfirmations($team, self::LAURA), 'Three colleagues can confirm; Laura is not one of them.');
+
+        self::assertFalse($assignment->recordVerification($this->confirmation('ana'), $team, $policy));
+        self::assertSame(1, $assignment->confirmations());
+        self::assertFalse($assignment->hasApprovalAuthority());
+        self::assertTrue($assignment->recordVerification($this->confirmation('david'), $team, $policy));
+        self::assertSame(SupervisorAssignmentStatus::VERIFIED, $assignment->status());
+        self::assertTrue($assignment->hasApprovalAuthority());
+    }
+
+    public function test_the_candidate_of_a_self_request_can_never_vote(): void
+    {
+        $team = $this->team(self::LAURA, 'ana', 'david');
+        $assignment = SupervisorAssignment::selfRequested('a-self', self::LAURA, $team, str_repeat('d', 64), new DateTimeImmutable('2026-09-25T10:00:00+00:00'));
+
+        try {
+            $assignment->recordVerification($this->confirmation(self::LAURA), $team, new SupervisorVerificationPolicy());
+            self::fail('The candidate voted for herself.');
+        } catch (SupervisionRejected) {
+        }
+        self::assertSame(0, $assignment->confirmations());
+    }
+
+    public function test_only_a_member_of_the_pool_can_ask_to_supervise_it(): void
+    {
+        $this->expectException(SupervisionRejected::class);
+        $this->expectExceptionMessage('equipo en el que trabajas');
+        SupervisorAssignment::selfRequested('a-self', 'mallory', $this->team('ana', 'david'), str_repeat('d', 64), new DateTimeImmutable('2026-09-25T10:00:00+00:00'));
+    }
+
+    public function test_an_accepted_invitation_is_recorded_as_such(): void
+    {
+        self::assertSame(SupervisorAssignmentOrigin::INVITATION, $this->pending()->origin());
     }
 
     private function pending(): SupervisorAssignment

@@ -489,3 +489,23 @@ que alguien podría cuestionar:
   de la responsable en E2E es por email porque Google no puede automatizarse;
   el ida y vuelta real de OAuth está en el test funcional con el proveedor
   simulado.
+
+## 2026-09-25 — Autosolicitud de responsable
+
+Un miembro del pool puede pedir a su equipo que lo verifique
+(→ [ADR 14, addendum](adr/0014-team-verified-supervisors.md)).
+
+* **La pregunta va después del onboarding, no dentro.** Solo entonces se sabe
+  de qué pools hablamos. Es una pantalla con «Sí, soy responsable» y «No,
+  continuar»; con un solo pool no se vuelve a elegir equipo y con varios se
+  preselecciona el principal. Si ya es responsable (o pendiente) de todos, se
+  salta.
+* **Varias casillas, varias solicitudes.** Cada pool es un assignment que se
+  verifica por separado.
+* **Sin invitación ficticia.** No se crea `SupervisorInvitation` y nadie cuenta
+  como primera confirmación.
+* **`origin` en el assignment** (`invitation`, `self_request`, `organization`),
+  con backfill: filas con invitación → `invitation`; `organization_verified` →
+  `organization`; el resto → `self_request`. No interviene en la autoridad.
+* **Retirar una solicitud pendiente no avisa al equipo.** Desaparece de su
+  inicio y el enlace deja de valer, como ya pasaba con la invitación.

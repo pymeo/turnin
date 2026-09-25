@@ -69,6 +69,12 @@ con Google, sin contraseñas ni emails de activación. Lo es de **un equipo**
 5. puede dejarlo cuando quiera; su historial («Aprobado por Laura») se conserva
    y los cambios pendientes siguen esperando a otra persona.
 
+Quien ya trabaja en el equipo no necesita que lo inviten: al final del
+onboarding («¿También coordinas a este equipo?», opcional y de un toque), en
+el inicio o en Mi equipo puede pulsar «Solicitar ser responsable». Empieza en
+0 confirmaciones y sus compañeros reciben el mismo aviso. Solo se ofrece para
+equipos en los que trabaja; un coordinador externo entra por invitación.
+
 Mientras está pendiente, su inicio muestra el progreso («1 de 2
 confirmaciones») y un botón para pedir confirmación por WhatsApp. Puede haber
 varios responsables por equipo; cualquiera puede aprobar y la primera decisión

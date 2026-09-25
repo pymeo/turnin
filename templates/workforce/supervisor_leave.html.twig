@@ -5,15 +5,21 @@
     {% include 'identity/_authenticated_header.html.twig' %}
     <section class="supervisor-card supervisor-card-muted">
         <p class="supervisor-state">Dejar de ser responsable</p>
-        <h1 class="text-2xl font-bold">¿Quieres dejar de ser responsable de {{ supervision.teamLabel }}?</h1>
-        <p class="text-ink-muted">{{ supervision.workplaceName }}</p>
-        <p>Dejarás de recibir cambios para aprobar y perderás el acceso al cuadrante del equipo.</p>
+        {% if supervision.verified %}
+            <h1 class="text-2xl font-bold">¿Quieres dejar de ser responsable de {{ supervision.teamLabel }}?</h1>
+            <p class="text-ink-muted">{{ supervision.workplaceName }}</p>
+            <p>Dejarás de recibir cambios para aprobar y perderás el acceso al cuadrante del equipo.</p>
+        {% else %}
+            <h1 class="text-2xl font-bold">¿Quieres retirar tu solicitud de responsable de {{ supervision.teamLabel }}?</h1>
+            <p class="text-ink-muted">{{ supervision.workplaceName }}</p>
+            <p>Tus compañeros ya no podrán confirmarte con el enlace que tienen.</p>
+        {% endif %}
         <p class="text-ink-muted">Tu historial de acciones anteriores se conservará.</p>
         <div class="supervisor-actions">
             <a class="btn-secondary" href="{{ path('identity_app') }}">Cancelar</a>
             <form method="post" action="{{ path('workforce_supervisor_leave', {assignmentId: supervision.assignmentId}) }}" class="flex">
                 <input type="hidden" name="_token" value="{{ csrfToken }}">
-                <button class="btn-primary btn-block" type="submit">Sí, dejar de ser responsable</button>
+                <button class="btn-primary btn-block" type="submit">{{ supervision.verified ? 'Sí, dejar de ser responsable' : 'Sí, retirar solicitud' }}</button>
             </form>
         </div>
     </section>

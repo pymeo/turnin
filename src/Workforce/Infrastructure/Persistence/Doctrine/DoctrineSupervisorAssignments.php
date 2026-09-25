@@ -5,6 +5,7 @@ declare(strict_types=1);
 namespace App\Workforce\Infrastructure\Persistence\Doctrine;
 
 use App\Workforce\Domain\Supervision\SupervisorAssignment;
+use App\Workforce\Domain\Supervision\SupervisorAssignmentOrigin;
 use App\Workforce\Domain\Supervision\SupervisorAssignments;
 use App\Workforce\Domain\Supervision\SupervisorAssignmentStatus;
 use App\Workforce\Domain\Supervision\SupervisorVerification;
@@ -31,14 +32,15 @@ final readonly class DoctrineSupervisorAssignments implements SupervisorAssignme
     public function save(SupervisorAssignment $assignment): void
     {
         $this->connection->executeStatement(<<<'SQL'
-            INSERT INTO workforce_supervisor_assignments (id, supervisor_user_id, swap_pool_id, invitation_id, verification_token_hash, status, verification_level, created_at, verified_at, left_at)
-            VALUES (:id, :supervisor, :pool, :invitation, :hash, :status, :level, :created, :verified, :left)
+            INSERT INTO workforce_supervisor_assignments (id, supervisor_user_id, swap_pool_id, invitation_id, origin, verification_token_hash, status, verification_level, created_at, verified_at, left_at)
+            VALUES (:id, :supervisor, :pool, :invitation, :origin, :hash, :status, :level, :created, :verified, :left)
             ON CONFLICT (id) DO UPDATE SET status = EXCLUDED.status, verification_level = EXCLUDED.verification_level, verified_at = EXCLUDED.verified_at, left_at = EXCLUDED.left_at
             SQL, [
             'id' => $assignment->id(),
             'supervisor' => $assignment->supervisorUserId(),
             'pool' => $assignment->swapPoolId(),
             'invitation' => $assignment->invitationId(),
+            'origin' => $assignment->origin()->value,
             'hash' => $assignment->verificationTokenHash(),
             'status' => $assignment->status()->value,
             'level' => $assignment->verificationLevel()?->value,
@@ -88,6 +90,14 @@ final readonly class DoctrineSupervisorAssignments implements SupervisorAssignme
         return $this->many('SELECT * FROM workforce_supervisor_assignments WHERE supervisor_user_id = :supervisor AND swap_pool_id = :pool AND '.self::ACTIVE, ['supervisor' => $supervisorUserId, 'pool' => $swapPoolId])[0] ?? null;
     }
 
+    public function activeForUpdate(string $supervisorUserId, string $swapPoolId): ?SupervisorAssignment
+    {
+        // A transaction-scoped advisory lock: there may be no row yet to lock.
+        $this->connection->executeStatement('SELECT pg_advisory_xact_lock(hashtext(:key))', ['key' => 'supervisor:'.$swapPoolId.':'.$supervisorUserId]);
+
+        return $this->activeFor($supervisorUserId, $swapPoolId);
+    }
+
     public function activeForSupervisor(string $supervisorUserId): array
     {
         return $this->many('SELECT * FROM workforce_supervisor_assignments WHERE supervisor_user_id = :supervisor AND '.self::ACTIVE.' ORDER BY created_at', ['supervisor' => $supervisorUserId]);
@@ -131,6 +141,7 @@ final readonly class DoctrineSupervisorAssignments implements SupervisorAssignme
             $this->text($row['supervisor_user_id'] ?? null),
             $this->text($row['swap_pool_id'] ?? null),
             null === ($row['invitation_id'] ?? null) ? null : $this->text($row['invitation_id']),
+            SupervisorAssignmentOrigin::from($this->text($row['origin'] ?? null)),
             $this->text($row['verification_token_hash'] ?? null),
             SupervisorAssignmentStatus::from($this->text($row['status'] ?? null)),
             null === ($row['verification_level'] ?? null) ? null : SupervisorVerificationLevel::from($this->text($row['verification_level'])),

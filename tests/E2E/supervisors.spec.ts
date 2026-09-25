@@ -79,6 +79,12 @@ async function confirmFromTheBell(david: Page): Promise<void> {
 	await expect(david.getByText('¿Es vuestro responsable?')).toBeVisible();
 }
 
+async function confirmOnce(page: Page): Promise<void> {
+	await confirmFromTheBell(page);
+	await page.getByRole('button', { name: 'Sí, es nuestro responsable' }).click();
+	await expect(page.getByText('Has confirmado que es vuestro responsable')).toBeVisible();
+}
+
 test.describe('Responsable verificado por su equipo', () => {
 	test.describe.configure({ timeout: 240_000 });
 
@@ -199,6 +205,65 @@ test.describe('Responsable verificado por su equipo', () => {
 
 			await ana.goto('/app/equipo');
 			await expect(ana.getByTestId('team-card').filter({ hasText: unit }).getByTestId('team-without-supervisor')).toHaveText('Sin responsable verificado.');
+		} finally {
+			await close();
+		}
+	});
+
+	test('una trabajadora del equipo lo solicita al terminar el onboarding: 0 de 2 y el equipo la verifica', async ({ browser }, testInfo) => {
+		const unit = `Autosolicitud E2E ${testInfo.project.name} ${Date.now() % 1_000_000}`;
+		const { ana, david, laura, close } = await team(browser, testInfo, unit);
+		try {
+			await onboardWorker(laura, testInfo, 'self-laura', { category: 'TCAE', destination: unit, local: true }, { givenName: 'Laura', supervisor: true });
+			const pending = laura.getByTestId('supervisor-pending-card');
+			await expect(pending.getByTestId('supervisor-progress')).toHaveText('0 de 2 confirmaciones');
+			await expect(pending).toContainText('otros 2 miembros del equipo confirmen');
+			await screenshot(laura, testInfo, 'self-request-0-of-2');
+			expect((await laura.goto('/app/responsable'))?.status()).toBe(403);
+
+			await confirmOnce(ana);
+			await laura.goto('/app');
+			await expect(laura.getByTestId('supervisor-progress')).toHaveText('1 de 2 confirmaciones');
+			await confirmOnce(david);
+
+			await laura.goto('/app');
+			await expect(laura.getByTestId('supervisor-verified-card')).toBeVisible();
+			expect((await laura.goto('/app/responsable'))?.status()).toBe(200);
+		} finally {
+			await close();
+		}
+	});
+
+	test('quien omitió la pregunta lo solicita después desde Mi equipo, con el mismo resultado', async ({ browser }, testInfo) => {
+		const unit = `Perfil E2E ${testInfo.project.name} ${Date.now() % 1_000_000}`;
+		const { ana, david, laura, close } = await team(browser, testInfo, unit);
+		try {
+			await onboardWorker(laura, testInfo, 'profile-laura', { category: 'TCAE', destination: unit, local: true }, { givenName: 'Laura' });
+			await laura.goto('/app/equipo/responsable/solicitar?desde=onboarding');
+			await expect(laura.getByRole('link', { name: 'No, continuar' })).toBeVisible();
+			await screenshot(laura, testInfo, 'onboarding-question');
+			await laura.goto('/app/workplaces');
+			await laura.getByRole('link', { name: 'Mi equipo y responsables' }).click();
+			const role = laura.getByTestId('team-card').filter({ hasText: unit }).getByTestId('team-my-role');
+			await expect(role).toContainText('Responsable: no');
+			await role.getByRole('link', { name: 'Solicitar ser responsable' }).click();
+			await expect(laura.getByText('Necesitarás 2 confirmaciones de compañeros.')).toBeVisible();
+			await screenshot(laura, testInfo, 'self-request-form');
+			await laura.getByRole('button', { name: 'Solicitar verificación' }).click();
+			await laura.waitForURL(/\/app\?responsable=solicitado$/);
+			await expect(laura.getByTestId('supervisor-progress')).toHaveText('0 de 2 confirmaciones');
+
+			await laura.goto('/app/equipo');
+			await expect(laura.getByTestId('team-card').filter({ hasText: unit }).getByTestId('team-my-role')).toContainText('pendiente de verificación · 0 de 2 confirmaciones');
+
+			await confirmOnce(ana);
+			await confirmOnce(david);
+			await laura.goto('/app/equipo');
+			const verifiedRole = laura.getByTestId('team-card').filter({ hasText: unit }).getByTestId('team-my-role');
+			await expect(verifiedRole).toContainText('verificado por el equipo ✓');
+			await screenshot(laura, testInfo, 'team-role-verified');
+			await verifiedRole.getByRole('link', { name: 'Ir al panel de responsable' }).click();
+			await expect(laura.getByRole('heading', { name: 'Cambios pendientes' })).toBeVisible();
 		} finally {
 			await close();
 		}

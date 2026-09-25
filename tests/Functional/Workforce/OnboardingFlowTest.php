@@ -81,7 +81,7 @@ final class OnboardingFlowTest extends WebTestCase
 
         $result = $payload['result'] ?? null;
         self::assertIsArray($result);
-        self::assertSame('/app', $result['redirect'] ?? null);
+        self::assertSame('/app/equipo/responsable/solicitar?desde=onboarding', $result['redirect'] ?? null);
         self::assertSame(0, $this->countRows('SELECT COUNT(*) FROM workforce_onboarding_drafts WHERE worker_id = :worker', ['worker' => $this->userId]));
         self::assertTrue((bool) $this->connection->fetchOne('SELECT has_worker_profile FROM identity_users WHERE id = :worker', ['worker' => $this->userId]));
         self::assertSame(1, $this->countRows('SELECT COUNT(*) FROM workforce_worker_assignments WHERE worker_id = :worker AND active = TRUE', ['worker' => $this->userId]));

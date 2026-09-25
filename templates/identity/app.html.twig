@@ -13,6 +13,12 @@
         <p class="alert-success" role="status">Has dejado de ser responsable. Tu historial se conserva.</p>
     {% elseif app.request.query.get('responsable') == 'rechazado' %}
         <p class="alert-info" role="status">Has rechazado la invitación. Avisaremos a quien te la envió.</p>
+    {% elseif app.request.query.get('responsable') == 'solicitado' %}
+        <p class="alert-success" role="status">Hemos pedido a tus compañeros que confirmen que eres su responsable.</p>
+    {% elseif app.request.query.get('responsable') == 'en-curso' %}
+        <p class="alert-info" role="status">Ya tienes una verificación en curso. Aquí puedes ver su progreso.</p>
+    {% elseif app.request.query.get('responsable') == 'ya-verificado' %}
+        <p class="alert-info" role="status">Ya eres responsable verificado de este equipo.</p>
     {% endif %}
 
     {# Supervision comes first while it needs something from this person: a

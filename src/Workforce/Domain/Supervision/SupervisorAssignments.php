@@ -20,6 +20,12 @@ interface SupervisorAssignments
     /** Pending or verified — the partial unique index allows at most one. */
     public function activeFor(string $supervisorUserId, string $swapPoolId): ?SupervisorAssignment;
 
+    /**
+     * Same as activeFor, but serialised per person and pool for the rest of
+     * the transaction, so a double tap on "Solicitar" cannot race itself.
+     */
+    public function activeForUpdate(string $supervisorUserId, string $swapPoolId): ?SupervisorAssignment;
+
     /** @return list<SupervisorAssignment> pending or verified, in any pool */
     public function activeForSupervisor(string $supervisorUserId): array;
 

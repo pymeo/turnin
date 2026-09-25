@@ -8,6 +8,8 @@ use App\Workforce\Application\Command\AcceptSupervisorInvitation;
 use App\Workforce\Application\Command\DeclineSupervisorInvitation;
 use App\Workforce\Application\Command\InviteSupervisor;
 use App\Workforce\Application\Command\LeaveSupervision;
+use App\Workforce\Application\Command\RequestSupervision;
+use App\Workforce\Application\Command\SupervisionRequested;
 use App\Workforce\Application\Command\SupervisorInvitationCreated;
 use App\Workforce\Application\Command\VerifySupervisor;
 use App\Workforce\Application\Query\GetSupervisionOverview;
@@ -16,6 +18,7 @@ use App\Workforce\Application\Query\GetSupervisorVerification;
 use App\Workforce\Application\Query\SupervisionOverview;
 use App\Workforce\Application\Query\SupervisorInvitationView;
 use App\Workforce\Application\Query\SupervisorVerificationView;
+use App\Workforce\Application\Query\TeamSupervisionView;
 use App\Workforce\Application\Supervision\SupervisionShareMessages;
 use App\Workforce\Domain\AuthenticatedWorker;
 use App\Workforce\Domain\Supervision\SupervisionRejected;
@@ -96,6 +99,72 @@ final readonly class SupervisionController
             'url' => $url,
             'message' => SupervisionShareMessages::invitation($created->teamLabel, $created->workplaceName, $url),
         ]));
+    }
+
+    /**
+     * "Solicitar ser responsable", reached from the end of onboarding, the
+     * home and Mi equipo. It only lists pools this person works in; the
+     * handler checks membership again, so posting another pool id is refused.
+     */
+    #[Route('/app/equipo/responsable/solicitar', name: 'workforce_supervisor_request_form', methods: ['GET'])]
+    public function requestForm(Request $request): Response
+    {
+        $userId = $this->userId();
+        if (null === $userId) {
+            return new RedirectResponse('/login');
+        }
+        $overview = $this->overview($userId, $request);
+        $fromOnboarding = 'onboarding' === $request->query->getString('desde');
+        $requestable = array_values(array_filter($overview->teams, static fn (TeamSupervisionView $team): bool => $team->viewerCanRequest()));
+        if ($fromOnboarding && [] === $requestable) {
+            return new RedirectResponse('/app');
+        }
+        $preselected = $request->query->getString('equipo');
+        if ('' === $preselected && [] !== $requestable) {
+            $preselected = $requestable[0]->swapPoolId;
+        }
+
+        return new Response($this->twig->render('workforce/supervisor_request.html.twig', [
+            'teams' => $overview->teams,
+            'requestable' => $requestable,
+            'preselected' => $preselected,
+            'fromOnboarding' => $fromOnboarding,
+            'csrfToken' => $this->token(),
+            'error' => null,
+        ]));
+    }
+
+    #[Route('/app/equipo/responsable/solicitar', name: 'workforce_supervisor_request', methods: ['POST'])]
+    public function requestSupervision(Request $request): Response
+    {
+        $userId = $this->userId();
+        if (null === $userId) {
+            return new RedirectResponse('/login');
+        }
+        if (!$this->validCsrf($request)) {
+            return new Response('La sesión ha caducado. Vuelve atrás y recarga la página.', 419);
+        }
+        $pools = array_values(array_unique(array_filter($request->request->all('swapPoolIds'), static fn (mixed $pool): bool => \is_string($pool) && '' !== $pool)));
+        if ([] === $pools) {
+            return new RedirectResponse('/app/equipo/responsable/solicitar?falta=equipo');
+        }
+        $outcomes = [];
+        foreach ($pools as $pool) {
+            try {
+                $result = $this->handled($this->commandBus, new RequestSupervision($userId, $pool));
+            } catch (Throwable $exception) {
+                return $this->rejected($exception, Response::HTTP_FORBIDDEN);
+            }
+            \assert($result instanceof SupervisionRequested);
+            $outcomes[] = $result->outcome;
+        }
+        $message = match (true) {
+            \in_array(SupervisionRequested::CREATED, $outcomes, true) => 'solicitado',
+            \in_array(SupervisionRequested::ALREADY_PENDING, $outcomes, true) => 'en-curso',
+            default => 'ya-verificado',
+        };
+
+        return new RedirectResponse('/app?responsable='.$message);
     }
 
     /**

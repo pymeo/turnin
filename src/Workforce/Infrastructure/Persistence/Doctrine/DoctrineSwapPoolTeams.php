@@ -38,7 +38,7 @@ final readonly class DoctrineSwapPoolTeams implements SwapPoolTeams
     public function poolsOf(string $workerId): array
     {
         /** @var list<string> $pools */
-        $pools = $this->connection->fetchFirstColumn('SELECT DISTINCT m.swap_pool_id '.self::ACTIVE_MEMBERSHIP.' AND m.worker_id = :worker ORDER BY m.swap_pool_id', ['worker' => $workerId]);
+        $pools = $this->connection->fetchFirstColumn('SELECT m.swap_pool_id '.self::ACTIVE_MEMBERSHIP.' AND m.worker_id = :worker GROUP BY m.swap_pool_id ORDER BY bool_or(m.is_primary) DESC, m.swap_pool_id', ['worker' => $workerId]);
 
         return $pools;
     }

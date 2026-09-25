@@ -44,7 +44,7 @@ actualizarlo.
 | **ShiftDebt** | «Marta hizo mi turno y le debo uno». Nominal, sin precio. |
 | **Cycle** | Un cambio encadenado: A→B→C→A. |
 | **SupervisorInvitation** | El enlace con el que un compañero invita a quien valida los cambios de su pool. Permite *pedir* ser responsable, nunca lo concede. |
-| **SupervisorAssignment** | «Esta persona es responsable de este pool», con estado: `PENDING_VERIFICATION`, `VERIFIED`, `LEFT`, `REVOKED`. Solo `VERIFIED` da autoridad, y solo sobre ese pool. |
+| **SupervisorAssignment** | «Esta persona es responsable de este pool», con estado: `PENDING_VERIFICATION`, `VERIFIED`, `LEFT`, `REVOKED`. Solo `VERIFIED` da autoridad, y solo sobre ese pool. Empieza por invitación o por autosolicitud de un miembro (`SupervisorAssignmentOrigin`). |
 | **SupervisorVerification** | La respuesta de un compañero sobre una candidata: `CONFIRMED` o `CANNOT_CONFIRM`. Una por persona y assignment. |
 | **SupervisorVerificationPolicy** | Cuántas confirmaciones hacen falta en un pool: 2 con menos de 5 compañeros, 3 con 5 o más. |
 | **TEAM_VERIFIED** | Verificación comunitaria: el equipo ha confirmado a esa persona en Turnin. No es una certificación oficial del centro. |
@@ -289,11 +289,18 @@ aprobación (`ShiftExchangePolicy`), y *quién* puede darla lo dice
 `SupervisorAssignment`. Son preguntas distintas y viven en sitios distintos.
 
 ```
-compañero invita ─▶ responsable entra con Google ─▶ acepta
+compañero invita ─▶ responsable entra con Google ─▶ acepta ─┐
+miembro del pool pulsa «Solicitar ser responsable» ─────────┤
    ─▶ PENDING_VERIFICATION ─▶ el equipo confirma (quórum) ─▶ VERIFIED ─▶ LEFT
 ```
 
 Invariantes:
+
+* solo un miembro activo del pool puede solicitarlo él mismo
+  (`SupervisorAssignment::selfRequested`); quien no trabaja en el equipo solo
+  llega por invitación;
+* la autosolicitud empieza en 0 confirmaciones; la invitación, en 1 si el
+  invitador sigue en el pool;
 
 * tener el enlace o aceptar la invitación **no** da ningún permiso;
 * solo confirman miembros activos del mismo pool, nunca la candidata;

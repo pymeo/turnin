@@ -11,6 +11,6 @@ interface SwapPoolTeams
 
     public function describe(string $swapPoolId): ?SwapPoolDescription;
 
-    /** @return list<string> pools where the worker has an active membership */
+    /** @return list<string> pools where the worker has an active membership, primary first */
     public function poolsOf(string $workerId): array;
 }

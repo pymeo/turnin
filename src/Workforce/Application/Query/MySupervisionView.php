@@ -17,6 +17,7 @@ final readonly class MySupervisionView
         public bool $quorumReachable,
         public string $verificationUrl,
         public string $shareMessage,
+        public int $eligibleVerifiers = 0,
     ) {
     }
 

@@ -199,6 +199,11 @@ Hay dos enlaces y ninguno concede permisos por conocerlo
   miembro activo del pool; si no, recibe 403 y un mensaje sin nombre, email ni
   equipo de la candidata.
 
+`POST /app/equipo/responsable/solicitar` solo crea una solicitud pendiente, y
+solo para pools en los que la sesión tiene membership activa: el agregado lo
+comprueba contra el equipo leído en servidor, así que enviar el id de otro
+pool devuelve 403 sin crear nada.
+
 Toda acción de responsable (`/app/responsable`, aprobar, rechazar) vuelve a
 comprobar en servidor un `SupervisorAssignment` `VERIFIED` para el pool de ese
 cambio concreto. El flag de perfil, la página de origen, un query string o un

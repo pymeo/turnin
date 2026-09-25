@@ -293,7 +293,7 @@ final class SupervisorOnboardingFlowTest extends WebTestCase
         $client->submit($client->request('GET', '/invitacion/responsable/'.$token)->filter('form[action$="/aceptar"]')->form());
 
         $home = $client->request('GET', '/app');
-        self::assertStringContainsString('Necesitamos al menos 2 miembros del equipo', $home->html());
+        self::assertStringContainsString('Actualmente no hay suficientes compañeros en Turnin para verificarte', $home->html());
         self::assertSame('pending_verification', $this->scalar('SELECT status FROM workforce_supervisor_assignments WHERE supervisor_user_id = :laura', ['laura' => $this->people['laura']['id']]));
     }
 
@@ -334,6 +334,150 @@ final class SupervisorOnboardingFlowTest extends WebTestCase
         self::assertStringContainsString('Laura García', $client->followRedirect()->html());
     }
 
+    public function test_a_member_asks_to_be_supervisor_starts_at_zero_and_the_team_verifies_her(): void
+    {
+        $client = $this->world();
+        $this->people['lauraWorker'] = $this->worker('Laura', $this->uci);
+
+        $this->signIn($client, 'lauraWorker');
+        $home = $client->request('GET', '/app');
+        self::assertStringContainsString('¿Eres tú quien normalmente gestiona los cambios?', $home->html());
+        $form = $client->request('GET', '/app/equipo/responsable/solicitar?equipo='.$this->uci);
+        self::assertStringContainsString('Necesitarás 2 confirmaciones', $form->html());
+        self::assertStringNotContainsString('Urgencias', $form->html(), 'Only pools she works in are offered.');
+        $submit = $form->filter('form[action="/app/equipo/responsable/solicitar"]')->form();
+        $client->submit($submit);
+        self::assertResponseRedirects('/app?responsable=solicitado');
+        $client->submit($submit);
+        self::assertResponseRedirects('/app?responsable=en-curso', null, 'Asking twice points at the running request.');
+
+        $laura = $this->people['lauraWorker']['id'];
+        self::assertSame(1, $this->rows('SELECT COUNT(*) FROM workforce_supervisor_assignments WHERE supervisor_user_id = :id', ['id' => $laura]));
+        $assignmentId = $this->scalar('SELECT id FROM workforce_supervisor_assignments WHERE supervisor_user_id = :id', ['id' => $laura]);
+        self::assertSame('pending_verification', $this->scalar('SELECT status FROM workforce_supervisor_assignments WHERE id = :a', ['a' => $assignmentId]));
+        self::assertSame('self_request', $this->scalar('SELECT origin FROM workforce_supervisor_assignments WHERE id = :a', ['a' => $assignmentId]));
+        self::assertSame('', $this->scalar('SELECT invitation_id FROM workforce_supervisor_assignments WHERE id = :a', ['a' => $assignmentId]));
+        self::assertSame(0, $this->rows('SELECT COUNT(*) FROM workforce_supervisor_verifications WHERE supervisor_assignment_id = :a', ['a' => $assignmentId]), 'Nobody vouched: nothing is counted.');
+        self::assertSame(0, $this->rows('SELECT COUNT(*) FROM workforce_supervisor_invitations WHERE swap_pool_id = :pool', ['pool' => $this->uci]));
+
+        // The team is asked; Laura is not; outsiders are not.
+        foreach (['ana', 'david', 'eva'] as $colleague) {
+            self::assertSame(1, $this->notifications($colleague, 'supervisor_verification', 'Comprueba a tu responsable'));
+        }
+        self::assertSame(0, $this->notifications('lauraWorker', 'supervisor_verification'));
+        self::assertSame(0, $this->notifications('otto', 'supervisor_verification'));
+        $verificationPath = $this->scalar("SELECT target_url FROM notification_user_notifications WHERE recipient_id = :ana AND type = 'supervisor_verification'", ['ana' => $this->people['ana']['id']]);
+        self::assertMatchesRegularExpression('#^/app/equipo/responsable/verificar/[A-Za-z0-9_-]{43}$#', $verificationPath);
+        self::assertStringContainsString('Laura de Prueba quiere figurar como responsable de UCI', $this->scalar("SELECT body FROM notification_user_notifications WHERE recipient_id = :ana AND type = 'supervisor_verification'", ['ana' => $this->people['ana']['id']]));
+
+        // Pending: the same home card, 0 of 2, and no authority.
+        $client->request('GET', '/app');
+        self::assertSelectorTextContains('[data-testid="supervisor-progress"]', '0 de 2 confirmaciones');
+        $client->request('GET', '/app/responsable');
+        self::assertResponseStatusCodeSame(403);
+
+        // She cannot vote for herself, even as a member of the pool.
+        $client->request('POST', $verificationPath, ['_token' => $this->csrf($client), 'decision' => 'confirmed']);
+        self::assertResponseStatusCodeSame(403);
+        self::assertSame(0, $this->rows('SELECT COUNT(*) FROM workforce_supervisor_verifications WHERE supervisor_assignment_id = :a', ['a' => $assignmentId]));
+
+        $this->signIn($client, 'ana');
+        $client->request('POST', $verificationPath, ['_token' => $this->csrf($client), 'decision' => 'confirmed']);
+        self::assertSame('pending_verification', $this->scalar('SELECT status FROM workforce_supervisor_assignments WHERE id = :a', ['a' => $assignmentId]));
+        $this->signIn($client, 'david');
+        $client->request('POST', $verificationPath, ['_token' => $this->csrf($client), 'decision' => 'confirmed']);
+        self::assertSame('verified', $this->scalar('SELECT status FROM workforce_supervisor_assignments WHERE id = :a', ['a' => $assignmentId]));
+        self::assertSame(1, $this->notifications('lauraWorker', 'supervisor_verified'));
+
+        $this->signIn($client, 'lauraWorker');
+        $client->request('GET', '/app/responsable');
+        self::assertResponseIsSuccessful();
+        $client->request('POST', '/app/equipo/responsable/solicitar', ['_token' => $this->csrf($client), 'swapPoolIds' => [$this->uci]]);
+        self::assertResponseRedirects('/app?responsable=ya-verificado');
+        self::assertSame(1, $this->rows('SELECT COUNT(*) FROM workforce_supervisor_assignments WHERE supervisor_user_id = :id', ['id' => $laura]));
+    }
+
+    public function test_nobody_can_ask_to_supervise_a_pool_they_do_not_work_in(): void
+    {
+        $client = $this->world();
+        $this->signIn($client, 'otto');
+        $client->request('POST', '/app/equipo/responsable/solicitar', ['_token' => $this->csrf($client), 'swapPoolIds' => [$this->uci]]);
+
+        self::assertResponseStatusCodeSame(403);
+        self::assertStringContainsString('pide a alguien de ese equipo que te invite', (string) $client->getResponse()->getContent());
+        self::assertSame(0, $this->rows('SELECT COUNT(*) FROM workforce_supervisor_assignments WHERE supervisor_user_id = :id', ['id' => $this->people['otto']['id']]));
+        self::assertSame(0, $this->notifications('ana', 'supervisor_verification'));
+
+        // A supervisor account with no job has nothing to ask for either.
+        $this->signIn($client, 'laura');
+        $client->request('POST', '/app/equipo/responsable/solicitar', ['_token' => $this->csrf($client), 'swapPoolIds' => [$this->uci]]);
+        self::assertResponseStatusCodeSame(403);
+    }
+
+    public function test_withdrawing_a_self_request_clears_the_checks_and_a_new_request_is_a_new_assignment(): void
+    {
+        $client = $this->world();
+        $this->people['lauraWorker'] = $this->worker('Laura', $this->uci);
+        $this->signIn($client, 'lauraWorker');
+        $client->request('POST', '/app/equipo/responsable/solicitar', ['_token' => $this->csrf($client), 'swapPoolIds' => [$this->uci]]);
+        $first = $this->scalar('SELECT id FROM workforce_supervisor_assignments WHERE supervisor_user_id = :id', ['id' => $this->people['lauraWorker']['id']]);
+        $verificationPath = $this->scalar("SELECT target_url FROM notification_user_notifications WHERE recipient_id = :ana AND type = 'supervisor_verification'", ['ana' => $this->people['ana']['id']]);
+
+        $this->signIn($client, 'ana');
+        self::assertCount(1, $client->request('GET', '/app')->filter('[data-testid="supervisor-check-card"]'));
+
+        $this->signIn($client, 'lauraWorker');
+        $client->submit($client->request('GET', '/app/equipo/responsable/'.$first.'/dejar')->filter('form[action$="/dejar"]')->form());
+        self::assertSame('left', $this->scalar('SELECT status FROM workforce_supervisor_assignments WHERE id = :a', ['a' => $first]));
+        self::assertSame(0, $this->notifications('ana', 'supervisor_team_update'), 'Withdrawing a pending request is not news for the team.');
+
+        $this->signIn($client, 'ana');
+        self::assertCount(0, $client->request('GET', '/app')->filter('[data-testid="supervisor-check-card"]'));
+        $client->request('POST', $verificationPath, ['_token' => $this->csrf($client), 'decision' => 'confirmed']);
+        self::assertResponseStatusCodeSame(403);
+
+        $this->signIn($client, 'lauraWorker');
+        $client->request('POST', '/app/equipo/responsable/solicitar', ['_token' => $this->csrf($client), 'swapPoolIds' => [$this->uci]]);
+        self::assertResponseRedirects('/app?responsable=solicitado');
+        self::assertSame(2, $this->rows('SELECT COUNT(*) FROM workforce_supervisor_assignments WHERE supervisor_user_id = :id', ['id' => $this->people['lauraWorker']['id']]), 'The old request stays as history.');
+    }
+
+    public function test_a_self_request_in_a_team_too_small_stays_pending_and_says_why(): void
+    {
+        $client = $this->world();
+        \assert(null !== $this->seed);
+        $tiny = $this->seed->pool('Paritorio');
+        $this->people['lauraWorker'] = $this->worker('Laura', $tiny);
+        $this->people['sole'] = $this->worker('Sole', $tiny);
+
+        $this->signIn($client, 'lauraWorker');
+        $form = $client->request('GET', '/app/equipo/responsable/solicitar');
+        self::assertStringContainsString('solo hay 1 persona que puede hacerlo', $form->html());
+        $client->submit($form->filter('form[action="/app/equipo/responsable/solicitar"]')->form());
+        $home = $client->followRedirect();
+
+        self::assertStringContainsString('Actualmente no hay suficientes compañeros en Turnin para verificarte', $home->html());
+        self::assertSelectorTextContains('[data-testid="supervisor-progress"]', '0 de 2 confirmaciones');
+        self::assertSame('pending_verification', $this->scalar('SELECT status FROM workforce_supervisor_assignments WHERE supervisor_user_id = :id', ['id' => $this->people['lauraWorker']['id']]));
+    }
+
+    public function test_onboarding_ends_with_the_optional_question_about_the_teams_she_works_in(): void
+    {
+        $client = $this->world();
+        $this->people['lauraWorker'] = $this->worker('Laura', $this->uci);
+        $this->signIn($client, 'lauraWorker');
+
+        $page = $client->request('GET', '/app/equipo/responsable/solicitar?desde=onboarding');
+        self::assertStringContainsString('¿También coordinas a este equipo?', $page->html());
+        self::assertCount(1, $page->filter('a[href="/app"]:contains("No, continuar")'));
+        self::assertCount(1, $page->filter('input[type="hidden"][name="swapPoolIds[]"][value="'.$this->uci.'"]'), 'A single team is not asked for again.');
+
+        // Somebody already verified or pending in every team is not asked.
+        $client->submit($page->filter('form[action="/app/equipo/responsable/solicitar"]')->form());
+        $client->request('GET', '/app/equipo/responsable/solicitar?desde=onboarding');
+        self::assertResponseRedirects('/app');
+    }
+
     private function world(): KernelBrowser
     {
         $client = static::createClient();
@@ -352,6 +496,14 @@ final class SupervisorOnboardingFlowTest extends WebTestCase
         $this->people['laura'] = $this->supervisorAccount();
 
         return $client;
+    }
+
+    /** @return array{id: string, assignment: string, email: string} */
+    private function worker(string $name, string $pool): array
+    {
+        \assert(null !== $this->seed);
+
+        return $this->seed->worker($name, $pool);
     }
 
     /**

@@ -24,6 +24,7 @@ final class SupervisorAssignment
         private readonly string $supervisorUserId,
         private readonly string $swapPoolId,
         private readonly ?string $invitationId,
+        private readonly SupervisorAssignmentOrigin $origin,
         private readonly string $verificationTokenHash,
         private SupervisorAssignmentStatus $status,
         private ?SupervisorVerificationLevel $verificationLevel,
@@ -35,6 +36,9 @@ final class SupervisorAssignment
         if ('' === trim($id) || '' === trim($supervisorUserId) || '' === trim($swapPoolId) || 64 !== \strlen($verificationTokenHash)) {
             throw new InvalidArgumentException('A supervisor assignment needs a person, a pool and a verification link.');
         }
+        if (SupervisorAssignmentOrigin::SELF_REQUEST === $origin && null !== $invitationId) {
+            throw new InvalidArgumentException('A self request has no invitation.');
+        }
         if (SupervisorAssignmentStatus::VERIFIED === $status && (null === $verifiedAt || null === $verificationLevel)) {
             throw new InvalidArgumentException('A verified supervisor needs a verification level and date.');
         }
@@ -43,13 +47,30 @@ final class SupervisorAssignment
     /** Accepting an invitation asks the team; it grants nothing by itself. */
     public static function requestVerification(string $id, string $supervisorUserId, string $swapPoolId, ?string $invitationId, string $verificationTokenHash, DateTimeImmutable $now): self
     {
-        return new self($id, $supervisorUserId, $swapPoolId, $invitationId, $verificationTokenHash, SupervisorAssignmentStatus::PENDING_VERIFICATION, null, [], $now, null, null);
+        return new self($id, $supervisorUserId, $swapPoolId, $invitationId, null === $invitationId ? SupervisorAssignmentOrigin::SELF_REQUEST : SupervisorAssignmentOrigin::INVITATION, $verificationTokenHash, SupervisorAssignmentStatus::PENDING_VERIFICATION, null, [], $now, null, null);
+    }
+
+    /**
+     * "I am the one who handles this team's changes — ask them.".
+     *
+     * Only a member of the pool may ask, so nobody can browse hospitals and
+     * claim authority over a team they do not work in; outsiders need a
+     * colleague's invitation. Nobody has vouched yet: it starts at zero, and
+     * the candidate can never be one of the votes.
+     */
+    public static function selfRequested(string $id, string $supervisorUserId, SwapPoolTeam $team, string $verificationTokenHash, DateTimeImmutable $now): self
+    {
+        if (!$team->includes($supervisorUserId)) {
+            throw new SupervisionRejected('Solo puedes solicitar ser responsable de un equipo en el que trabajas. Si coordinas otro equipo, pide a alguien de ese equipo que te invite.');
+        }
+
+        return new self($id, $supervisorUserId, $team->swapPoolId, null, SupervisorAssignmentOrigin::SELF_REQUEST, $verificationTokenHash, SupervisorAssignmentStatus::PENDING_VERIFICATION, null, [], $now, null, null);
     }
 
     /** @param list<SupervisorVerification> $verifications */
-    public static function restore(string $id, string $supervisorUserId, string $swapPoolId, ?string $invitationId, string $verificationTokenHash, SupervisorAssignmentStatus $status, ?SupervisorVerificationLevel $verificationLevel, array $verifications, DateTimeImmutable $createdAt, ?DateTimeImmutable $verifiedAt, ?DateTimeImmutable $leftAt): self
+    public static function restore(string $id, string $supervisorUserId, string $swapPoolId, ?string $invitationId, SupervisorAssignmentOrigin $origin, string $verificationTokenHash, SupervisorAssignmentStatus $status, ?SupervisorVerificationLevel $verificationLevel, array $verifications, DateTimeImmutable $createdAt, ?DateTimeImmutable $verifiedAt, ?DateTimeImmutable $leftAt): self
     {
-        return new self($id, $supervisorUserId, $swapPoolId, $invitationId, $verificationTokenHash, $status, $verificationLevel, $verifications, $createdAt, $verifiedAt, $leftAt);
+        return new self($id, $supervisorUserId, $swapPoolId, $invitationId, $origin, $verificationTokenHash, $status, $verificationLevel, $verifications, $createdAt, $verifiedAt, $leftAt);
     }
 
     /**
@@ -164,6 +185,11 @@ final class SupervisorAssignment
     public function invitationId(): ?string
     {
         return $this->invitationId;
+    }
+
+    public function origin(): SupervisorAssignmentOrigin
+    {
+        return $this->origin;
     }
 
     public function verificationTokenHash(): string

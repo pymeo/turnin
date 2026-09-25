@@ -106,6 +106,9 @@ test.describe('progressive onboarding', () => {
 		await expect(summaryStep).toContainText('Observación');
 		await expect(summaryStep).toContainText('Equipo volante');
 		await summaryStep.getByRole('button', { name: 'Entrar en Turnin' }).click();
+		// One optional question, small enough to skip in one tap.
+		await expect(page.getByRole('heading', { name: '¿También coordinas a este equipo?' })).toBeVisible();
+		await page.getByRole('link', { name: 'No, continuar' }).click();
 		await expect(page).toHaveURL(/\/app$/);
 
 		const overflow = await page.evaluate(() => ({

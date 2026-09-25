@@ -27,6 +27,7 @@ export async function onboardWorker(
 	testInfo: TestInfo,
 	label: string,
 	group?: { category: string; destination: string; additionalDestinations?: string[]; local?: boolean },
+	options: { givenName?: string; supervisor?: boolean } = {},
 ): Promise<void> {
 	const offset = PROJECTS.indexOf(testInfo.project.name) + 1;
 	const seed = (Date.now() + offset * 7919 + label.length * 104_729) % 100_000_000;
@@ -44,7 +45,7 @@ export async function onboardWorker(
 	await page.getByRole('button', { name: 'Iniciar sesión' }).click();
 	await page.waitForURL(/\/onboarding$/);
 
-	await page.locator('input[name="given_name"]').fill('Ana');
+	await page.locator('input[name="given_name"]').fill(options.givenName ?? 'Ana');
 	await page.locator('input[name="family_name"]').fill('García');
 	await page.getByRole('button', { name: 'Continuar' }).click();
 
@@ -99,6 +100,15 @@ export async function onboardWorker(
 	await additionalStep.locator('[data-onboarding-target="additionalButton"]').click();
 
 	await page.locator('[data-step="summary"]').getByRole('button', { name: 'Entrar en Turnin' }).click();
+	// The optional last question: "¿También coordinas a este equipo?".
+	await page.waitForURL(/\/app\/equipo\/responsable\/solicitar\?desde=onboarding$/);
+	await expect(page.getByRole('heading', { name: '¿También coordinas a este equipo?' })).toBeVisible();
+	if (options.supervisor) {
+		await page.getByRole('button', { name: 'Sí, soy responsable' }).click();
+		await page.waitForURL(/\/app\?responsable=solicitado$/);
+		return;
+	}
+	await page.getByRole('link', { name: 'No, continuar' }).click();
 	await page.waitForURL(/\/app$/);
 }
 

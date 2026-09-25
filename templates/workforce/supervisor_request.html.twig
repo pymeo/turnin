@@ -1,0 +1,59 @@
+{% extends 'base.html.twig' %}
+{% block title %}Turnin — Solicitar ser responsable{% endblock %}
+{% block body %}
+{# The same page from the end of onboarding, the home and Mi equipo. Asking
+   grants nothing: the team confirms first. Only pools this person works in are
+   listed, and the server checks that again. #}
+<main class="supervisor-shell" data-testid="supervisor-request">
+    {% include 'identity/_authenticated_header.html.twig' %}
+    {% if not fromOnboarding %}<a class="text-sm text-ink-muted no-underline" href="{{ path('workforce_team') }}">‹ Mi equipo</a>{% endif %}
+    <header class="flex flex-col gap-2">
+        <p class="supervisor-state">{{ fromOnboarding ? 'Un último detalle, opcional' : 'Solicitar ser responsable' }}</p>
+        <h1 class="text-2xl font-bold">{{ fromOnboarding ? '¿También coordinas a este equipo?' : (requestable|length > 1 ? '¿De qué equipo eres responsable?' : 'Solicitar ser responsable') }}</h1>
+        <p class="text-ink-muted">Si eres la persona que normalmente revisa o aprueba los cambios de turno, tus compañeros pueden confirmarlo en Turnin.</p>
+    </header>
+
+    {% if app.request.query.get('falta') == 'equipo' %}<p class="alert-critical" role="alert">Elige al menos un equipo.</p>{% endif %}
+
+    {% if requestable|length %}
+        <form method="post" action="{{ path('workforce_supervisor_request') }}" class="flex flex-col gap-3">
+            <input type="hidden" name="_token" value="{{ csrfToken }}">
+            {% for team in requestable %}
+                <label class="supervisor-card supervisor-choice" data-testid="supervisor-request-team">
+                    {% if requestable|length == 1 %}
+                        <input type="hidden" name="swapPoolIds[]" value="{{ team.swapPoolId }}">
+                    {% else %}
+                        <input type="checkbox" name="swapPoolIds[]" value="{{ team.swapPoolId }}"{{ team.swapPoolId == preselected ? ' checked' : '' }}>
+                    {% endif %}
+                    <span class="supervisor-team"><strong>{{ team.teamLabel }}</strong><span>{{ team.workplaceName }}</span></span>
+                    <span class="text-sm">Necesitarás {{ team.requiredConfirmations }} confirmaciones de compañeros.</span>
+                    {% if team.verifiedSupervisors|length %}
+                        <span class="text-sm text-ink-muted">Este equipo ya tiene {{ team.verifiedSupervisors|length }} {{ team.verifiedSupervisors|length == 1 ? 'responsable verificado' : 'responsables verificados' }}. Puedes solicitar ser responsable también.</span>
+                    {% endif %}
+                    {% if not team.quorumReachable %}
+                        <span class="text-sm text-ink-muted">Actualmente no hay suficientes compañeros en Turnin para verificarte: {{ team.eligibleVerifiers == 1 ? 'solo hay 1 persona que puede hacerlo' : (team.eligibleVerifiers == 0 ? 'todavía nadie puede hacerlo' : 'solo hay ' ~ team.eligibleVerifiers ~ ' personas que pueden hacerlo') }}.</span>
+                    {% endif %}
+                </label>
+            {% endfor %}
+            <p class="text-sm text-ink-muted">Tus compañeros recibirán un aviso para confirmar que eres la persona que normalmente gestiona los cambios. Hasta entonces no podrás aprobar nada.</p>
+            <button class="btn-primary btn-block" type="submit">{{ fromOnboarding ? 'Sí, soy responsable' : 'Solicitar verificación' }}</button>
+        </form>
+    {% endif %}
+
+    {% for team in teams|filter(t => not t.viewerCanRequest) %}
+        <p class="alert-info" data-testid="supervisor-request-existing">
+            {% if team.viewerRole == 'verified' %}
+                Ya eres responsable verificado de {{ team.teamLabel }}.
+            {% else %}
+                Ya tienes una verificación en curso en {{ team.teamLabel }}. <a class="font-semibold underline" href="{{ path('identity_app') }}">Ver progreso</a>
+            {% endif %}
+        </p>
+    {% endfor %}
+
+    {% if teams is empty %}
+        <div class="empty-state"><strong>Todavía no perteneces a ningún equipo.</strong><span>Si coordinas un equipo en el que no trabajas, pide a alguien de ese equipo que te invite como responsable.</span></div>
+    {% endif %}
+
+    <a class="btn-ghost btn-block" href="{{ fromOnboarding ? path('identity_app') : path('workforce_team') }}">{{ fromOnboarding ? 'No, continuar' : 'Cancelar' }}</a>
+</main>
+{% endblock %}

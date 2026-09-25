@@ -5,6 +5,7 @@ declare(strict_types=1);
 namespace App\Tests\Unit\Notification\Application;
 
 use App\Notification\Application\DeliverNotification;
+use App\Notification\Application\Event\NotifySupervisorVerificationRequestedHandler;
 use App\Notification\Domain\NotificationIdGenerator;
 use App\Notification\Domain\NotificationType;
 use App\Notification\Domain\PushDelivery;
@@ -13,6 +14,7 @@ use App\Notification\Domain\PushSubscription;
 use App\Notification\Domain\PushSubscriptions;
 use App\Notification\Domain\UserNotification;
 use App\Notification\Domain\UserNotifications;
+use App\Workforce\Domain\Supervision\Event\SupervisorVerificationRequested;
 use DateTimeImmutable;
 use PHPUnit\Framework\TestCase;
 use Psr\Clock\ClockInterface;
@@ -38,6 +40,28 @@ final class DeliverNotificationTest extends TestCase
         self::assertCount(2, $push->deliveries);
         self::assertSame(['/app/changes/proposals/1', '/app/changes/proposals/1'], array_column($push->deliveries, 'targetUrl'));
         self::assertSame(1, $notifications->unreadCount('david'));
+    }
+
+    public function test_a_self_request_asks_every_colleague_by_push_and_never_the_candidate(): void
+    {
+        $notifications = new MemoryNotifications();
+        $push = new RecordingPushGateway();
+        $subscriptions = new MemorySubscriptions([
+            $this->subscription('ana-phone', 'https://push.example/ana', 'ana'),
+            $this->subscription('david-phone', 'https://push.example/david', 'david'),
+            $this->subscription('laura-phone', 'https://push.example/laura', 'laura'),
+        ], true);
+        $handler = new NotifySupervisorVerificationRequestedHandler($this->delivery($notifications, $subscriptions, $push));
+
+        $handler(new SupervisorVerificationRequested('assignment-1', 'laura', 'Laura García', null, 'UCI · Enfermería', 'token-abc', ['ana', 'david']));
+
+        self::assertSame(['ana', 'david'], array_values(array_map(static fn (UserNotification $row): string => $row->recipientId(), $notifications->rows)));
+        foreach ($notifications->rows as $row) {
+            self::assertSame('Comprueba a tu responsable', $row->title());
+            self::assertStringContainsString('Laura García quiere figurar como responsable de UCI', $row->body());
+            self::assertSame('/app/equipo/responsable/verificar/token-abc', $row->targetUrl());
+        }
+        self::assertSame(['https://push.example/ana', 'https://push.example/david'], array_column($push->deliveries, 'endpoint'));
     }
 
     public function test_team_news_stays_in_the_bell_and_never_reaches_the_phone(): void
@@ -104,9 +128,9 @@ final class DeliverNotificationTest extends TestCase
         );
     }
 
-    private function subscription(string $id, string $endpoint): PushSubscription
+    private function subscription(string $id, string $endpoint, string $recipient = 'ana'): PushSubscription
     {
-        return new PushSubscription($id, 'ana', $endpoint, 'public-key', 'auth-token', new DateTimeImmutable('2026-09-24T18:00:00+02:00'));
+        return new PushSubscription($id, $recipient, $endpoint, 'public-key', 'auth-token', new DateTimeImmutable('2026-09-24T18:00:00+02:00'));
     }
 }
 
@@ -169,7 +193,7 @@ final class MemoryNotifications implements UserNotifications
 final class MemorySubscriptions implements PushSubscriptions
 {
     /** @param list<PushSubscription> $rows */
-    public function __construct(private array $rows)
+    public function __construct(private array $rows, private readonly bool $byRecipient = false)
     {
     }
 
@@ -183,6 +207,10 @@ final class MemorySubscriptions implements PushSubscriptions
 
     public function activeFor(string $recipientId): array
     {
+        if ($this->byRecipient) {
+            return array_values(array_filter($this->rows, static fn (PushSubscription $subscription): bool => $subscription->recipientId === $recipientId));
+        }
+
         return $this->rows;
     }
 

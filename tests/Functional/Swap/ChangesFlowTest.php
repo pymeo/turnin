@@ -232,6 +232,7 @@ final class ChangesFlowTest extends WebTestCase
             'id' => Uuid::v7()->toRfc4122(),
             'supervisor_user_id' => $this->workers['antonio']['id'],
             'swap_pool_id' => $this->uciPool,
+            'origin' => 'organization',
             'verification_token_hash' => hash('sha256', 'changes-flow-supervisor'),
             'status' => 'verified',
             'verification_level' => 'team_verified',

@@ -89,7 +89,9 @@ final readonly class OnboardingController
             }
             $this->handled($this->commandBus, new CompleteWorkerOnboarding($workerId, $draft->workplaceId, $draft->staffCategoryId, $draft->primaryDestination->selectionId, $draft->additionalDestinationIds()));
 
-            return ['redirect' => '/app'];
+            // One optional last question, now that Turnin knows which teams
+            // this person works in: do they also coordinate one of them?
+            return ['redirect' => '/app/equipo/responsable/solicitar?desde=onboarding'];
         });
     }
 

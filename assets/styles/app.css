@@ -1833,3 +1833,8 @@
 @utility supervisor-actions { @apply flex flex-col gap-2 sm:flex-row sm:flex-wrap; & > * { @apply sm:flex-1; } }
 @utility supervisor-share-feedback { @apply min-h-5 text-center text-sm text-ink-muted; }
 @utility supervisor-shell { @apply page flex flex-col gap-5; }
+@utility supervisor-choice {
+	@apply relative cursor-pointer;
+	& > input[type="checkbox"] { @apply absolute top-4 right-4 size-5; accent-color: var(--turnin-teal); }
+	& > .supervisor-team { @apply pr-8; }
+}

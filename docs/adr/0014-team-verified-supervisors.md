@@ -125,3 +125,35 @@ backoffice.
   de responsable; `/supervisor` redirige a `/app/responsable`.
 * Un equipo de una sola persona no puede verificar a nadie hasta que entren más
   compañeros o exista la verificación organizativa.
+
+## Addendum 2026-09-25 — Segundo camino: autosolicitud de un miembro del pool
+
+Quien ya trabaja en el pool puede pedir él mismo que su equipo lo verifique
+(«Solicitar ser responsable»), desde el final del onboarding, el inicio o Mi
+equipo. Los tres llaman al mismo comando, `RequestSupervision`.
+
+```
+Camino A: compañero invita → acepta → 1/N (el invitador cuenta) → quórum → VERIFIED
+Camino B: miembro solicita          → 0/N (nadie ha avalado)   → quórum → VERIFIED
+```
+
+* **Mismo agregado, misma verificación.** `SupervisorAssignment::selfRequested`
+  crea el mismo assignment `PENDING_VERIFICATION`, con el mismo enlace, la
+  misma política, el mismo evento `SupervisorVerificationRequested` (sin
+  invitador) y la misma autorización. No se crea `SupervisorInvitation`.
+* **Solo miembros activos del pool.** Lo comprueba el propio agregado con el
+  `SwapPoolTeam` leído en servidor. Nadie puede buscar un hospital y
+  proclamarse responsable de un equipo ajeno: quien coordina un equipo en el
+  que no trabaja entra por invitación.
+* **Empieza en cero.** Nadie ha avalado a la candidata, que nunca cuenta.
+* **Origen auditable.** `SupervisorAssignmentOrigin`: `INVITATION`,
+  `SELF_REQUEST`, `ORGANIZATION`. Solo para auditoría: la autoridad sigue
+  dependiendo exclusivamente de `VERIFIED`.
+* **Duplicados.** Pedirlo dos veces devuelve el assignment en curso (un
+  advisory lock por persona y pool serializa el doble toque, y el índice único
+  parcial sigue siendo la última garantía). Tras `LEFT`, una nueva solicitud
+  crea un assignment nuevo y el anterior queda como historia.
+
+Descartado: un interruptor «responsable sí/no» en el perfil (sugiere que
+activarlo da permisos) y contar la propia solicitud como primera confirmación
+(sería votarse a sí misma).

@@ -11,7 +11,8 @@ use App\Workforce\Domain\Supervision\Event\SupervisorVerificationRequested;
 /**
  * Asks the team to vouch for a candidate. Push, because nobody gets authority
  * until colleagues answer. The inviter already counted as the first
- * confirmation, so they only hear that the invitation was accepted.
+ * confirmation, so they only hear that the invitation was accepted. A self
+ * request has no inviter: the whole team is asked.
  */
 final readonly class NotifySupervisorVerificationRequestedHandler
 {
@@ -28,11 +29,11 @@ final readonly class NotifySupervisorVerificationRequestedHandler
                 $recipient,
                 NotificationType::SUPERVISOR_VERIFICATION_REQUESTED,
                 'Comprueba a tu responsable',
-                $event->candidateName.' se ha registrado como responsable de '.$event->teamLabel.'. ¿Es la persona que normalmente gestiona vuestros cambios?',
+                $event->candidateName.(null === $event->inviterId ? ' quiere figurar como responsable de ' : ' se ha registrado como responsable de ').$event->teamLabel.'. ¿Es la persona que normalmente gestiona vuestros cambios?',
                 $target,
             );
         }
-        if ($event->inviterId !== $event->candidateId && !\in_array($event->inviterId, $event->verifierIds, true)) {
+        if (null !== $event->inviterId && $event->inviterId !== $event->candidateId && !\in_array($event->inviterId, $event->verifierIds, true)) {
             $this->notifications->deliver(
                 $event->eventId(),
                 $event->inviterId,
